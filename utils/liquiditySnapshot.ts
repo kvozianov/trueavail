@@ -1,5 +1,6 @@
 import type { Currency, LiquiditySnapshot, MoneyAmount } from "@/types/finance";
 import { explainGap } from "@/utils/explanations";
+import { reconcileForecasts } from "@/utils/forecastReconciler";
 import {
   buildDailyForecast,
   calculateUsableLiquidity,
@@ -10,8 +11,10 @@ import {
   DEMO_BANK_CALENDAR,
   DEMO_CASH_FLOWS,
   DEMO_NOW,
+  DEMO_OBSERVED_MOVEMENTS,
   DEMO_SETTLEMENT_RULES,
 } from "@/utils/mockBankData";
+import { checkOnlineCorrections } from "@/utils/onlineCorrector";
 import { buildPortfolioForecast } from "@/utils/portfolioForecast";
 import { generateRecommendation } from "@/utils/recommendations";
 
@@ -96,6 +99,8 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
     calendar: DEMO_BANK_CALENDAR,
   });
   const portfolioForecast = buildPortfolioForecast(forecast);
+  const reconciliation = reconcileForecasts(forecast, portfolioForecast);
+  const onlineCorrections = checkOnlineCorrections(DEMO_OBSERVED_MOVEMENTS);
   const gaps = detectCashGaps(forecast);
   const explanations = gaps.map((gap) =>
     explainGap({
@@ -122,6 +127,8 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
     idleReserve: getIdleReserve(),
     forecast,
     portfolioForecast,
+    reconciliation,
+    onlineCorrections,
     gaps,
     explanations,
     recommendation,

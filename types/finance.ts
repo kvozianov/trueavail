@@ -34,6 +34,17 @@ export type CashFlow = {
   businessReason: string;
 };
 
+export type ObservedCashMovement = {
+  id: string;
+  cashFlowId: string;
+  accountId: string;
+  currency: Currency;
+  observedAt: string;
+  expectedAmount: number;
+  actualAmount: number;
+  source: string;
+};
+
 export type SettlementRule = {
   rail: BankRail;
   delayBusinessDays: number;
@@ -62,6 +73,29 @@ export type PortfolioForecastPoint = {
   requiredBuffer: number;
   riskStatus: RiskStatus;
   accountCount: number;
+};
+
+export type ForecastReconciliationPoint = {
+  date: string;
+  currency: Currency;
+  accountLevelUsableLiquidity: number;
+  portfolioLevelUsableLiquidity: number;
+  difference: number;
+  matched: boolean;
+};
+
+export type OnlineCorrectionAlert = {
+  id: string;
+  cashFlowId: string;
+  accountId: string;
+  currency: Currency;
+  observedAt: string;
+  expectedAmount: number;
+  actualAmount: number;
+  difference: number;
+  differencePercent: number;
+  severity: "watch" | "alert";
+  message: string;
 };
 
 export type CashGap = {
@@ -113,6 +147,8 @@ export type LiquiditySnapshot = {
   idleReserve: MoneyAmount[];
   forecast: ForecastPoint[];
   portfolioForecast: PortfolioForecastPoint[];
+  reconciliation: ForecastReconciliationPoint[];
+  onlineCorrections: OnlineCorrectionAlert[];
   gaps: CashGap[];
   explanations: GapExplanation[];
   recommendation: LiquidityRecommendation | null;

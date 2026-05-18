@@ -1,4 +1,10 @@
-import type { BankAccount, BankCalendar, CashFlow, SettlementRule } from "@/types/finance";
+import type {
+  BankAccount,
+  BankCalendar,
+  CashFlow,
+  ObservedCashMovement,
+  SettlementRule,
+} from "@/types/finance";
 
 export const DEMO_NOW = "2026-05-18T09:00:00.000Z";
 
@@ -113,5 +119,18 @@ export const DEMO_CASH_FLOWS: CashFlow[] = [
     expectedAt: "2026-05-22T09:00:00.000Z",
     counterparty: "UK payroll provider",
     businessReason: "payroll reserve",
+  },
+];
+
+export const DEMO_OBSERVED_MOVEMENTS: ObservedCashMovement[] = [
+  {
+    id: "observed-eur-card-settlement-lower",
+    cashFlowId: "flow-eur-card-settlement",
+    accountId: "atlas-eur-operating",
+    currency: "EUR",
+    observedAt: "2026-05-18T11:00:00.000Z",
+    expectedAmount: 3_200_000,
+    actualAmount: 2_550_000,
+    source: "card clearing monitor",
   },
 ];

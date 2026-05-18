@@ -177,12 +177,12 @@ usable liquidity =
   - показать общую картину компании;
   - в MVP: простой `reduce` по forecast points;
   - после MVP: Temporal Fusion Transformer или другой time-series model.
-- [ ] Слой C — Forecast Reconciler:
+- [x] Слой C — Forecast Reconciler:
   - сверять суммы account-level forecast с portfolio-level forecast;
   - гарантировать, что account -> currency -> rail -> total сходится;
   - в MVP: проверка totals и простая корректировка округлений;
   - после MVP: hierarchical forecasting reconciliation.
-- [ ] Слой D — Online Corrector:
+- [x] Слой D — Online Corrector:
   - сравнивать forecast с фактическими событиями;
   - если real cash flow сильно расходится с планом, поднять alert;
   - в MVP: mock deviation check;
