@@ -1,6 +1,7 @@
 import type {
   BankAccount,
   BankCalendar,
+  CashGap,
   CashFlow,
   ForecastPoint,
   RiskStatus,
@@ -116,4 +117,31 @@ export function buildDailyForecast(params: DailyForecastParams): ForecastPoint[]
   }
 
   return forecast;
+}
+
+function getGapReason(point: ForecastPoint) {
+  if (point.riskStatus === "Red") {
+    return "Usable liquidity falls below zero after planned outflows and required buffer.";
+  }
+
+  return "Usable liquidity is positive, but the remaining buffer is too thin for safe treasury operations.";
+}
+
+function isRiskPoint(
+  point: ForecastPoint,
+): point is ForecastPoint & { riskStatus: "Yellow" | "Red" } {
+  return point.riskStatus !== "Green";
+}
+
+export function detectCashGaps(forecast: ForecastPoint[]): CashGap[] {
+  return forecast
+    .filter(isRiskPoint)
+    .map((point) => ({
+      date: point.date,
+      currency: point.currency,
+      accountId: point.accountId,
+      shortageAmount: Math.max(0, -point.usableLiquidity),
+      riskStatus: point.riskStatus,
+      reason: getGapReason(point),
+    }));
 }
