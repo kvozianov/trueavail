@@ -1,0 +1,9 @@
+source_bank_id,destination_bank_id,currency,variable_cost_bps,fixed_fee
+nova,atlas,EUR,2.0,350
+orion,atlas,EUR,2.5,400
+atlas,nova,EUR,2.0,350
+atlas,orion,EUR,2.5,400
+nova,orion,EUR,1.5,300
+orion,nova,EUR,1.5,300
+atlas,meridian,GBP,3.0,500
+meridian,atlas,GBP,3.0,500

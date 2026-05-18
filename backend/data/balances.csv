@@ -1,0 +1,6 @@
+account_id,bank_id,bank_name,label,currency,book_balance,settled_balance,required_buffer
+atlas-eur-operating,atlas,Atlas Bank,EUR Operating,EUR,5900000,3000000,1000000
+nova-eur-reserve,nova,Nova Bank,EUR Reserve,EUR,4800000,4600000,1200000
+orion-eur-safeguard,orion,Orion Bank,EUR Safeguarding,EUR,3600000,3400000,900000
+atlas-usd-operating,atlas,Atlas Bank,USD Operating,USD,9400000,8900000,2000000
+meridian-gbp-operating,meridian,Meridian Bank,GBP Operating,GBP,3700000,3300000,900000

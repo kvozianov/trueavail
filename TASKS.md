@@ -122,9 +122,9 @@
   - 1-2 fake bank holidays;
   - cut-off time for transfer.
 - [x] Подготовить данные так, чтобы один cash gap возникал точно и стабильно.
-- [ ] Расширить synthetic dataset до 3-5 моковых банков: `Bank A`, `Bank B`, `Bank C`, опционально `Bank D/E`.
+- [x] Расширить synthetic dataset до 3-5 моковых банков: `Bank A`, `Bank B`, `Bank C`, опционально `Bank D/E`.
   - Математическая суть: каждому банку добавить `CCRI_b`, `MaxExposure_b`, cost transfer matrix и `B_min_b`.
-- [ ] Добавить cost transfer matrix между банками.
+- [x] Добавить cost transfer matrix между банками.
   - Математическая суть: `cost_i_j` используется MIP-оптимизатором для минимизации стоимости переводов.
 
 ### Результат
@@ -142,7 +142,7 @@
 - [x] Данные можно загрузить без ручного редактирования.
 - [x] Gap появляется каждый раз при запуске демо.
 - [x] Причина gap понятна из данных, а не выглядит случайной.
-- [ ] Есть данные для HHI, CCRI и PuLP-ребалансировки.
+- [x] Есть данные для HHI, CCRI и PuLP-ребалансировки.
 
 ---
 
@@ -190,7 +190,7 @@ usable liquidity =
   - currency;
   - deadline before cut-off;
   - estimated impact.
-- [ ] Подготовить deterministic baseline как fallback, если ML endpoint недоступен.
+- [x] Подготовить deterministic baseline как fallback, если ML endpoint недоступен.
   - Математическая суть: baseline forecast должен возвращать тот же JSON shape, что и LightGBM quantile forecast.
 
 ### Результат
@@ -199,14 +199,14 @@ usable liquidity =
 - [x] Функция `detectCashGaps()`.
 - [x] Функция `explainGap()`.
 - [x] Функция `generateRecommendation()`.
-- [ ] Функция `buildForecastResponse()` с единым контрактом для deterministic и ML forecast.
+- [x] Функция `buildForecastResponse()` с единым контрактом для deterministic и ML forecast.
 
 ### Acceptance Criteria
 
 - [x] Backend для `Run Forecast` создает прогноз, alert и recommendation.
 - [x] Логика работает без ручных правок во время демо.
 - [x] Каждый результат можно объяснить жюри простыми словами.
-- [ ] Результат можно объяснить также формулой: settlement date, usable liquidity, `B_min`.
+- [x] Результат можно объяснить также формулой: settlement date, usable liquidity, `B_min`.
 
 ---
 
@@ -218,26 +218,26 @@ usable liquidity =
 
 ### Задачи
 
-- [ ] Реализовать backend loader на pandas.
+- [x] Реализовать backend loader на pandas.
   - Математическая суть: все источники приводятся к единой гранулярности `bank_id, account_id, currency, timestamp, amount, direction`.
-- [ ] Реализовать циклическое кодирование часа транзакции.
+- [x] Реализовать циклическое кодирование часа транзакции.
   - Математическая суть: используем тригонометрию, чтобы 23:00 и 00:00 были близкими точками: `hour_sin = sin(2*pi*h/24)`, `hour_cos = cos(2*pi*h/24)`.
-- [ ] Добавить календарные признаки:
+- [x] Добавить календарные признаки:
   - day of week;
   - month end;
   - holiday flag;
   - payroll day;
   - merchant payout cycle.
   - Математическая суть: модель получает сезонность и known future events как объясняющие переменные.
-- [ ] Написать расчет EWMA для исторических объемов.
+- [x] Написать расчет EWMA для исторических объемов.
   - Математическая суть: сглаживаем шум и усиливаем свежие наблюдения по формуле `EWMA_t = alpha*y_t + (1-alpha)*EWMA_{t-1}`.
-- [ ] Реализовать rolling net flow и rolling volatility.
+- [x] Реализовать rolling net flow и rolling volatility.
   - Математическая суть: считаем локальную тенденцию и изменчивость по окну `W`.
-- [ ] Реализовать фильтрацию аномальных транзакций через MAD-based Z-Score.
+- [x] Реализовать фильтрацию аномальных транзакций через MAD-based Z-Score.
   - Математическая суть: `z_t = |y_t - median_W| / (1.4826*MAD_W)`; транзакции с `z_t > 4` помечаются как anomalies или исключаются из обучения.
-- [ ] Сохранять anomaly flags для explainability.
+- [x] Сохранять anomaly flags для explainability.
   - Математическая суть: anomaly не всегда удаляется из бизнес-логики; она может быть причиной alert.
-- [ ] Добавить unit tests для feature engineering.
+- [x] Добавить unit tests для feature engineering.
   - Математическая суть: проверяем периодичность `hour_sin/hour_cos`, рекуррентность EWMA и корректную фильтрацию выбросов.
 
 ### Результат
@@ -250,10 +250,10 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- [ ] Feature matrix строится одной командой.
-- [ ] `hour_sin/hour_cos`, EWMA и MAD Z-Score реально используются в pipeline.
-- [ ] Нет ручного удаления выбросов.
-- [ ] Фичи можно показать на architecture slide.
+- [x] Feature matrix строится одной командой.
+- [x] `hour_sin/hour_cos`, EWMA и MAD Z-Score реально используются в pipeline.
+- [x] Нет ручного удаления выбросов.
+- [x] Фичи можно показать на architecture slide.
 
 ---
 
@@ -265,23 +265,23 @@ usable liquidity =
 
 ### Задачи
 
-- [ ] Подготовить training matrix для LightGBM.
+- [x] Подготовить training matrix для LightGBM.
   - Математическая суть: target `y_t` — будущий баланс или net cash flow на горизонте `t+h`; features — calendar, EWMA, lag values, rolling stats, settlement flags.
-- [ ] Настроить LightGBM с quantile objective для `q=0.05`, `q=0.50`, `q=0.95`.
+- [x] Настроить LightGBM с quantile objective для `q=0.05`, `q=0.50`, `q=0.95`.
   - Математическая суть: модель минимизирует Pinball Loss и возвращает прогнозный коридор: pessimistic 5%, median 50%, optimistic 95%.
-- [ ] Обучать три отдельные quantile models или один wrapper над тремя конфигурациями.
+- [x] Обучать три отдельные quantile models или один wrapper над тремя конфигурациями.
   - Математическая суть: для каждого квантиля оптимизируется асимметричная ошибка `L_q(y, y_hat) = max(q*(y-y_hat), (q-1)*(y-y_hat))`.
-- [ ] Реализовать endpoint `POST /api/forecast/run`.
+- [x] Реализовать endpoint `POST /api/forecast/run`.
   - Математическая суть: API возвращает `balance_p05`, `balance_p50`, `balance_p95`, risk flag и expected breach time.
-- [ ] Добавить консервативную risk logic.
+- [x] Добавить консервативную risk logic.
   - Математическая суть: риск возникает, если `balance_p05(t,b,c) < B_min_b,c`; p05 используется как downside scenario.
-- [ ] Рассчитать severity:
+- [x] Рассчитать severity:
   - Green: `p05 >= B_min`;
   - Yellow: `p50 >= B_min > p05`;
   - Red: `p50 < B_min`.
-- [ ] Добавить backtest на synthetic history.
+- [x] Добавить backtest на synthetic history.
   - Математическая суть: rolling-origin validation без leakage; будущее не попадает в прошлое.
-- [ ] Добавить demo metrics:
+- [x] Добавить demo metrics:
   - WAPE по медиане;
   - coverage для `[p05, p95]`;
   - alert lead time;
@@ -296,10 +296,10 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- [ ] Backend строит forecast band по банкам и валютам.
-- [ ] Прогноз не является fake ML: есть LightGBM objective и quantile outputs.
-- [ ] Модель может работать на synthetic data.
-- [ ] При нехватке времени deterministic forecast остается fallback.
+- [x] Backend строит forecast band по банкам и валютам.
+- [x] Прогноз не является fake ML: есть LightGBM objective и quantile outputs.
+- [x] Модель может работать на synthetic data.
+- [x] При нехватке времени deterministic forecast остается fallback.
 
 ---
 
@@ -397,21 +397,21 @@ usable liquidity =
 
 ### Задачи
 
-- [ ] Описать 3-5 моковых счетов и матрицу комиссий переводов.
+- [x] Описать 3-5 моковых счетов и матрицу комиссий переводов.
   - Математическая суть: переменная решения `x_i_j >= 0` означает сумму перевода из банка `i` в банк `j`; `cost_i_j` — стоимость такого перевода.
-- [ ] Реализовать PuLP-модель минимизации transfer costs.
+- [x] Реализовать PuLP-модель минимизации transfer costs.
   - Математическая суть: минимизируем `sum_i sum_j cost_i_j * x_i_j`.
-- [ ] Добавить ограничения сохранения баланса для каждого банка.
+- [x] Добавить ограничения сохранения баланса для каждого банка.
   - Математическая суть: `Balance_b + inflow_transfers_b - outflow_transfers_b >= B_min_b`.
-- [ ] Добавить ограничение доступной ликвидности источника.
+- [x] Добавить ограничение доступной ликвидности источника.
   - Математическая суть: `sum_j x_b_j <= max(0, Balance_b - B_min_b)`; нельзя вывести больше свободного остатка.
-- [ ] Добавить binary variable для включения / выключения маршрута перевода.
+- [x] Добавить binary variable для включения / выключения маршрута перевода.
   - Математическая суть: `x_i_j <= M * route_used_i_j`; это превращает задачу в MIP и позволяет учитывать fixed transfer fee.
-- [ ] Добавить fixed fee в objective.
+- [x] Добавить fixed fee в objective.
   - Математическая суть: минимизируем `sum cost_i_j*x_i_j + sum fixed_fee_i_j*route_used_i_j`.
-- [ ] Вернуть оптимальный transfer plan.
+- [x] Вернуть оптимальный transfer plan.
   - Математическая суть: solver возвращает набор путей `source -> destination -> amount`, который закрывает дефицит с минимальной стоимостью.
-- [ ] Реализовать endpoint `POST /api/optimizer/rebalance`.
+- [x] Реализовать endpoint `POST /api/optimizer/rebalance`.
   - Математическая суть: frontend отправляет текущие балансы, `B_min`, risk flags и получает оптимальную рекомендацию.
 
 ### Результат
@@ -429,10 +429,10 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- [ ] Оптимизатор решает задачу переводов между 3-5 счетами через PuLP.
-- [ ] Ни один итоговый баланс после rebalance не ниже `B_min`, если задача feasible.
-- [ ] Если free liquidity недостаточно, solver возвращает `infeasible`, а UI показывает Red alert.
-- [ ] Рекомендация содержит сумму, источник, получателя, cost и expected post-transfer balances.
+- [x] Оптимизатор решает задачу переводов между 3-5 счетами через PuLP.
+- [x] Ни один итоговый баланс после rebalance не ниже `B_min`, если задача feasible.
+- [x] Если free liquidity недостаточно, solver возвращает `infeasible`, а UI показывает Red alert.
+- [x] Рекомендация содержит сумму, источник, получателя, cost и expected post-transfer balances.
 
 ---
 
@@ -442,13 +442,13 @@ usable liquidity =
 
 ### Задачи
 
-- [ ] Реализовать функцию расчета HHI по балансам банков.
+- [x] Реализовать функцию расчета HHI по балансам банков.
   - Математическая суть: `HHI = sum_b (Balance_b / sum_b' Balance_b')^2`; чем выше индекс, тем сильнее концентрация средств.
-- [ ] Добавить threshold alert при `HHI > 0.25`.
+- [x] Добавить threshold alert при `HHI > 0.25`.
   - Математическая суть: порог `0.25` означает, что портфель слишком концентрирован и нужен rebalance.
-- [ ] Показывать вклад каждого банка в HHI.
+- [x] Показывать вклад каждого банка в HHI.
   - Математическая суть: вклад банка равен квадрату его доли `share_b^2`, поэтому один крупный баланс резко повышает риск.
-- [ ] Использовать HHI как триггер для recommendation.
+- [x] Использовать HHI как триггер для recommendation.
   - Математическая суть: даже если cash gap нет, высокая концентрация может требовать перевода части средств.
 
 ### Результат
@@ -459,9 +459,9 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- [ ] HHI считается по формуле, а не моковым статусом.
-- [ ] При `HHI > 0.25` появляется concentration warning.
-- [ ] Dashboard может объяснить, какой банк создает концентрацию.
+- [x] HHI считается по формуле, а не моковым статусом.
+- [x] При `HHI > 0.25` появляется concentration warning.
+- [x] Dashboard может объяснить, какой банк создает концентрацию.
 
 ---
 
@@ -471,15 +471,15 @@ usable liquidity =
 
 ### Задачи
 
-- [ ] Создать mock CCRI score для 3 банков.
+- [x] Создать mock CCRI score для 3 банков.
   - Математическая суть: `CCRI_b` — синтетический risk score банка на шкале 0-100, где низкий score повышает ограничение на максимальную экспозицию.
-- [ ] Создать mapping CCRI -> Max Exposure.
+- [x] Создать mapping CCRI -> Max Exposure.
   - Математическая суть: например, `MaxExposure_b = TotalCash * exposure_limit(CCRI_b)`.
-- [ ] Реализовать кнопку / скрипт `Downgrade Bank Rating`.
+- [x] Реализовать кнопку / скрипт `Downgrade Bank Rating`.
   - Математическая суть: после downgrade банк получает lower CCRI и lower max exposure limit.
-- [ ] Связать downgrade с MIP-оптимизатором.
+- [x] Связать downgrade с MIP-оптимизатором.
   - Математическая суть: новое ограничение `Balance_b <= MaxExposure_b(CCRI_b)` заставляет solver вывести часть средств из рискованного банка.
-- [ ] Добавить audit event для действия downgrade.
+- [x] Добавить audit event для действия downgrade.
   - Математическая суть: фиксируем входные балансы, старый/новый CCRI и transfer plan, чтобы решение было воспроизводимым.
 
 ### Результат
@@ -491,9 +491,9 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- [ ] Downgrade банка автоматически запускает расчет вывода средств.
-- [ ] После downgrade система показывает, сколько средств надо вывести и куда.
-- [ ] Решение объясняется через новое exposure constraint.
+- [x] Downgrade банка автоматически запускает расчет вывода средств.
+- [x] После downgrade система показывает, сколько средств надо вывести и куда.
+- [x] Решение объясняется через новое exposure constraint.
 
 ---
 
@@ -501,13 +501,13 @@ usable liquidity =
 
 ### Задачи
 
-- [ ] Написать тест, где один банк падает ниже `B_min`.
+- [x] Написать тест, где один банк падает ниже `B_min`.
   - Математическая суть: PuLP должен найти перевод с минимальным cost, который возвращает банк выше лимита.
-- [ ] Написать тест на невозможный rebalance.
+- [x] Написать тест на невозможный rebalance.
   - Математическая суть: если суммарной свободной ликвидности недостаточно, solver должен вернуть `infeasible`.
-- [ ] Написать тест на HHI alert.
+- [x] Написать тест на HHI alert.
   - Математическая суть: при концентрации средств в одном банке `HHI > 0.25` должен появиться concentration warning.
-- [ ] Написать тест на CCRI downgrade.
+- [x] Написать тест на CCRI downgrade.
   - Математическая суть: снижение `CCRI_b` уменьшает `MaxExposure_b`, и solver выводит лишний баланс.
 
 ---
@@ -515,6 +515,47 @@ usable liquidity =
 ## Phase 3: Dashboard Next.js
 
 Цель: показать не таблицу, а cockpit для Head of Treasury: риск, прогноз, стресс-сценарии и рекомендации понятны за 10 секунд.
+
+---
+
+### 3.0 Backend Contracts For External UI
+
+Статус: done.
+
+UI будет делаться отдельным сервисом/дизайном, поэтому текущий этап закрывает backend-контракты, которые будущий dashboard будет дергать.
+
+- [x] Реализовать `POST /api/stress/run`.
+  - Математическая суть: `Balance_after(b,c) = Balance_before(b,c) * stress_multiplier(s,b,c)`.
+- [x] Реализовать сценарии `Bank Run` и `TARGET2 Outage`.
+  - Математическая суть: backend применяет жестко заданные stress coefficients по банку и валюте.
+- [x] Реализовать расчет `Expected Shortfall 99%`.
+  - Математическая суть: `ES_99 = mean(losses in the worst 1% tail)`.
+- [x] После stress пересчитывать HHI и accounts below `B_min`.
+  - Математическая суть: stressed balances становятся входом для `HHI` и buffer constraints.
+- [x] После stress опционально запускать optimizer.
+  - Математическая суть: stressed balances передаются в PuLP MIP как новые `Balance_b`.
+- [x] Реализовать `POST /api/recommendation/approve`.
+  - Математическая суть: approval применяет `source_balance -= x_i_j`, `destination_balance += x_i_j`.
+- [x] Реализовать `GET /api/demo/snapshot`.
+  - Математическая суть: единый payload объединяет forecast corridor, stress results и optimizer recommendation.
+- [x] Реализовать `POST /api/explainability/summary`.
+  - Математическая суть: backend возвращает root causes, timeline, formula cards и data-quality notes.
+- [x] Реализовать `POST /api/roi/summary`.
+  - Математическая суть: backend считает `avoided_gap`, `released_reserve`, `optimizer_cost` и ES 99% для CFO блока.
+- [x] Реализовать `POST /api/ai-council/review`.
+  - Математическая суть: 5 независимых AI advisors интерпретируют forecast, stress, HHI, ES99 и PuLP output; chairman собирает verdict.
+- [x] Добавить OpenAI live mode и deterministic mock fallback.
+  - Математическая суть: LLM не заменяет расчет, а объясняет и критикует уже рассчитанные математические факты.
+- [ ] Добавить Claude / Anthropic как optional second LLM provider для AI Council.
+  - Математическая суть: multi-model council сравнивает независимые выводы OpenAI и Claude поверх одного и того же facts payload.
+- [ ] Реализовать provider routing для AI Council: `openai`, `anthropic`, `mock`, `mixed`.
+  - Математическая суть: разные advisors могут получать один и тот же `forecast + stress + optimizer + ROI` контекст, но отвечать через разные LLM-провайдеры.
+- [ ] Реализовать mixed council demo.
+  - Математическая суть: например, `Quant/Data Scientist` и `Chairman` через OpenAI, `Contrarian Risk Officer` и `CFO Lens` через Claude, fallback на mock при отсутствии ключа.
+- [ ] Добавить env config без хранения секретов: `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`.
+  - Математическая суть: ключи не попадают в репозиторий; backend выбирает live provider только из environment variables.
+- [x] Покрыть backend flow тестами.
+  - Математическая суть: проверены ES99, stress coefficients, optimizer-after-stress, approval audit, explainability, ROI, AI Council и demo snapshot.
 
 ---
 
@@ -637,6 +678,8 @@ usable liquidity =
   - "EUR looks healthy today, but usable liquidity drops below buffer on May 20 because the card settlement arrives one business day later than the merchant payout."
 - [ ] Добавить data / tech mode с формулами.
   - Математическая суть: жюри видит `EWMA`, `MAD Z-Score`, `HHI`, `B_min` constraints и objective function PuLP.
+- [x] Подготовить backend payload для explanation drawer.
+  - Математическая суть: root causes и formula cards уже считаются API-слоем, UI только отрисовывает.
 
 ### Результат
 
@@ -729,6 +772,8 @@ usable liquidity =
   - better confidence in multi-currency operations.
 - [ ] Добавить optimizer economics.
   - Математическая суть: сравнить transfer cost с avoided overdraft / released reserve.
+- [x] Подготовить backend payload для ROI / CFO value screen.
+  - Математическая суть: API возвращает `avoided_gap`, `released_reserve`, `optimizer_cost`, `ES_99`.
 
 ### Результат
 
@@ -825,6 +870,8 @@ usable liquidity =
   - загрузка новых demo transactions.
 - [ ] Export CFO report:
   - PDF/CSV summary.
+- [ ] Anthropic Claude provider for AI Council:
+  - Contrarian / CFO / Regulatory advisors can run on Claude, while Quant / Chairman stay on OpenAI.
 - [ ] Slack/email alert mock:
   - не реальная интеграция, только визуальная симуляция.
 - [ ] Role switcher:
@@ -870,6 +917,9 @@ usable liquidity =
 - [ ] Scenario stress testing.
 - [ ] Real Monte Carlo simulation:
   - Математическая суть: генерировать много сценариев cash flow и считать VaR / Expected Shortfall.
+- [ ] Multi-provider LLM governance:
+  - OpenAI + Claude + deterministic mock fallback;
+  - provider-level evaluation for answer quality, latency and JSON reliability.
 - [ ] FX liquidity optimization.
 - [ ] Compliance-grade audit trail.
 - [ ] Access control and approval policies.
@@ -883,15 +933,15 @@ usable liquidity =
 
 Если времени мало, делать только это:
 
-1. [ ] Synthetic data.
-2. [ ] Settlement delay calculation.
-3. [ ] Usable liquidity forecast.
-4. [ ] `hour_sin`, `hour_cos`, EWMA, MAD Z-Score anomaly filter.
-5. [ ] LightGBM quantile forecast для p05 / p50 / p95.
-6. [ ] Cash gap alert через `B_min`.
-7. [ ] HHI и alert при `HHI > 0.25`.
-8. [ ] PuLP optimizer для переводов между 3-5 счетами.
-9. [ ] Mock CCRI + `Downgrade Bank Rating`.
+1. [x] Synthetic data.
+2. [x] Settlement delay calculation.
+3. [x] Usable liquidity forecast.
+4. [x] `hour_sin`, `hour_cos`, EWMA, MAD Z-Score anomaly filter.
+5. [x] LightGBM quantile forecast для p05 / p50 / p95.
+6. [x] Cash gap alert через `B_min`.
+7. [x] HHI и alert при `HHI > 0.25`.
+8. [x] PuLP optimizer для переводов между 3-5 счетами.
+9. [x] Mock CCRI + `Downgrade Bank Rating`.
 10. [ ] Explanation panel.
 11. [ ] Stress testing widget: `Bank Run`, `TARGET2 Outage`, ES 99%.
 12. [ ] Recommendation card.

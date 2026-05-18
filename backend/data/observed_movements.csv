@@ -1,0 +1,2 @@
+movement_id,transaction_id,account_id,currency,observed_at,settled_at,expected_amount,actual_amount,source
+observed-eur-card-settlement-lower,flow-eur-card-settlement,atlas-eur-operating,EUR,2026-05-18T11:00:00Z,2026-05-21T09:30:00Z,3200000,2550000,card clearing monitor

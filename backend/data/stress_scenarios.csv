@@ -1,0 +1,11 @@
+scenario_id,scenario_name,bank_id,currency,balance_multiplier,inflow_delay_days,description
+bank_run,Bank Run,atlas,EUR,0.72,0,Retail and merchant outflow shock hits Atlas EUR operating liquidity
+bank_run,Bank Run,nova,EUR,0.88,0,Reserve bank also sees withdrawal pressure
+bank_run,Bank Run,orion,EUR,0.95,0,Safeguarding bank remains relatively stable
+bank_run,Bank Run,atlas,USD,0.78,0,USD operating liquidity suffers cross-market confidence shock
+bank_run,Bank Run,meridian,GBP,0.90,0,GBP liquidity sees moderate withdrawal pressure
+target2_outage,TARGET2 Outage,atlas,EUR,0.80,2,EUR settlement outage delays expected inflows and reduces usable balances
+target2_outage,TARGET2 Outage,nova,EUR,0.84,2,EUR reserve account haircut from infrastructure outage
+target2_outage,TARGET2 Outage,orion,EUR,0.88,2,EUR safeguarding balance remains usable but delayed
+target2_outage,TARGET2 Outage,atlas,USD,0.98,0,USD mostly unaffected by TARGET2 outage
+target2_outage,TARGET2 Outage,meridian,GBP,0.97,0,GBP mostly unaffected by TARGET2 outage

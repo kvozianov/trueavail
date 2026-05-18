@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backend:dev": "uvicorn backend.liquidity_control_tower.api:app --reload --port 8000",
+    "backend:forecast": "python3 -m backend.scripts.run_phase1_demo",
+    "backend:optimizer": "python3 -m backend.scripts.run_phase2_optimizer_demo",
+    "backend:demo": "python3 -m backend.scripts.run_phase3_backend_demo",
+    "backend:council": "python3 -m backend.scripts.run_ai_council_demo",
+    "backend:test": "python3 -m unittest discover backend/tests -v"
   },
   "dependencies": {
     "next": "16.2.6",

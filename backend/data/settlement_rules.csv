@@ -1,0 +1,5 @@
+rail,delay_business_days
+Local Bank Transfer,0
+SEPA,1
+SWIFT,2
+Card Clearing,2

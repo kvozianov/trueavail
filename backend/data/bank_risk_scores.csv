@@ -1,0 +1,5 @@
+bank_id,bank_name,ccri_score,max_exposure_share
+atlas,Atlas Bank,82,0.45
+nova,Nova Bank,74,0.55
+orion,Orion Bank,68,0.45
+meridian,Meridian Bank,79,0.80
