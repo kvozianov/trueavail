@@ -55,6 +55,15 @@ export type ForecastPoint = {
   riskStatus: RiskStatus;
 };
 
+export type PortfolioForecastPoint = {
+  date: string;
+  currency: Currency;
+  usableLiquidity: number;
+  requiredBuffer: number;
+  riskStatus: RiskStatus;
+  accountCount: number;
+};
+
 export type CashGap = {
   date: string;
   currency: Currency;
@@ -103,6 +112,7 @@ export type LiquiditySnapshot = {
   atRiskAmount: MoneyAmount[];
   idleReserve: MoneyAmount[];
   forecast: ForecastPoint[];
+  portfolioForecast: PortfolioForecastPoint[];
   gaps: CashGap[];
   explanations: GapExplanation[];
   recommendation: LiquidityRecommendation | null;

@@ -172,7 +172,7 @@ usable liquidity =
   - горизонт 7–14 дней;
   - в MVP: расчет на основе synthetic cash flows и settlement rules;
   - после MVP: LightGBM / MLForecast / Darts.
-- [ ] Слой B — Portfolio Forecast:
+- [x] Слой B — Portfolio Forecast:
   - агрегировать прогноз по валютам, счетам и payment rails;
   - показать общую картину компании;
   - в MVP: простой `reduce` по forecast points;

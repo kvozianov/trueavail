@@ -12,6 +12,7 @@ import {
   DEMO_NOW,
   DEMO_SETTLEMENT_RULES,
 } from "@/utils/mockBankData";
+import { buildPortfolioForecast } from "@/utils/portfolioForecast";
 import { generateRecommendation } from "@/utils/recommendations";
 
 const FORECAST_HORIZON_DAYS = 7;
@@ -94,6 +95,7 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
     settlementRules: DEMO_SETTLEMENT_RULES,
     calendar: DEMO_BANK_CALENDAR,
   });
+  const portfolioForecast = buildPortfolioForecast(forecast);
   const gaps = detectCashGaps(forecast);
   const explanations = gaps.map((gap) =>
     explainGap({
@@ -119,6 +121,7 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
     atRiskAmount: getAtRiskAmount(gaps),
     idleReserve: getIdleReserve(),
     forecast,
+    portfolioForecast,
     gaps,
     explanations,
     recommendation,
