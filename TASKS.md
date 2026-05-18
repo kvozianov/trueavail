@@ -52,14 +52,14 @@
 
 ### Задачи
 
-- [ ] Создать файл с synthetic balances:
+- [x] Создать файл с synthetic balances:
   - bank account;
   - currency;
   - current book balance;
   - settled balance;
   - minimum required buffer;
   - idle funds.
-- [ ] Создать файл с incoming / outgoing transactions:
+- [x] Создать файл с incoming / outgoing transactions:
   - date;
   - amount;
   - currency;
@@ -68,17 +68,17 @@
   - status: pending / settled;
   - source / destination bank;
   - business reason: payroll, merchant payout, card settlement, partner payment.
-- [ ] Создать settlement rules:
+- [x] Создать settlement rules:
   - SEPA: T+1;
   - SWIFT: T+2;
   - Card Clearing: T+2/T+3;
   - Local Bank Transfer: T+0/T+1;
   - holidays move settlement to next business day.
-- [ ] Создать holiday / cut-off calendar:
+- [x] Создать holiday / cut-off calendar:
   - weekend;
   - 1–2 fake bank holidays;
   - cut-off time for transfer.
-- [ ] Подготовить данные так, чтобы один cash gap возникал точно и стабильно.
+- [x] Подготовить данные так, чтобы один cash gap возникал точно и стабильно.
 
 ### Результат
 
@@ -104,7 +104,7 @@
 
 ### Задачи
 
-- [ ] Реализовать расчет settlement date:
+- [x] Реализовать расчет settlement date:
   - transaction date + rail delay;
   - перенос с holiday/weekend на следующий рабочий день.
 - [ ] Реализовать расчет usable liquidity:
