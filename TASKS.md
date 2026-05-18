@@ -124,7 +124,7 @@ usable liquidity =
   - Green: no risk;
   - Yellow: buffer pressure;
   - Red: cash gap / overdraft risk.
-- [ ] Реализовать root cause explanation:
+- [x] Реализовать root cause explanation:
   - какие 2–3 события привели к gap;
   - rail delay;
   - holiday;

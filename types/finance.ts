@@ -64,6 +64,28 @@ export type CashGap = {
   reason: string;
 };
 
+export type GapRootCause = {
+  type: "large_outflow" | "delayed_inflow" | "required_buffer";
+  title: string;
+  detail: string;
+  amount?: number;
+  cashFlowId?: string;
+};
+
+export type GapTimelineEvent = {
+  date: string;
+  label: string;
+  detail: string;
+};
+
+export type GapExplanation = {
+  gap: CashGap;
+  accountLabel: string;
+  summary: string;
+  rootCauses: GapRootCause[];
+  timeline: GapTimelineEvent[];
+};
+
 export type LiquidityRecommendation = {
   id: string;
   currency: Currency;
