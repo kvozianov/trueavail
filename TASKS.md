@@ -1,54 +1,94 @@
-# TASKS.md — MVP Liquidity Control Tower
+# TASKS.md — MVP Predictive Liquidity Control Tower
 
-Цель MVP: за 3–5 минут показать жюри, что продукт находит будущий cash gap, объясняет причину, предлагает действие и показывает экономический эффект для CFO / Head of Treasury.
+Цель MVP: за 3-5 минут показать жюри, что продукт находит будущий cash gap, объясняет причину, предлагает оптимальное действие и показывает экономический эффект для CFO / Head of Treasury.
+
+Обновление этого плана: базовый deterministic MVP сохраняется, но усиливается конкретной математикой и алгоритмами:
+
+- pandas feature pipeline;
+- циклическое кодирование времени;
+- EWMA;
+- MAD-based anomaly filtering;
+- LightGBM quantile forecasting;
+- PuLP MIP optimizer;
+- HHI concentration risk;
+- CCRI mock bank risk scoring;
+- stress testing на dashboard.
+
+Технический стек:
+
+- Frontend: Next.js, Vercel, dashboard widgets.
+- Backend & ML: Python, FastAPI, pandas, LightGBM, PuLP.
+- Данные MVP: synthetic CSV/JSON по 3-5 банкам, счетам, валютам, платежным рельсам и моковым стресс-сценариям.
 
 Главный демо-сценарий:
 
-1. У компании “на бумаге” денег достаточно.
+1. У компании "на бумаге" денег достаточно.
 2. Система пересчитывает именно usable liquidity с учетом settlement delays, holidays, cut-offs, валют и банков.
-3. Через 36 часов появляется риск cash gap в EUR.
-4. Система объясняет причину: задержка card clearing + банковский holiday + крупный payout.
-5. Система предлагает перебалансировку до cut-off.
-6. Пользователь нажимает Approve.
-7. Risk status меняется с Red на Green, показывается avoided overdraft и released idle reserve.
+3. Backend строит прогнозный коридор балансов на горизонте 7-14 дней: 5% / 50% / 95%.
+4. Через 36 часов появляется риск cash gap в EUR.
+5. Система объясняет причину: задержка card clearing + банковский holiday + крупный payout.
+6. Система считает HHI и показывает concentration risk, если портфель слишком сконцентрирован.
+7. Пользователь запускает stress scenario: `Bank Run` или `TARGET2 Outage`.
+8. Пользователь нажимает `Downgrade Bank Rating`, CCRI банка падает.
+9. PuLP MIP-оптимизатор предлагает ребалансировку до cut-off.
+10. Пользователь нажимает `Approve Recommendation`.
+11. Risk status меняется с Red на Green, показывается avoided overdraft и released idle reserve.
 
 ---
 
-## Уровень 0 — Scope Lock
+## Phase 0: Scope Lock
 
 Статус: обязателен до начала кода.
+
+Цель: зафиксировать, что MVP продает одну сильную историю, а не превращается в набор разрозненных финансовых графиков.
 
 ### Задачи
 
 - [ ] Зафиксировать название продукта: `Liquidity Control Tower`.
-- [ ] Зафиксировать ICP: fintech / PSP / neobank с TPV от $50–100M+ в месяц.
+- [ ] Зафиксировать ICP: fintech / PSP / neobank с TPV от `$50-100M+` в месяц.
+- [ ] Зафиксировать buyer persona:
+  - CFO;
+  - Head of Treasury;
+  - Risk / Finance Operations lead.
 - [ ] Зафиксировать главный экономический результат:
-  - overdraft incidents: -75–90%;
-  - manual treasury work: -50–60%;
-  - forecast lead time: 24–48h;
-  - frozen reserve: $15M -> $8–9M;
-  - released liquidity: $6–7M.
+  - overdraft incidents: `-75-90%`;
+  - manual treasury work: `-50-60%`;
+  - forecast lead time: `24-48h`;
+  - frozen reserve: `$15M -> $8-9M`;
+  - released liquidity: `$6-7M`.
 - [ ] Выбрать один основной демо-кейс: EUR liquidity gap через 36 часов.
+- [ ] Зафиксировать математический тезис MVP:
+  - прогнозируем диапазон будущих балансов;
+  - проверяем ограничения `Balance_b >= B_min_b`;
+  - минимизируем стоимость ребалансировки;
+  - показываем концентрацию через HHI.
 - [ ] Запретить в MVP:
   - реальные банковские API;
   - реальные платежи;
-  - production ML;
+  - production ML platform;
   - сложный compliance/RBAC;
   - интеграции с ERP/TMS;
-  - полноценный optimization solver.
+  - автопереводы без human approval.
 
 ### Результат
 
-- Короткий текст на 5–7 предложений: что делает продукт, для кого и какой эффект дает.
+- Короткий текст на 5-7 предложений: что делает продукт, для кого и какой эффект дает.
 - Один утвержденный demo story, который команда больше не меняет.
+- Один математический narrative для жюри: `Forecast -> Risk Constraint -> Optimization -> Stress Test`.
 
 ---
 
-## Уровень 1 — Demo Data Foundation
+## Phase 1: Data & ML
 
-Статус: done.
+Цель: создать synthetic data foundation, deterministic liquidity logic и ML-прогнозный слой, который можно объяснить формулами.
 
-Цель: создать синтетические данные, на которых прототип будет выглядеть как реальный fintech treasury cockpit.
+---
+
+### 1.1 Demo Data Foundation
+
+Статус: done / сохранить и расширить.
+
+Цель: создать синтетические данные, на которых прототип выглядит как реальный fintech treasury cockpit.
 
 ### Задачи
 
@@ -59,6 +99,7 @@
   - settled balance;
   - minimum required buffer;
   - idle funds.
+  - Математическая суть: каждый банк имеет `Balance_b`, `SettledBalance_b`, `B_min_b`, `Idle_b = max(0, Balance_b - B_min_b)`.
 - [x] Создать файл с incoming / outgoing transactions:
   - date;
   - amount;
@@ -68,17 +109,23 @@
   - status: pending / settled;
   - source / destination bank;
   - business reason: payroll, merchant payout, card settlement, partner payment.
+  - Математическая суть: временной ряд `y_t` строится как net cash flow `inflows_t - outflows_t`.
 - [x] Создать settlement rules:
-  - SEPA: T+1;
-  - SWIFT: T+2;
-  - Card Clearing: T+2/T+3;
-  - Local Bank Transfer: T+0/T+1;
+  - SEPA: `T+1`;
+  - SWIFT: `T+2`;
+  - Card Clearing: `T+2/T+3`;
+  - Local Bank Transfer: `T+0/T+1`;
   - holidays move settlement to next business day.
+  - Математическая суть: дата доступности денег равна `transaction_time + rail_delay`, затем переносится на следующий business day.
 - [x] Создать holiday / cut-off calendar:
   - weekend;
-  - 1–2 fake bank holidays;
+  - 1-2 fake bank holidays;
   - cut-off time for transfer.
 - [x] Подготовить данные так, чтобы один cash gap возникал точно и стабильно.
+- [ ] Расширить synthetic dataset до 3-5 моковых банков: `Bank A`, `Bank B`, `Bank C`, опционально `Bank D/E`.
+  - Математическая суть: каждому банку добавить `CCRI_b`, `MaxExposure_b`, cost transfer matrix и `B_min_b`.
+- [ ] Добавить cost transfer matrix между банками.
+  - Математическая суть: `cost_i_j` используется MIP-оптимизатором для минимизации стоимости переводов.
 
 ### Результат
 
@@ -86,27 +133,31 @@
 - `transactions.json` или `transactions.csv`.
 - `settlement_rules.json`.
 - `calendar.json`.
-- В данных есть один понятный “опасный момент”: EUR gap in 36h.
+- `bank_risk_scores.json`.
+- `transfer_costs.json`.
+- В данных есть один понятный опасный момент: EUR gap in 36h.
 
 ### Acceptance Criteria
 
-- Данные можно загрузить без ручного редактирования.
-- Gap появляется каждый раз при запуске демо.
-- Причина gap понятна из данных, а не выглядит случайной.
+- [x] Данные можно загрузить без ручного редактирования.
+- [x] Gap появляется каждый раз при запуске демо.
+- [x] Причина gap понятна из данных, а не выглядит случайной.
+- [ ] Есть данные для HHI, CCRI и PuLP-ребалансировки.
 
 ---
 
-## Уровень 2 — Core Logic Engine
+### 1.2 Core Logic Engine
 
-Статус: done.
+Статус: done / сохранить как deterministic baseline.
 
-Цель: сделать простую, объяснимую логику, которая продает продукт лучше, чем “магический AI”.
+Цель: сделать простую, объяснимую логику, которая продает продукт лучше, чем "магический AI".
 
 ### Задачи
 
 - [x] Реализовать расчет settlement date:
   - transaction date + rail delay;
   - перенос с holiday/weekend на следующий рабочий день.
+  - Математическая суть: cash flow попадает в usable liquidity только после settlement date.
 - [x] Реализовать расчет usable liquidity:
 
 ```text
@@ -117,15 +168,16 @@ usable liquidity =
   - required buffer
 ```
 
-- [x] Построить forecast на 7–14 дней по валютам и банкам.
+- [x] Построить forecast на 7-14 дней по валютам и банкам.
 - [x] Реализовать cash gap detection:
   - если usable liquidity < 0 или ниже buffer threshold.
+  - Математическая суть: риск возникает, когда `Balance_b,c,t < B_min_b,c`.
 - [x] Реализовать severity:
   - Green: no risk;
   - Yellow: buffer pressure;
   - Red: cash gap / overdraft risk.
 - [x] Реализовать root cause explanation:
-  - какие 2–3 события привели к gap;
+  - какие 2-3 события привели к gap;
   - rail delay;
   - holiday;
   - крупный payout;
@@ -138,6 +190,8 @@ usable liquidity =
   - currency;
   - deadline before cut-off;
   - estimated impact.
+- [ ] Подготовить deterministic baseline как fallback, если ML endpoint недоступен.
+  - Математическая суть: baseline forecast должен возвращать тот же JSON shape, что и LightGBM quantile forecast.
 
 ### Результат
 
@@ -145,37 +199,128 @@ usable liquidity =
 - [x] Функция `detectCashGaps()`.
 - [x] Функция `explainGap()`.
 - [x] Функция `generateRecommendation()`.
+- [ ] Функция `buildForecastResponse()` с единым контрактом для deterministic и ML forecast.
 
 ### Acceptance Criteria
 
 - [x] Backend для `Run Forecast` создает прогноз, alert и recommendation.
 - [x] Логика работает без ручных правок во время демо.
 - [x] Каждый результат можно объяснить жюри простыми словами.
+- [ ] Результат можно объяснить также формулой: settlement date, usable liquidity, `B_min`.
 
 ---
 
-## Уровень 2.5 — Predictive Cash Flow Architecture
+### 1.3 Data Pipeline & Feature Engineering
 
-Статус: roadmap для реализации после базового deterministic forecast.
+Статус: must-have для математического MVP.
 
-Цель: превратить текущий расчет liquidity gap в понятную архитектуру прогнозирования cash flow, которую можно показать как технический план развития продукта.
+Цель: подготовить ML-ready признаки для прогнозирования балансов и cash flows.
 
-### MVP-адаптация
+### Задачи
 
-В MVP не обучаем production ML-модель. Вместо этого делаем прозрачный deterministic baseline, который имитирует основные архитектурные слои и показывает, как система будет развиваться.
+- [ ] Реализовать backend loader на pandas.
+  - Математическая суть: все источники приводятся к единой гранулярности `bank_id, account_id, currency, timestamp, amount, direction`.
+- [ ] Реализовать циклическое кодирование часа транзакции.
+  - Математическая суть: используем тригонометрию, чтобы 23:00 и 00:00 были близкими точками: `hour_sin = sin(2*pi*h/24)`, `hour_cos = cos(2*pi*h/24)`.
+- [ ] Добавить календарные признаки:
+  - day of week;
+  - month end;
+  - holiday flag;
+  - payroll day;
+  - merchant payout cycle.
+  - Математическая суть: модель получает сезонность и known future events как объясняющие переменные.
+- [ ] Написать расчет EWMA для исторических объемов.
+  - Математическая суть: сглаживаем шум и усиливаем свежие наблюдения по формуле `EWMA_t = alpha*y_t + (1-alpha)*EWMA_{t-1}`.
+- [ ] Реализовать rolling net flow и rolling volatility.
+  - Математическая суть: считаем локальную тенденцию и изменчивость по окну `W`.
+- [ ] Реализовать фильтрацию аномальных транзакций через MAD-based Z-Score.
+  - Математическая суть: `z_t = |y_t - median_W| / (1.4826*MAD_W)`; транзакции с `z_t > 4` помечаются как anomalies или исключаются из обучения.
+- [ ] Сохранять anomaly flags для explainability.
+  - Математическая суть: anomaly не всегда удаляется из бизнес-логики; она может быть причиной alert.
+- [ ] Добавить unit tests для feature engineering.
+  - Математическая суть: проверяем периодичность `hour_sin/hour_cos`, рекуррентность EWMA и корректную фильтрацию выбросов.
+
+### Результат
+
+- `features.py`.
+- `build_features(transactions, balances, calendar)`.
+- `filter_anomalies_mad_zscore(series, window, threshold=4)`.
+- `add_cyclical_time_features(df)`.
+- `add_ewma_features(df, alpha)`.
+
+### Acceptance Criteria
+
+- [ ] Feature matrix строится одной командой.
+- [ ] `hour_sin/hour_cos`, EWMA и MAD Z-Score реально используются в pipeline.
+- [ ] Нет ручного удаления выбросов.
+- [ ] Фичи можно показать на architecture slide.
+
+---
+
+### 1.4 LightGBM Quantile Forecasting
+
+Статус: must-have для Data Science narrative.
+
+Цель: перейти от одного deterministic forecast к прогнозному коридору балансов.
+
+### Задачи
+
+- [ ] Подготовить training matrix для LightGBM.
+  - Математическая суть: target `y_t` — будущий баланс или net cash flow на горизонте `t+h`; features — calendar, EWMA, lag values, rolling stats, settlement flags.
+- [ ] Настроить LightGBM с quantile objective для `q=0.05`, `q=0.50`, `q=0.95`.
+  - Математическая суть: модель минимизирует Pinball Loss и возвращает прогнозный коридор: pessimistic 5%, median 50%, optimistic 95%.
+- [ ] Обучать три отдельные quantile models или один wrapper над тремя конфигурациями.
+  - Математическая суть: для каждого квантиля оптимизируется асимметричная ошибка `L_q(y, y_hat) = max(q*(y-y_hat), (q-1)*(y-y_hat))`.
+- [ ] Реализовать endpoint `POST /api/forecast/run`.
+  - Математическая суть: API возвращает `balance_p05`, `balance_p50`, `balance_p95`, risk flag и expected breach time.
+- [ ] Добавить консервативную risk logic.
+  - Математическая суть: риск возникает, если `balance_p05(t,b,c) < B_min_b,c`; p05 используется как downside scenario.
+- [ ] Рассчитать severity:
+  - Green: `p05 >= B_min`;
+  - Yellow: `p50 >= B_min > p05`;
+  - Red: `p50 < B_min`.
+- [ ] Добавить backtest на synthetic history.
+  - Математическая суть: rolling-origin validation без leakage; будущее не попадает в прошлое.
+- [ ] Добавить demo metrics:
+  - WAPE по медиане;
+  - coverage для `[p05, p95]`;
+  - alert lead time;
+  - model / logic version.
+
+### Результат
+
+- `train_quantile_models.py`.
+- `forecast_service.py`.
+- `POST /api/forecast/run`.
+- JSON с прогнозным коридором 5% / 50% / 95%.
+
+### Acceptance Criteria
+
+- [ ] Backend строит forecast band по банкам и валютам.
+- [ ] Прогноз не является fake ML: есть LightGBM objective и quantile outputs.
+- [ ] Модель может работать на synthetic data.
+- [ ] При нехватке времени deterministic forecast остается fallback.
+
+---
+
+### 1.5 Predictive Cash Flow Architecture
+
+Статус: roadmap для реализации после базового deterministic forecast, но оставить в TASKS.md для защиты архитектуры.
+
+Цель: показать путь от MVP к production forecasting.
 
 ### Архитектурные слои
 
 - [x] Слой A — Account / Currency Forecast:
   - прогноз по каждому банковскому счету;
   - прогноз по каждой валюте;
-  - горизонт 7–14 дней;
-  - в MVP: расчет на основе synthetic cash flows и settlement rules;
+  - горизонт 7-14 дней;
+  - в MVP: synthetic cash flows + settlement rules;
   - после MVP: LightGBM / MLForecast / Darts.
 - [x] Слой B — Portfolio Forecast:
   - агрегировать прогноз по валютам, счетам и payment rails;
   - показать общую картину компании;
-  - в MVP: простой `reduce` по forecast points;
+  - в MVP: простой reduce по forecast points;
   - после MVP: Temporal Fusion Transformer или другой time-series model.
 - [x] Слой C — Forecast Reconciler:
   - сверять суммы account-level forecast с portfolio-level forecast;
@@ -204,43 +349,8 @@ usable liquidity =
   - actual settlement date;
   - SLA breached / not breached;
   - probable delay reason.
-
-### Вероятностный прогноз
-
-- [ ] Добавить conservative / expected / optimistic сценарии:
-  - pessimistic cash flow;
-  - base cash flow;
-  - optimistic cash flow.
-- [ ] Добавить forecast band:
-  - lower bound;
-  - expected value;
-  - upper bound.
-- [ ] Сделать риск осторожным:
-  - недооценка outflow опаснее, чем переоценка;
-  - при сомнении risk status должен становиться Yellow, а не Green.
-
-### Метрики качества
-
-- [ ] Добавить demo metrics:
-  - forecast error amount;
-  - WAPE-like percentage;
-  - alert lead time;
-  - coverage of forecast band.
-- [ ] Добавить model / logic version в snapshot:
-  - чтобы на demo было видно, какая версия расчета дала результат.
-
-### Safe launch roadmap
-
-- [ ] Shadow mode:
-  - система считает forecast, но не предлагает auto action;
-  - человек сравнивает прогноз с фактом.
-- [ ] Canary rollout:
-  - сначала один банк и одна валюта;
-  - потом несколько счетов;
-  - потом весь portfolio.
-- [ ] Backtesting:
-  - прогонять историю строго вперед во времени;
-  - не перемешивать будущие данные с прошлыми.
+- [ ] Связать anomaly flags с MAD-based Z-Score.
+  - Математическая суть: anomaly flag появляется не из ручного порога, а из устойчивой статистики по rolling window.
 
 ### Open-source stack после MVP
 
@@ -265,27 +375,152 @@ usable liquidity =
 
 1. `forecast`: построить daily forecast points по счетам.
 2. `risk`: добавить cash gap detection и severity.
-3. `portfolio`: агрегировать forecast по валютам и portfolio.
-4. `reconcile`: проверить, что totals сходятся.
-5. `bands`: добавить optimistic / expected / conservative сценарии.
-6. `anomalies`: добавить flags для задержек и крупных outflows.
-7. `metrics`: добавить простые demo metrics.
-8. `snapshot`: вернуть все это через API одним понятным JSON.
-
-### Acceptance Criteria
-
-- Архитектура объясняет путь от простого MVP к production forecasting.
-- MVP остается deterministic и понятным.
-- В коде нет fake ML, который невозможно защитить.
-- Каждый новый слой можно реализовать отдельной маленькой задачей.
+3. `features`: добавить cyclical time, EWMA, MAD Z-Score.
+4. `bands`: добавить p05 / p50 / p95 через LightGBM quantile.
+5. `portfolio`: агрегировать forecast по валютам и portfolio.
+6. `reconcile`: проверить, что totals сходятся.
+7. `anomalies`: добавить flags для задержек и крупных outflows.
+8. `metrics`: добавить простые demo metrics.
+9. `snapshot`: вернуть все это через API одним понятным JSON.
 
 ---
 
-## Уровень 3 — Control Tower UI
+## Phase 2: Optimizer
+
+Цель: реализовать ядро принятия решений: оптимальный перевод между счетами, контроль концентрации и реакция на падение рейтинга банка.
+
+---
+
+### 2.1 MIP Liquidity Optimizer With PuLP
+
+Статус: must-have для математической защиты.
+
+### Задачи
+
+- [ ] Описать 3-5 моковых счетов и матрицу комиссий переводов.
+  - Математическая суть: переменная решения `x_i_j >= 0` означает сумму перевода из банка `i` в банк `j`; `cost_i_j` — стоимость такого перевода.
+- [ ] Реализовать PuLP-модель минимизации transfer costs.
+  - Математическая суть: минимизируем `sum_i sum_j cost_i_j * x_i_j`.
+- [ ] Добавить ограничения сохранения баланса для каждого банка.
+  - Математическая суть: `Balance_b + inflow_transfers_b - outflow_transfers_b >= B_min_b`.
+- [ ] Добавить ограничение доступной ликвидности источника.
+  - Математическая суть: `sum_j x_b_j <= max(0, Balance_b - B_min_b)`; нельзя вывести больше свободного остатка.
+- [ ] Добавить binary variable для включения / выключения маршрута перевода.
+  - Математическая суть: `x_i_j <= M * route_used_i_j`; это превращает задачу в MIP и позволяет учитывать fixed transfer fee.
+- [ ] Добавить fixed fee в objective.
+  - Математическая суть: минимизируем `sum cost_i_j*x_i_j + sum fixed_fee_i_j*route_used_i_j`.
+- [ ] Вернуть оптимальный transfer plan.
+  - Математическая суть: solver возвращает набор путей `source -> destination -> amount`, который закрывает дефицит с минимальной стоимостью.
+- [ ] Реализовать endpoint `POST /api/optimizer/rebalance`.
+  - Математическая суть: frontend отправляет текущие балансы, `B_min`, risk flags и получает оптимальную рекомендацию.
+
+### Результат
+
+- `optimizer.py`.
+- `solve_liquidity_rebalance(balances, limits, transfer_costs)`.
+- `POST /api/optimizer/rebalance`.
+- Response:
+  - solver status;
+  - selected routes;
+  - transfer amounts;
+  - total cost;
+  - post-transfer balances;
+  - infeasible reason, если решения нет.
+
+### Acceptance Criteria
+
+- [ ] Оптимизатор решает задачу переводов между 3-5 счетами через PuLP.
+- [ ] Ни один итоговый баланс после rebalance не ниже `B_min`, если задача feasible.
+- [ ] Если free liquidity недостаточно, solver возвращает `infeasible`, а UI показывает Red alert.
+- [ ] Рекомендация содержит сумму, источник, получателя, cost и expected post-transfer balances.
+
+---
+
+### 2.2 HHI Concentration Index
 
 Статус: must-have.
 
-Цель: показать не таблицу, а cockpit для Head of Treasury.
+### Задачи
+
+- [ ] Реализовать функцию расчета HHI по балансам банков.
+  - Математическая суть: `HHI = sum_b (Balance_b / sum_b' Balance_b')^2`; чем выше индекс, тем сильнее концентрация средств.
+- [ ] Добавить threshold alert при `HHI > 0.25`.
+  - Математическая суть: порог `0.25` означает, что портфель слишком концентрирован и нужен rebalance.
+- [ ] Показывать вклад каждого банка в HHI.
+  - Математическая суть: вклад банка равен квадрату его доли `share_b^2`, поэтому один крупный баланс резко повышает риск.
+- [ ] Использовать HHI как триггер для recommendation.
+  - Математическая суть: даже если cash gap нет, высокая концентрация может требовать перевода части средств.
+
+### Результат
+
+- `calculate_hhi(balances_by_bank)`.
+- `concentration_alert`.
+- `bank_contribution_to_hhi`.
+
+### Acceptance Criteria
+
+- [ ] HHI считается по формуле, а не моковым статусом.
+- [ ] При `HHI > 0.25` появляется concentration warning.
+- [ ] Dashboard может объяснить, какой банк создает концентрацию.
+
+---
+
+### 2.3 Mock CCRI Bank Risk Scoring
+
+Статус: must-have для risk-management demo.
+
+### Задачи
+
+- [ ] Создать mock CCRI score для 3 банков.
+  - Математическая суть: `CCRI_b` — синтетический risk score банка на шкале 0-100, где низкий score повышает ограничение на максимальную экспозицию.
+- [ ] Создать mapping CCRI -> Max Exposure.
+  - Математическая суть: например, `MaxExposure_b = TotalCash * exposure_limit(CCRI_b)`.
+- [ ] Реализовать кнопку / скрипт `Downgrade Bank Rating`.
+  - Математическая суть: после downgrade банк получает lower CCRI и lower max exposure limit.
+- [ ] Связать downgrade с MIP-оптимизатором.
+  - Математическая суть: новое ограничение `Balance_b <= MaxExposure_b(CCRI_b)` заставляет solver вывести часть средств из рискованного банка.
+- [ ] Добавить audit event для действия downgrade.
+  - Математическая суть: фиксируем входные балансы, старый/новый CCRI и transfer plan, чтобы решение было воспроизводимым.
+
+### Результат
+
+- `bank_risk_scores.json`.
+- `downgradeBankRating(bankId)`.
+- `max_exposure_by_ccri(score)`.
+- Optimizer trigger after downgrade.
+
+### Acceptance Criteria
+
+- [ ] Downgrade банка автоматически запускает расчет вывода средств.
+- [ ] После downgrade система показывает, сколько средств надо вывести и куда.
+- [ ] Решение объясняется через новое exposure constraint.
+
+---
+
+### 2.4 Optimizer Tests
+
+### Задачи
+
+- [ ] Написать тест, где один банк падает ниже `B_min`.
+  - Математическая суть: PuLP должен найти перевод с минимальным cost, который возвращает банк выше лимита.
+- [ ] Написать тест на невозможный rebalance.
+  - Математическая суть: если суммарной свободной ликвидности недостаточно, solver должен вернуть `infeasible`.
+- [ ] Написать тест на HHI alert.
+  - Математическая суть: при концентрации средств в одном банке `HHI > 0.25` должен появиться concentration warning.
+- [ ] Написать тест на CCRI downgrade.
+  - Математическая суть: снижение `CCRI_b` уменьшает `MaxExposure_b`, и solver выводит лишний баланс.
+
+---
+
+## Phase 3: Dashboard Next.js
+
+Цель: показать не таблицу, а cockpit для Head of Treasury: риск, прогноз, стресс-сценарии и рекомендации понятны за 10 секунд.
+
+---
+
+### 3.1 Control Tower UI
+
+Статус: must-have.
 
 ### Главный экран
 
@@ -295,20 +530,28 @@ usable liquidity =
   - At-Risk Amount;
   - Idle Reserve;
   - Forecast Horizon;
+  - HHI;
+  - ES 99%;
   - Risk Status.
+  - Математическая суть: KPI считаются из forecast, optimizer output и stress-adjusted balances.
 - [ ] Forecast chart:
   - линия usable liquidity;
-  - minimum buffer;
+  - forecast corridor `p05 / p50 / p95`;
+  - minimum buffer `B_min`;
   - красная зона cash gap;
-  - отметка “36h risk”.
+  - отметка "36h risk".
+  - Математическая суть: пересечение `p05` или `p50` с `B_min` превращается в Yellow / Red alert.
 - [ ] Currency / bank breakdown:
   - EUR, USD, GBP;
   - Bank A, Bank B, Bank C.
+  - Математическая суть: доля каждого банка `Balance_b / TotalBalance` объясняет HHI и concentration risk.
 - [ ] Alert panel:
   - severity;
   - time to gap;
   - affected currency;
   - affected bank;
+  - HHI warning;
+  - CCRI warning;
   - business impact.
 - [ ] Recommendation card:
   - proposed action;
@@ -316,10 +559,12 @@ usable liquidity =
   - source;
   - destination;
   - deadline;
+  - transfer cost;
   - expected result.
 - [ ] Buttons:
   - `Run Forecast`;
   - `View Explanation`;
+  - `Run Optimizer`;
   - `Approve Recommendation`;
   - `Simulate After`.
 
@@ -329,17 +574,45 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- Жюри за 10 секунд понимает: где риск, когда он случится и что делать.
-- Нет перегруза таблицами.
-- Главный экран выглядит как fintech treasury tool, а не учебный калькулятор.
+- [ ] Жюри за 10 секунд понимает: где риск, когда он случится и что делать.
+- [ ] Нет перегруза таблицами.
+- [ ] Главный экран выглядит как fintech treasury tool, а не учебный калькулятор.
+- [ ] На dashboard видны forecast band, `B_min`, HHI, ES 99% и risk status.
 
 ---
 
-## Уровень 4 — Explainability Layer
+### 3.2 Stress Testing Widget
+
+Статус: must-have.
+
+### Задачи
+
+- [ ] Создать виджет `Stress Testing`.
+  - Математическая суть: сценарии умножают текущие балансы на фиксированные stress coefficients, имитируя Monte Carlo logic для демо.
+- [ ] Добавить статичную метрику `Expected Shortfall 99%`.
+  - Математическая суть: ES 99% трактуется как средняя потеря в худшем 1% сценариев; в MVP это статичная demo metric.
+- [ ] Добавить кнопку `Bank Run`.
+  - Математическая суть: frontend применяет коэффициенты, например `Bank A: 0.72`, `Bank B: 0.88`, `Bank C: 0.95`, чтобы имитировать массовый отток.
+- [ ] Добавить кнопку `TARGET2 Outage`.
+  - Математическая суть: frontend применяет коэффициенты settlement shock, например `EUR balances * 0.80` и delayed inflows, чтобы показать инфраструктурный стресс.
+- [ ] После сценария пересчитать HHI, cash gap и recommendation.
+  - Математическая суть: stress-adjusted balances становятся входом для `HHI`, `B_min` checks и PuLP optimizer.
+- [ ] Добавить визуальный before/after stress state.
+  - Математическая суть: показываем, как коэффициенты меняют баланс и риск.
+
+### Acceptance Criteria
+
+- [ ] Кнопки `Bank Run` и `TARGET2 Outage` меняют моковые балансы через stress coefficients.
+- [ ] После клика риск и рекомендации пересчитываются.
+- [ ] Стресс-тест выглядит как demo Monte Carlo logic, но честно обозначен как deterministic mock.
+
+---
+
+### 3.3 Explainability Layer
 
 Статус: strong must-have для победного питча.
 
-Цель: доказать, что продукт не просто “предсказывает”, а помогает принять решение.
+Цель: доказать, что продукт не просто "предсказывает", а помогает принять решение.
 
 ### Задачи
 
@@ -348,16 +621,22 @@ usable liquidity =
   - delayed card settlement: +2 days;
   - bank holiday moved inflow;
   - merchant payout due tomorrow;
-  - EUR buffer below safe threshold.
+  - EUR buffer below safe threshold;
+  - HHI above `0.25`;
+  - CCRI downgrade reduced max exposure.
 - [ ] Показать timeline событий:
   - expected inflow date;
   - actual settlement date;
   - payout date;
-  - gap date.
+  - gap date;
+  - rating downgrade date;
+  - optimizer recommendation time.
 - [ ] Показать confidence / reliability score:
-  - не как настоящий ML score, а как demo indicator.
+  - не как настоящий production ML score, а как demo indicator.
 - [ ] Добавить текстовое объяснение простыми словами:
-  - “EUR looks healthy today, but usable liquidity drops below buffer on May 20 because the card settlement arrives one business day later than the merchant payout.”
+  - "EUR looks healthy today, but usable liquidity drops below buffer on May 20 because the card settlement arrives one business day later than the merchant payout."
+- [ ] Добавить data / tech mode с формулами.
+  - Математическая суть: жюри видит `EWMA`, `MAD Z-Score`, `HHI`, `B_min` constraints и objective function PuLP.
 
 ### Результат
 
@@ -365,13 +644,14 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- CFO понимает бизнес-причину.
-- Treasury понимает операционную причину.
-- CTO понимает, что логика не черный ящик.
+- [ ] CFO понимает бизнес-причину.
+- [ ] Treasury понимает операционную причину.
+- [ ] CTO понимает, что логика не черный ящик.
+- [ ] Data Scientist может объяснить, где используется ML, а где deterministic optimization.
 
 ---
 
-## Уровень 5 — Recommendation + Approval Flow
+### 3.4 Recommendation + Approval Flow
 
 Статус: must-have.
 
@@ -380,13 +660,19 @@ usable liquidity =
 ### Задачи
 
 - [ ] Создать recommendation card с конкретным действием:
-  - “Transfer EUR 3.0M from Bank B to Bank A before 15:00 cut-off.”
+  - "Transfer EUR 3.0M from Bank B to Bank A before 15:00 cut-off."
+  - Математическая суть: карточка показывает оптимальный результат MIP: `x_i_j`, `source`, `destination`, `cost`, `post_balance`.
 - [ ] Показать expected impact:
   - cash gap removed;
   - overdraft avoided;
   - risk status Green;
-  - idle reserve reduced.
+  - idle reserve reduced;
+  - HHI reduced;
+  - CCRI exposure compliant.
+- [ ] Сделать кнопку `Run Optimizer`.
+  - Математическая суть: frontend отправляет stress-adjusted balances в PuLP endpoint.
 - [ ] Сделать кнопку `Approve Recommendation`.
+  - Математическая суть: approval применяет `x_i_j` к моковым балансам и пересчитывает `B_min`, HHI и risk status.
 - [ ] После approve обновить состояние:
   - alert resolved;
   - chart changes to green;
@@ -397,20 +683,24 @@ usable liquidity =
   - user;
   - action;
   - reason;
+  - solver status;
+  - input balances;
+  - selected transfers;
   - status.
 
 ### Результат
 
-- Сквозной сценарий: Forecast -> Alert -> Explanation -> Recommendation -> Approve -> Green status.
+- Сквозной сценарий: Forecast -> Alert -> Explanation -> Stress -> Optimizer -> Approve -> Green status.
 
 ### Acceptance Criteria
 
-- Пользователь видит, что система не просто аналитика, а decision-support.
-- Нет обещания “мы сами двигаем деньги”, только human-approved treasury action.
+- [ ] Пользователь видит, что система не просто аналитика, а decision-support.
+- [ ] Нет обещания "мы сами двигаем деньги", только human-approved treasury action.
+- [ ] Transfer plan математически соответствует ограничениям `Balance_b >= B_min_b`.
 
 ---
 
-## Уровень 6 — ROI / CFO Value Screen
+### 3.5 ROI / CFO Value Screen
 
 Статус: killer-feature для жюри.
 
@@ -422,19 +712,23 @@ usable liquidity =
 - [ ] До рекомендации:
   - overdraft risk: High;
   - at-risk amount: EUR 2.4M;
-  - required reserve: $15M;
-  - manual work: 12 h/week.
+  - required reserve: `$15M`;
+  - manual work: `12 h/week`;
+  - HHI above threshold.
 - [ ] После рекомендации:
   - overdraft risk: Low;
   - at-risk amount: EUR 0;
-  - optimized reserve: $8–9M;
-  - released liquidity: $6–7M;
-  - manual work: 5–6 h/week.
+  - optimized reserve: `$8-9M`;
+  - released liquidity: `$6-7M`;
+  - manual work: `5-6 h/week`;
+  - HHI below or closer to threshold.
 - [ ] Добавить CFO summary:
   - avoided overdraft;
   - released working capital;
   - fewer emergency treasury calls;
   - better confidence in multi-currency operations.
+- [ ] Добавить optimizer economics.
+  - Математическая суть: сравнить transfer cost с avoided overdraft / released reserve.
 
 ### Результат
 
@@ -442,11 +736,11 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- В питче можно сказать: “Мы не просто строим графики, мы высвобождаем $6–7M замороженной ликвидности.”
+- [ ] В питче можно сказать: "Мы не просто строим графики, мы высвобождаем `$6-7M` замороженной ликвидности."
 
 ---
 
-## Уровень 7 — Demo Script & Pitch Assets
+### 3.6 Demo Script & Pitch Assets
 
 Статус: must-have перед защитой.
 
@@ -454,28 +748,40 @@ usable liquidity =
 
 ### Задачи
 
-- [ ] Написать demo script на 3–5 минут:
+- [ ] Написать demo script на 3-5 минут:
   - проблема;
   - почему обычный cash balance обманывает;
   - запуск forecast;
   - найденный risk;
   - explanation;
-  - recommendation;
+  - stress scenario;
+  - CCRI downgrade;
+  - optimizer recommendation;
   - approve;
   - ROI.
-- [ ] Подготовить 3 скриншота:
+- [ ] Подготовить 5 скриншотов:
   - dashboard before forecast;
   - red risk alert;
+  - stress scenario;
+  - optimizer recommendation;
   - green after approval / ROI.
 - [ ] Подготовить 1 слайд architecture:
   - synthetic data / APIs;
+  - pandas feature pipeline;
   - settlement engine;
+  - LightGBM quantile forecast;
   - account / currency forecast layer;
   - portfolio forecast layer;
-  - forecast reconciler;
-  - anomaly and bank delay checks;
-  - recommendation engine;
+  - HHI / CCRI risk checks;
+  - PuLP optimizer;
   - dashboard.
+- [ ] Подготовить 1 слайд formulas:
+  - `hour_sin`, `hour_cos`;
+  - `EWMA`;
+  - `MAD Z-Score`;
+  - `Pinball Loss`;
+  - `HHI`;
+  - PuLP objective and constraints.
 - [ ] Подготовить 1 слайд business model:
   - ICP;
   - buyer;
@@ -483,7 +789,7 @@ usable liquidity =
   - sales cycle.
 - [ ] Подготовить 1 слайд roadmap:
   - real bank APIs;
-  - ML forecasting;
+  - production ML forecasting;
   - ERP/TMS integrations;
   - compliance-grade audit;
   - scenario stress testing.
@@ -496,20 +802,21 @@ usable liquidity =
 
 ### Acceptance Criteria
 
-- Полная демка укладывается в 5 минут.
-- Даже если код зависнет, у команды есть скриншоты.
+- [ ] Полная демка укладывается в 5 минут.
+- [ ] Даже если код зависнет, у команды есть скриншоты.
+- [ ] Каждый математический блок объясняется одной фразой.
 
 ---
 
-## Уровень 8 — Stretch Features
+## Stretch Features
 
-Статус: делать только после уровней 1–7.
+Статус: делать только после Phase 1-3.
 
 ### Фичи
 
 - [ ] Scenario simulator:
-  - “What if card settlement is delayed by +1 day?”
-  - “What if payout grows by 20%?”
+  - "What if card settlement is delayed by +1 day?"
+  - "What if payout grows by 20%?"
 - [ ] Currency heatmap:
   - где больше всего liquidity risk по валютам.
 - [ ] Bank / rail reliability score:
@@ -524,14 +831,18 @@ usable liquidity =
   - CFO view;
   - Treasury view;
   - CTO/Data view.
+- [ ] FX liquidity optimization:
+  - Математическая суть: добавить exchange rate и FX transfer cost в objective.
+- [ ] Multi-currency HHI:
+  - Математическая суть: считать concentration risk отдельно по валютам и в base currency.
 
 ### Правило
 
-Если до защиты меньше 6 часов и уровни 1–7 не готовы, stretch features не делать.
+Если до защиты меньше 6 часов и Phase 1-3 не готовы, stretch features не делать.
 
 ---
 
-## Уровень 9 — После Хакатона / Roadmap
+## После Хакатона / Roadmap
 
 Статус: не кодить в MVP, только показать в презентации.
 
@@ -557,6 +868,8 @@ usable liquidity =
   - shadow deployment;
   - canary rollout.
 - [ ] Scenario stress testing.
+- [ ] Real Monte Carlo simulation:
+  - Математическая суть: генерировать много сценариев cash flow и считать VaR / Expected Shortfall.
 - [ ] FX liquidity optimization.
 - [ ] Compliance-grade audit trail.
 - [ ] Access control and approval policies.
@@ -570,17 +883,23 @@ usable liquidity =
 
 Если времени мало, делать только это:
 
-1. Synthetic data.
-2. Settlement delay calculation.
-3. Usable liquidity forecast.
-4. Cash gap alert.
-5. Explanation panel.
-6. Recommendation card.
-7. Approve button.
-8. Before/after ROI block.
-9. Demo script.
+1. [ ] Synthetic data.
+2. [ ] Settlement delay calculation.
+3. [ ] Usable liquidity forecast.
+4. [ ] `hour_sin`, `hour_cos`, EWMA, MAD Z-Score anomaly filter.
+5. [ ] LightGBM quantile forecast для p05 / p50 / p95.
+6. [ ] Cash gap alert через `B_min`.
+7. [ ] HHI и alert при `HHI > 0.25`.
+8. [ ] PuLP optimizer для переводов между 3-5 счетами.
+9. [ ] Mock CCRI + `Downgrade Bank Rating`.
+10. [ ] Explanation panel.
+11. [ ] Stress testing widget: `Bank Run`, `TARGET2 Outage`, ES 99%.
+12. [ ] Recommendation card.
+13. [ ] Approve button.
+14. [ ] Before/after ROI block.
+15. [ ] Demo script.
 
-Без этих 9 пунктов MVP не продает идею.
+Без этих пунктов MVP не продает идею прогнозного управления ликвидностью.
 
 ---
 
@@ -590,13 +909,15 @@ usable liquidity =
 
 - [ ] Утро: финализировать demo story и synthetic data.
 - [ ] День: написать settlement / forecast / gap detection logic.
+- [ ] День: добавить feature engineering `hour_sin/hour_cos`, EWMA, MAD Z-Score.
 - [ ] Вечер: вывести результаты в простом UI.
 - [ ] Ночь: добиться стабильного сквозного сценария без красоты.
 
-### День 2 — UI + Pitch
+### День 2 — Optimizer + UI + Pitch
 
-- [ ] Утро: довести dashboard, chart, alert, recommendation.
-- [ ] День: добавить explanation, approval flow, ROI.
+- [ ] Утро: реализовать PuLP optimizer, HHI, CCRI downgrade.
+- [ ] День: довести dashboard, chart, alert, recommendation.
+- [ ] День: добавить stress testing, ES 99%, approval flow, ROI.
 - [ ] Вечер: подготовить demo script и слайды.
 - [ ] Перед защитой: сделать backup screenshots и прогнать демо 5 раз подряд.
 
@@ -611,24 +932,36 @@ usable liquidity =
 - [ ] Пишет demo script.
 - [ ] Следит, чтобы фичи не уходили в overengineering.
 
-### Data / Logic
+### Data / ML
 
 - [ ] Делает synthetic dataset.
+- [ ] Реализует pandas feature pipeline.
+- [ ] Реализует циклическое время, EWMA, MAD Z-Score.
+- [ ] Настраивает LightGBM quantile forecast.
+- [ ] Готовит forecast metrics и объяснение Pinball Loss.
+
+### Backend / Optimization
+
 - [ ] Реализует settlement rules.
-- [ ] Реализует forecast и cash gap detection.
+- [ ] Реализует forecast API.
+- [ ] Реализует HHI.
+- [ ] Реализует CCRI mock risk scoring.
+- [ ] Реализует PuLP MIP optimizer.
 - [ ] Готовит root cause explanation.
 
 ### Frontend / UI
 
 - [ ] Делает dashboard.
 - [ ] Делает charts и KPI cards.
+- [ ] Делает stress testing widget.
 - [ ] Делает alert / recommendation / ROI screens.
 - [ ] Проверяет, что демо выглядит уверенно на проекторе.
 
 ### Presenter
 
-- [ ] Репетирует 3–5 минутный pitch.
+- [ ] Репетирует 3-5 минутный pitch.
 - [ ] Показывает только главный сценарий.
+- [ ] Объясняет формулы простым языком.
 - [ ] Не рассказывает про лишние будущие фичи до roadmap slide.
 
 ---
@@ -640,13 +973,19 @@ MVP считается готовым, если:
 - [ ] Демо запускается с одной команды или одной кнопки.
 - [ ] На экране видно текущее состояние ликвидности.
 - [ ] Forecast показывает будущий EUR cash gap.
+- [ ] Forecast возвращает коридор p05 / p50 / p95.
 - [ ] Alert объясняет когда и где возникнет риск.
 - [ ] Explanation объясняет почему риск возник.
-- [ ] Recommendation предлагает конкретное действие.
+- [ ] HHI показывает concentration risk и alert при `> 0.25`.
+- [ ] CCRI downgrade запускает rebalance recommendation.
+- [ ] PuLP optimizer предлагает конкретное действие.
+- [ ] Recommendation предлагает конкретный перевод.
 - [ ] Approve меняет состояние риска на Green.
+- [ ] Stress widget показывает `Bank Run`, `TARGET2 Outage` и ES 99%.
 - [ ] ROI показывает экономический эффект.
 - [ ] Есть backup screenshots.
 - [ ] Команда может объяснить бизнес-ценность за 60 секунд.
+- [ ] Команда может объяснить математику за 60 секунд.
 
 ---
 
@@ -656,7 +995,7 @@ MVP считается готовым, если:
 
 - [ ] Реальные банковские подключения.
 - [ ] Настоящие переводы денег.
-- [ ] Сложный ML вместо понятной логики.
+- [ ] Production-grade ML platform.
 - [ ] Регистрацию, логин и роли.
 - [ ] Много разных клиентов/кейсов.
 - [ ] Слишком много графиков.
@@ -664,6 +1003,8 @@ MVP считается готовым, если:
 - [ ] Полноценную базу данных, если хватает JSON/CSV.
 - [ ] Интеграции со Slack, ERP, TMS, банками.
 - [ ] Долгие споры о цветах до готовности core flow.
+- [ ] Заменять PuLP эвристикой, если можно показать честную constrained optimization.
+- [ ] Скрывать математику: MVP должен быть explainable, а не magical AI.
 
 ---
 
@@ -673,10 +1014,17 @@ MVP считается готовым, если:
 - [ ] Показать, что total cash выглядит нормально.
 - [ ] Нажать `Run Forecast`.
 - [ ] Показать EUR cash gap через 36h.
+- [ ] Показать forecast corridor p05 / p50 / p95.
+- [ ] Показать HHI и concentration risk.
 - [ ] Нажать `View Explanation`.
 - [ ] Показать root causes.
+- [ ] Нажать `Bank Run` или `TARGET2 Outage`.
+- [ ] Показать ES 99%.
+- [ ] Нажать `Downgrade Bank Rating`.
+- [ ] Показать CCRI drop.
+- [ ] Нажать `Run Optimizer`.
 - [ ] Показать recommendation.
 - [ ] Нажать `Approve Recommendation`.
 - [ ] Показать Green status.
 - [ ] Показать ROI: released liquidity + avoided overdraft.
-- [ ] Закончить фразой: “Мы превращаем treasury из ручного реагирования в прогнозное управление ликвидностью.”
+- [ ] Закончить фразой: "Мы превращаем treasury из ручного реагирования в прогнозное управление ликвидностью."
