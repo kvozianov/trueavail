@@ -107,7 +107,7 @@
 - [x] Реализовать расчет settlement date:
   - transaction date + rail delay;
   - перенос с holiday/weekend на следующий рабочий день.
-- [ ] Реализовать расчет usable liquidity:
+- [x] Реализовать расчет usable liquidity:
 
 ```text
 usable liquidity =
@@ -151,6 +151,133 @@ usable liquidity =
 - Нажатие `Run Forecast` создает прогноз, alert и recommendation.
 - Логика работает без ручных правок во время демо.
 - Каждый результат можно объяснить жюри простыми словами.
+
+---
+
+## Уровень 2.5 — Predictive Cash Flow Architecture
+
+Статус: roadmap для реализации после базового deterministic forecast.
+
+Цель: превратить текущий расчет liquidity gap в понятную архитектуру прогнозирования cash flow, которую можно показать как технический план развития продукта.
+
+### MVP-адаптация
+
+В MVP не обучаем production ML-модель. Вместо этого делаем прозрачный deterministic baseline, который имитирует основные архитектурные слои и показывает, как система будет развиваться.
+
+### Архитектурные слои
+
+- [ ] Слой A — Account / Currency Forecast:
+  - прогноз по каждому банковскому счету;
+  - прогноз по каждой валюте;
+  - горизонт 7–14 дней;
+  - в MVP: расчет на основе synthetic cash flows и settlement rules;
+  - после MVP: LightGBM / MLForecast / Darts.
+- [ ] Слой B — Portfolio Forecast:
+  - агрегировать прогноз по валютам, счетам и payment rails;
+  - показать общую картину компании;
+  - в MVP: простой `reduce` по forecast points;
+  - после MVP: Temporal Fusion Transformer или другой time-series model.
+- [ ] Слой C — Forecast Reconciler:
+  - сверять суммы account-level forecast с portfolio-level forecast;
+  - гарантировать, что account -> currency -> rail -> total сходится;
+  - в MVP: проверка totals и простая корректировка округлений;
+  - после MVP: hierarchical forecasting reconciliation.
+- [ ] Слой D — Online Corrector:
+  - сравнивать forecast с фактическими событиями;
+  - если real cash flow сильно расходится с планом, поднять alert;
+  - в MVP: mock deviation check;
+  - после MVP: incremental learning / River-style corrector.
+
+### Аномалии и задержки
+
+- [ ] Добавить known events calendar:
+  - payroll days;
+  - Black Friday / New Year;
+  - merchant payout cycles;
+  - bank holidays.
+- [ ] Добавить anomaly flags:
+  - unusually large transfer;
+  - unexpected missing inflow;
+  - payout spike above normal demo threshold.
+- [ ] Добавить bank delay logic:
+  - expected settlement date;
+  - actual settlement date;
+  - SLA breached / not breached;
+  - probable delay reason.
+
+### Вероятностный прогноз
+
+- [ ] Добавить conservative / expected / optimistic сценарии:
+  - pessimistic cash flow;
+  - base cash flow;
+  - optimistic cash flow.
+- [ ] Добавить forecast band:
+  - lower bound;
+  - expected value;
+  - upper bound.
+- [ ] Сделать риск осторожным:
+  - недооценка outflow опаснее, чем переоценка;
+  - при сомнении risk status должен становиться Yellow, а не Green.
+
+### Метрики качества
+
+- [ ] Добавить demo metrics:
+  - forecast error amount;
+  - WAPE-like percentage;
+  - alert lead time;
+  - coverage of forecast band.
+- [ ] Добавить model / logic version в snapshot:
+  - чтобы на demo было видно, какая версия расчета дала результат.
+
+### Safe launch roadmap
+
+- [ ] Shadow mode:
+  - система считает forecast, но не предлагает auto action;
+  - человек сравнивает прогноз с фактом.
+- [ ] Canary rollout:
+  - сначала один банк и одна валюта;
+  - потом несколько счетов;
+  - потом весь portfolio.
+- [ ] Backtesting:
+  - прогонять историю строго вперед во времени;
+  - не перемешивать будущие данные с прошлыми.
+
+### Open-source stack после MVP
+
+Не устанавливать эти библиотеки в MVP без необходимости. Использовать как roadmap для презентации и будущей реализации.
+
+- [ ] Darts:
+  - единый интерфейс для time-series models;
+  - probabilistic intervals.
+- [ ] Nixtla / MLForecast / HierarchicalForecast:
+  - массовый per-account forecast;
+  - reconciliation по иерархии.
+- [ ] PyTorch Forecasting:
+  - Temporal Fusion Transformer для portfolio-level слоя.
+- [ ] River:
+  - online correction по свежим фактическим событиям.
+- [ ] MLflow + DVC:
+  - версии моделей и данных.
+- [ ] Evidently AI:
+  - drift monitoring.
+
+### Маленький порядок реализации
+
+1. `forecast`: построить daily forecast points по счетам.
+2. `risk`: добавить cash gap detection и severity.
+3. `portfolio`: агрегировать forecast по валютам и portfolio.
+4. `reconcile`: проверить, что totals сходятся.
+5. `bands`: добавить optimistic / expected / conservative сценарии.
+6. `anomalies`: добавить flags для задержек и крупных outflows.
+7. `metrics`: добавить простые demo metrics.
+8. `snapshot`: вернуть все это через API одним понятным JSON.
+
+### Acceptance Criteria
+
+- Архитектура объясняет путь от простого MVP к production forecasting.
+- MVP остается deterministic и понятным.
+- В коде нет fake ML, который невозможно защитить.
+- Каждый новый слой можно реализовать отдельной маленькой задачей.
 
 ---
 
@@ -343,7 +470,10 @@ usable liquidity =
 - [ ] Подготовить 1 слайд architecture:
   - synthetic data / APIs;
   - settlement engine;
-  - forecast engine;
+  - account / currency forecast layer;
+  - portfolio forecast layer;
+  - forecast reconciler;
+  - anomaly and bank delay checks;
   - recommendation engine;
   - dashboard.
 - [ ] Подготовить 1 слайд business model:
@@ -409,7 +539,23 @@ usable liquidity =
 
 - [ ] Real bank/API integrations.
 - [ ] ERP / TMS / ledger integrations.
-- [ ] Production ML forecasting.
+- [ ] Production ML forecasting:
+  - account / currency granular model;
+  - portfolio-level model;
+  - hierarchical reconciliation;
+  - online correction.
+- [ ] Probabilistic forecast bands:
+  - conservative;
+  - expected;
+  - optimistic.
+- [ ] Anomaly handling:
+  - known future events;
+  - shock transfers;
+  - bank SLA delays.
+- [ ] Forecast validation:
+  - rolling backtests;
+  - shadow deployment;
+  - canary rollout.
 - [ ] Scenario stress testing.
 - [ ] FX liquidity optimization.
 - [ ] Compliance-grade audit trail.
