@@ -2,14 +2,27 @@ import type {
   BankAccount,
   BankCalendar,
   CashFlow,
+  ForecastPoint,
+  RiskStatus,
   SettlementRule,
 } from "@/types/finance";
-import { calculateSettlementDate } from "@/utils/settlement";
+import { calculateSettlementDate, toDateKey } from "@/utils/settlement";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type UsableLiquidityParams = {
   account: BankAccount;
   cashFlows: CashFlow[];
   asOfDate: Date;
+  settlementRules: SettlementRule[];
+  calendar: BankCalendar;
+};
+
+type DailyForecastParams = {
+  accounts: BankAccount[];
+  cashFlows: CashFlow[];
+  startDate: Date;
+  horizonDays: number;
   settlementRules: SettlementRule[];
   calendar: BankCalendar;
 };
@@ -54,4 +67,53 @@ export function calculateUsableLiquidity(params: UsableLiquidityParams) {
     plannedOutflows -
     params.account.requiredBuffer
   );
+}
+
+function getRiskStatus(usableLiquidity: number, requiredBuffer: number): RiskStatus {
+  if (usableLiquidity < 0) {
+    return "Red";
+  }
+
+  if (usableLiquidity < requiredBuffer * 0.25) {
+    return "Yellow";
+  }
+
+  return "Green";
+}
+
+function getForecastDate(startDate: Date, dayOffset: number) {
+  const date = new Date(startDate.getTime() + dayOffset * DAY_MS);
+
+  date.setUTCHours(23, 59, 59, 999);
+
+  return date;
+}
+
+export function buildDailyForecast(params: DailyForecastParams): ForecastPoint[] {
+  const forecast: ForecastPoint[] = [];
+
+  for (let day = 0; day < params.horizonDays; day += 1) {
+    const asOfDate = getForecastDate(params.startDate, day);
+
+    params.accounts.forEach((account) => {
+      const usableLiquidity = calculateUsableLiquidity({
+        account,
+        cashFlows: params.cashFlows,
+        asOfDate,
+        settlementRules: params.settlementRules,
+        calendar: params.calendar,
+      });
+
+      forecast.push({
+        date: toDateKey(asOfDate),
+        currency: account.currency,
+        accountId: account.id,
+        usableLiquidity,
+        requiredBuffer: account.requiredBuffer,
+        riskStatus: getRiskStatus(usableLiquidity, account.requiredBuffer),
+      });
+    });
+  }
+
+  return forecast;
 }

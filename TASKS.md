@@ -117,7 +117,7 @@ usable liquidity =
   - required buffer
 ```
 
-- [ ] Построить forecast на 7–14 дней по валютам и банкам.
+- [x] Построить forecast на 7–14 дней по валютам и банкам.
 - [ ] Реализовать cash gap detection:
   - если usable liquidity < 0 или ниже buffer threshold.
 - [ ] Реализовать severity:
@@ -166,7 +166,7 @@ usable liquidity =
 
 ### Архитектурные слои
 
-- [ ] Слой A — Account / Currency Forecast:
+- [x] Слой A — Account / Currency Forecast:
   - прогноз по каждому банковскому счету;
   - прогноз по каждой валюте;
   - горизонт 7–14 дней;
