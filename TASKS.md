@@ -199,7 +199,7 @@ usable liquidity =
   - unusually large transfer;
   - unexpected missing inflow;
   - payout spike above normal demo threshold.
-- [ ] Добавить bank delay logic:
+- [x] Добавить bank delay logic:
   - expected settlement date;
   - actual settlement date;
   - SLA breached / not breached;

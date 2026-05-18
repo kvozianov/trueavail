@@ -1,5 +1,6 @@
 import type { Currency, LiquiditySnapshot, MoneyAmount } from "@/types/finance";
 import { detectCashFlowAnomalies } from "@/utils/anomalyDetection";
+import { checkBankDelays } from "@/utils/bankDelay";
 import { explainGap } from "@/utils/explanations";
 import { reconcileForecasts } from "@/utils/forecastReconciler";
 import {
@@ -106,6 +107,12 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
     cashFlows: DEMO_CASH_FLOWS,
     observedMovements: DEMO_OBSERVED_MOVEMENTS,
   });
+  const bankDelayChecks = checkBankDelays({
+    cashFlows: DEMO_CASH_FLOWS,
+    observedMovements: DEMO_OBSERVED_MOVEMENTS,
+    settlementRules: DEMO_SETTLEMENT_RULES,
+    calendar: DEMO_BANK_CALENDAR,
+  });
   const gaps = detectCashGaps(forecast);
   const explanations = gaps.map((gap) =>
     explainGap({
@@ -135,6 +142,7 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
     reconciliation,
     onlineCorrections,
     anomalies,
+    bankDelayChecks,
     gaps,
     explanations,
     recommendation,

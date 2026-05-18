@@ -129,6 +129,7 @@ export const DEMO_OBSERVED_MOVEMENTS: ObservedCashMovement[] = [
     accountId: "atlas-eur-operating",
     currency: "EUR",
     observedAt: "2026-05-18T11:00:00.000Z",
+    settledAt: "2026-05-21T09:30:00.000Z",
     expectedAmount: 3_200_000,
     actualAmount: 2_550_000,
     source: "card clearing monitor",

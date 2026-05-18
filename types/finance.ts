@@ -40,6 +40,7 @@ export type ObservedCashMovement = {
   accountId: string;
   currency: Currency;
   observedAt: string;
+  settledAt?: string;
   expectedAmount: number;
   actualAmount: number;
   source: string;
@@ -109,6 +110,19 @@ export type CashFlowAnomaly = {
   message: string;
 };
 
+export type BankDelayCheck = {
+  id: string;
+  cashFlowId: string;
+  accountId: string;
+  currency: Currency;
+  rail: BankRail;
+  expectedSettlementDate: string;
+  actualSettlementDate: string | null;
+  slaBreached: boolean;
+  status: "pending" | "settled";
+  probableDelayReason: string;
+};
+
 export type CashGap = {
   date: string;
   currency: Currency;
@@ -161,6 +175,7 @@ export type LiquiditySnapshot = {
   reconciliation: ForecastReconciliationPoint[];
   onlineCorrections: OnlineCorrectionAlert[];
   anomalies: CashFlowAnomaly[];
+  bankDelayChecks: BankDelayCheck[];
   gaps: CashGap[];
   explanations: GapExplanation[];
   recommendation: LiquidityRecommendation | null;
