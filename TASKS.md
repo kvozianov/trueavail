@@ -46,7 +46,7 @@
 
 ## Уровень 1 — Demo Data Foundation
 
-Статус: must-have.
+Статус: done.
 
 Цель: создать синтетические данные, на которых прототип будет выглядеть как реальный fintech treasury cockpit.
 
@@ -98,7 +98,7 @@
 
 ## Уровень 2 — Core Logic Engine
 
-Статус: must-have.
+Статус: done.
 
 Цель: сделать простую, объяснимую логику, которая продает продукт лучше, чем “магический AI”.
 
@@ -130,7 +130,7 @@ usable liquidity =
   - holiday;
   - крупный payout;
   - недостаточный buffer в конкретном банке/валюте.
-- [ ] Реализовать deterministic recommendation engine:
+- [x] Реализовать deterministic recommendation engine:
   - transfer from idle account;
   - transfer amount;
   - source bank;
@@ -141,16 +141,16 @@ usable liquidity =
 
 ### Результат
 
-- Функция `runForecast()`.
-- Функция `detectCashGaps()`.
-- Функция `explainGap()`.
-- Функция `generateRecommendation()`.
+- [x] Функция `runForecast()` / `getLiquiditySnapshot()`.
+- [x] Функция `detectCashGaps()`.
+- [x] Функция `explainGap()`.
+- [x] Функция `generateRecommendation()`.
 
 ### Acceptance Criteria
 
-- Нажатие `Run Forecast` создает прогноз, alert и recommendation.
-- Логика работает без ручных правок во время демо.
-- Каждый результат можно объяснить жюри простыми словами.
+- [x] Backend для `Run Forecast` создает прогноз, alert и recommendation.
+- [x] Логика работает без ручных правок во время демо.
+- [x] Каждый результат можно объяснить жюри простыми словами.
 
 ---
 

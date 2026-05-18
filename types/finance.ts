@@ -104,5 +104,6 @@ export type LiquiditySnapshot = {
   idleReserve: MoneyAmount[];
   forecast: ForecastPoint[];
   gaps: CashGap[];
+  explanations: GapExplanation[];
   recommendation: LiquidityRecommendation | null;
 };
