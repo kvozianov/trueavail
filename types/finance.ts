@@ -98,6 +98,17 @@ export type OnlineCorrectionAlert = {
   message: string;
 };
 
+export type CashFlowAnomaly = {
+  id: string;
+  type: "large_outflow" | "lower_than_expected_inflow" | "bank_delay_risk";
+  severity: "watch" | "alert";
+  cashFlowId: string;
+  accountId: string;
+  currency: Currency;
+  amount: number;
+  message: string;
+};
+
 export type CashGap = {
   date: string;
   currency: Currency;
@@ -149,6 +160,7 @@ export type LiquiditySnapshot = {
   portfolioForecast: PortfolioForecastPoint[];
   reconciliation: ForecastReconciliationPoint[];
   onlineCorrections: OnlineCorrectionAlert[];
+  anomalies: CashFlowAnomaly[];
   gaps: CashGap[];
   explanations: GapExplanation[];
   recommendation: LiquidityRecommendation | null;

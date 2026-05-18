@@ -195,7 +195,7 @@ usable liquidity =
   - Black Friday / New Year;
   - merchant payout cycles;
   - bank holidays.
-- [ ] Добавить anomaly flags:
+- [x] Добавить anomaly flags:
   - unusually large transfer;
   - unexpected missing inflow;
   - payout spike above normal demo threshold.

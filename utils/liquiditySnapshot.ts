@@ -1,4 +1,5 @@
 import type { Currency, LiquiditySnapshot, MoneyAmount } from "@/types/finance";
+import { detectCashFlowAnomalies } from "@/utils/anomalyDetection";
 import { explainGap } from "@/utils/explanations";
 import { reconcileForecasts } from "@/utils/forecastReconciler";
 import {
@@ -101,6 +102,10 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
   const portfolioForecast = buildPortfolioForecast(forecast);
   const reconciliation = reconcileForecasts(forecast, portfolioForecast);
   const onlineCorrections = checkOnlineCorrections(DEMO_OBSERVED_MOVEMENTS);
+  const anomalies = detectCashFlowAnomalies({
+    cashFlows: DEMO_CASH_FLOWS,
+    observedMovements: DEMO_OBSERVED_MOVEMENTS,
+  });
   const gaps = detectCashGaps(forecast);
   const explanations = gaps.map((gap) =>
     explainGap({
@@ -129,6 +134,7 @@ export function getLiquiditySnapshot(): LiquiditySnapshot {
     portfolioForecast,
     reconciliation,
     onlineCorrections,
+    anomalies,
     gaps,
     explanations,
     recommendation,
