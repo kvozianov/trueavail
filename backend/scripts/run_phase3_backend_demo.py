@@ -5,6 +5,7 @@ import json
 import pandas as pd
 
 from backend.liquidity_control_tower.explainability import build_explanation
+from backend.liquidity_control_tower.contingency import build_contingency_plan
 from backend.liquidity_control_tower.roi import build_roi_summary
 from backend.liquidity_control_tower.stress import apply_transfer_approval, run_stress_scenario
 
@@ -41,6 +42,7 @@ def main() -> None:
         )
     explanation = build_explanation("target2_outage", "atlas")
     roi = build_roi_summary("target2_outage", "atlas")
+    contingency = build_contingency_plan("target2_outage", "atlas")
 
     print(
         json.dumps(
@@ -55,6 +57,13 @@ def main() -> None:
                 "transfers": optimizer["transfers"] if optimizer else [],
                 "approval_gate": gate,
                 "approval": approval,
+                "contingency": {
+                    "plan_status": contingency["plan_status"],
+                    "total_p05_gap": contingency["total_p05_gap"],
+                    "deferrable_coverage": contingency["deferrable_coverage"],
+                    "intraday_credit_need": contingency["intraday_credit_need"],
+                    "actions": contingency["actions"],
+                },
                 "explanation_summary": explanation["summary"],
                 "root_causes": explanation["root_causes"],
                 "roi": roi,

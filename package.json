@@ -12,6 +12,8 @@
     "backend:optimizer": "python3 -m backend.scripts.run_phase2_optimizer_demo",
     "backend:demo": "python3 -m backend.scripts.run_phase3_backend_demo",
     "backend:council": "python3 -m backend.scripts.run_ai_council_demo",
+    "backend:contracts": "python3 -m backend.scripts.export_ui_contracts",
+    "backend:verify": "npm run backend:forecast && npm run backend:optimizer && npm run backend:demo && AI_COUNCIL_PROVIDER=mock npm run backend:council && npm run backend:contracts && npm run backend:test",
     "backend:test": "python3 -m unittest discover backend/tests -v"
   },
   "dependencies": {

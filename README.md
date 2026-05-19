@@ -51,7 +51,8 @@ The Python backend contains the MVP data and ML layer:
 
 - synthetic balances, transactions, settlement rules, bank risk scores, and transfer costs in `backend/data`;
 - pandas feature engineering with cyclical hour encoding, EWMA, rolling statistics, and MAD-based anomaly flags;
-- LightGBM quantile forecasting support for p05 / p50 / p95 when `lightgbm` and `scikit-learn` are installed;
+- known events calendar for payroll days, merchant payout cycles, bank holidays, and settlement delays;
+- ensemble quantile forecasting for p05 / p50 / p95 with LightGBM, sklearn Gradient Boosting, and EWMA-volatility baseline weights;
 - EWMA + volatility fallback so the demo still returns a forecast corridor without optional ML dependencies;
 - FastAPI endpoint `POST /api/forecast/run`.
 
@@ -85,10 +86,29 @@ Run the backend-only end-to-end demo for the future UI:
 npm run backend:demo
 ```
 
+Export UI handoff contracts:
+
+```bash
+npm run backend:contracts
+```
+
+This writes:
+
+- `backend/artifacts/openapi.json`: full FastAPI OpenAPI schema;
+- `backend/artifacts/demo_snapshot.json`: deterministic golden payload for UI design and frontend mocks;
+- `backend/artifacts/demo_metadata.json`: demo clock, seed, thresholds, and model weights;
+- `backend/artifacts/ui_handoff_summary.json`: short handoff index.
+
 Run the AI Council review:
 
 ```bash
 npm run backend:council
+```
+
+Run the backend verification bundle:
+
+```bash
+npm run backend:verify
 ```
 
 Fast AI Council smoke test without live API calls:
@@ -105,6 +125,17 @@ export OPENAI_MODEL="gpt-5.2"
 AI_COUNCIL_PEER_REVIEW=false npm run backend:council
 ```
 
+Mixed OpenAI + Claude council:
+
+```bash
+export OPENAI_API_KEY="..."
+export ANTHROPIC_API_KEY="..."
+export AI_COUNCIL_PROVIDER="mixed"
+export OPENAI_MODEL="gpt-5.2"
+export ANTHROPIC_MODEL="claude-sonnet-4-5-20250929"
+AI_COUNCIL_PEER_REVIEW=false npm run backend:council
+```
+
 Install Python dependencies when working on the ML path:
 
 ```bash
@@ -117,18 +148,20 @@ On macOS, LightGBM also needs OpenMP:
 brew install libomp
 ```
 
-The optimizer exposes `POST /api/optimizer/rebalance`. It uses PuLP/CBC when `pulp` is installed and keeps a deterministic fallback for demo continuity. The model minimizes transfer cost while enforcing account floor constraints, binary route usage, and CCRI-driven exposure limits.
+The optimizer exposes `POST /api/optimizer/rebalance`. It uses PuLP/CBC when `pulp` is installed and keeps a deterministic fallback for demo continuity. The model minimizes transfer cost while enforcing account floor constraints, forecast p05 survival floors, binary route usage, and CCRI-driven exposure limits. If survival floors conflict with downgrade exposure caps, it returns `infeasible` instead of producing a false-positive transfer.
 
 Backend API contracts prepared for the external UI service:
 
-- `POST /api/forecast/run`: p05 / p50 / p95 forecast corridor, feature quality, WAPE, coverage, HHI, first breach.
+- `POST /api/forecast/run`: p05 / p50 / p95 forecast corridor, feature quality, known events, MAD anomaly flags, WAPE, coverage, HHI, first breach.
 - `POST /api/optimizer/rebalance`: PuLP transfer recommendation with costs, post-transfer balances, HHI before/after, audit events.
 - `POST /api/stress/run`: `bank_run` or `target2_outage` stress coefficients, stressed balances, ES 99%, HHI before/after, optional optimizer recommendation, and approval gate.
 - `POST /api/recommendation/approve`: applies recommended transfers to mock balances and returns an audit log.
 - `POST /api/explainability/summary`: root causes, event timeline, formula cards, and data-quality notes for the dashboard explanation drawer.
 - `POST /api/roi/summary`: CFO-facing before/after economics, optimizer cost, avoided downside gap, ES 99%, and released reserve.
+- `POST /api/contingency/plan`: emergency playbook when the optimizer is infeasible, including prefunding, payment throttling, fallback rails, and intraday credit sizing.
 - `POST /api/ai-council/review`: five independent AI advisor reviews, optional peer review, and a chairman verdict over the mathematical backend outputs.
 - `GET /api/demo/snapshot`: combined forecast + stress + primary recommendation payload for dashboard integration.
+- `GET /api/demo/metadata`: fixed demo parameters, thresholds, ensemble weights, and UI-ready endpoint list.
 
 AI Council uses `OPENAI_API_KEY` from the environment when available. Optional:
 
@@ -148,9 +181,12 @@ Then edit `.env`:
 ```bash
 OPENAI_API_KEY=your_key_here
 OPENAI_MODEL=gpt-5.2
+ANTHROPIC_API_KEY=your_claude_key_here
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+AI_COUNCIL_PROVIDER=mixed
 AI_COUNCIL_PEER_REVIEW=false
 ```
 
 `.env` is ignored by git. Commit only `.env.example`.
 
-Without a key, the backend returns a deterministic mock council with the same response shape, so the demo and UI integration remain stable.
+Without a key, the backend returns a deterministic mock council with the same response shape, so the demo and UI integration remain stable. In `mixed` mode, unavailable providers fall back per advisor, so OpenAI roles can still run live even before `ANTHROPIC_API_KEY` is configured.

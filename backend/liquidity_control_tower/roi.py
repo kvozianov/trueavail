@@ -30,6 +30,7 @@ def build_roi_summary(
     optimizer = stress.get("optimizer_recommendation") or {}
     approval_gate = stress.get("approval_gate") or {}
     transfers = optimizer.get("transfers", [])
+    optimizer_status = str(optimizer.get("status", "not_run"))
     optimizer_cost = float(optimizer.get("total_transfer_cost", 0.0))
     avoided_gap = _min_downside_gap(forecast)
     es99 = float(stress["expected_shortfall_99"]["value"])
@@ -81,17 +82,31 @@ def build_roi_summary(
             "before": 0.0,
             "after": optimizer_cost,
             "unit": "currency",
-            "explanation": "Cost paid to move liquidity along the selected compliant route.",
+            "explanation": (
+                "Cost paid to move liquidity along the selected compliant route."
+                if transfers
+                else "No route cost because the optimizer found no feasible transfer plan."
+            ),
         },
     ]
 
-    return {
-        "summary": (
+    if optimizer_status == "infeasible":
+        summary = (
+            f"The backend identifies {avoided_gap:,.0f} of downside liquidity gap and ES 99% at "
+            f"{es99:,.0f}, then refuses to price a false-positive transfer because survival floors "
+            f"and exposure limits are infeasible together. Governance decision: "
+            f"{approval_gate.get('decision', 'not_checked')}."
+        )
+    else:
+        summary = (
             f"The backend identifies {avoided_gap:,.0f} of downside liquidity gap, "
             f"quantifies ES 99% at {es99:,.0f}, and prices transfers at "
             f"{optimizer_cost:,.2f}. Governance decision: "
             f"{approval_gate.get('decision', 'not_checked')}."
-        ),
+        )
+
+    return {
+        "summary": summary,
         "metrics": metrics,
         "optimizer_cost": optimizer_cost,
         "expected_shortfall_99": es99,

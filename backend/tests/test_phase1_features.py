@@ -5,6 +5,7 @@ import pandas as pd
 
 from backend.liquidity_control_tower.features import (
     add_cyclical_time_features,
+    add_known_event_features,
     add_mad_zscore_flags,
     calculate_ewma,
 )
@@ -52,6 +53,37 @@ class Phase1FeatureTests(unittest.TestCase):
 
         self.assertTrue(bool(result.iloc[-1]["is_anomaly_mad"]))
         self.assertGreater(result.iloc[-1]["mad_zscore"], 4)
+
+    def test_known_event_features_attach_calendar_events_to_matching_account(self) -> None:
+        frame = pd.DataFrame(
+            [
+                {
+                    "timestamp": "2026-05-19T12:00:00Z",
+                    "account_id": "atlas-eur-operating",
+                    "bank_id": "atlas",
+                    "currency": "EUR",
+                }
+            ]
+        )
+        events = pd.DataFrame(
+            [
+                {
+                    "event_date": "2026-05-19",
+                    "event_type": "merchant_payout_cycle",
+                    "account_id": "atlas-eur-operating",
+                    "bank_id": "atlas",
+                    "currency": "EUR",
+                    "impact_direction": "outflow",
+                    "expected_amount": 4_100_000.0,
+                }
+            ]
+        )
+
+        result = add_known_event_features(frame, events)
+
+        self.assertEqual(int(result.iloc[0]["known_event_count"]), 1)
+        self.assertEqual(float(result.iloc[0]["known_event_expected_net_flow"]), -4_100_000.0)
+        self.assertEqual(int(result.iloc[0]["event_merchant_payout_cycle"]), 1)
 
 
 if __name__ == "__main__":

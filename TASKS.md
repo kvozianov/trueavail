@@ -286,6 +286,8 @@ usable liquidity =
   - coverage для `[p05, p95]`;
   - alert lead time;
   - model / logic version.
+- [x] Добавить ensemble forecasting поверх quantile corridor.
+  - Математическая суть: смешиваем независимые оценки `LightGBM_quantile`, `sklearn_GBDT_quantile` и `EWMA_volatility_baseline` по формуле `q_hat_ens = sum_m w_m*q_hat_m + w_ewma*q_hat_ewma`, где `sum(w)=1`.
 
 ### Результат
 
@@ -293,11 +295,13 @@ usable liquidity =
 - `forecast_service.py`.
 - `POST /api/forecast/run`.
 - JSON с прогнозным коридором 5% / 50% / 95%.
+- Metadata `model_components` и `model_weights` для объяснения жюри, какие модели вошли в ансамбль.
 
 ### Acceptance Criteria
 
 - [x] Backend строит forecast band по банкам и валютам.
 - [x] Прогноз не является fake ML: есть LightGBM objective и quantile outputs.
+- [x] Forecast corridor строится ансамблем моделей, а не одной эвристикой.
 - [x] Модель может работать на synthetic data.
 - [x] При нехватке времени deterministic forecast остается fallback.
 
@@ -335,7 +339,7 @@ usable liquidity =
 
 ### Аномалии и задержки
 
-- [ ] Добавить known events calendar:
+- [x] Добавить known events calendar:
   - payroll days;
   - Black Friday / New Year;
   - merchant payout cycles;
@@ -349,7 +353,7 @@ usable liquidity =
   - actual settlement date;
   - SLA breached / not breached;
   - probable delay reason.
-- [ ] Связать anomaly flags с MAD-based Z-Score.
+- [x] Связать anomaly flags с MAD-based Z-Score.
   - Математическая суть: anomaly flag появляется не из ручного порога, а из устойчивой статистики по rolling window.
 
 ### Open-source stack после MVP
@@ -405,6 +409,8 @@ usable liquidity =
   - Математическая суть: `Balance_b + inflow_transfers_b - outflow_transfers_b >= B_min_b`.
 - [x] Добавить ограничение доступной ликвидности источника.
   - Математическая суть: `sum_j x_b_j <= max(0, Balance_b - B_min_b)`; нельзя вывести больше свободного остатка.
+- [x] Добавить survival floor constraints из forecast p05.
+  - Математическая суть: если у счета есть downside gap, solver использует `Balance_after_a >= max(B_min_a, Balance_now_a + gap_p05_a)` и запрещает outflow из счета, пока survival floor не покрыт.
 - [x] Добавить binary variable для включения / выключения маршрута перевода.
   - Математическая суть: `x_i_j <= M * route_used_i_j`; это превращает задачу в MIP и позволяет учитывать fixed transfer fee.
 - [x] Добавить fixed fee в objective.
@@ -542,17 +548,25 @@ UI будет делаться отдельным сервисом/дизайн�
   - Математическая суть: backend возвращает root causes, timeline, formula cards и data-quality notes.
 - [x] Реализовать `POST /api/roi/summary`.
   - Математическая суть: backend считает `avoided_gap`, `released_reserve`, `optimizer_cost` и ES 99% для CFO блока.
+- [x] Реализовать `POST /api/contingency/plan`.
+  - Математическая суть: если MIP возвращает `infeasible`, backend считает `gap_p05`, `deferrable_coverage = min(gap, sum eligible_outflows)` и `credit_line_need = max(0, gap - deferrable_coverage)`.
+- [x] Реализовать `GET /api/demo/metadata`.
+  - Математическая суть: фиксируем demo clock, random seed, thresholds и model weights, чтобы UI и защита воспроизводили один и тот же расчет.
+- [x] Добавить генератор UI handoff artifacts.
+  - Математическая суть: `openapi.json` задает контракт API, `demo_snapshot.json` фиксирует эталонный backend state для дизайна и фронтенд-моков.
+- [x] Добавить backend verification bundle.
+  - Математическая суть: одна команда прогоняет forecast, optimizer, stress demo, council mock, contract export и unit tests.
 - [x] Реализовать `POST /api/ai-council/review`.
   - Математическая суть: 5 независимых AI advisors интерпретируют forecast, stress, HHI, ES99 и PuLP output; chairman собирает verdict.
 - [x] Добавить OpenAI live mode и deterministic mock fallback.
   - Математическая суть: LLM не заменяет расчет, а объясняет и критикует уже рассчитанные математические факты.
-- [ ] Добавить Claude / Anthropic как optional second LLM provider для AI Council.
+- [x] Добавить Claude / Anthropic как optional second LLM provider для AI Council.
   - Математическая суть: multi-model council сравнивает независимые выводы OpenAI и Claude поверх одного и того же facts payload.
-- [ ] Реализовать provider routing для AI Council: `openai`, `anthropic`, `mock`, `mixed`.
+- [x] Реализовать provider routing для AI Council: `openai`, `anthropic`, `mock`, `mixed`.
   - Математическая суть: разные advisors могут получать один и тот же `forecast + stress + optimizer + ROI` контекст, но отвечать через разные LLM-провайдеры.
-- [ ] Реализовать mixed council demo.
+- [x] Реализовать mixed council demo.
   - Математическая суть: например, `Quant/Data Scientist` и `Chairman` через OpenAI, `Contrarian Risk Officer` и `CFO Lens` через Claude, fallback на mock при отсутствии ключа.
-- [ ] Добавить env config без хранения секретов: `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`.
+- [x] Добавить env config без хранения секретов: `OPENAI_API_KEY`, `OPENAI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`.
   - Математическая суть: ключи не попадают в репозиторий; backend выбирает live provider только из environment variables.
 - [x] Покрыть backend flow тестами.
   - Математическая суть: проверены ES99, stress coefficients, optimizer-after-stress, approval audit, explainability, ROI, AI Council и demo snapshot.
@@ -870,7 +884,7 @@ UI будет делаться отдельным сервисом/дизайн�
   - загрузка новых demo transactions.
 - [ ] Export CFO report:
   - PDF/CSV summary.
-- [ ] Anthropic Claude provider for AI Council:
+- [x] Anthropic Claude provider for AI Council:
   - Contrarian / CFO / Regulatory advisors can run on Claude, while Quant / Chairman stay on OpenAI.
 - [ ] Slack/email alert mock:
   - не реальная интеграция, только визуальная симуляция.
@@ -942,11 +956,11 @@ UI будет делаться отдельным сервисом/дизайн�
 7. [x] HHI и alert при `HHI > 0.25`.
 8. [x] PuLP optimizer для переводов между 3-5 счетами.
 9. [x] Mock CCRI + `Downgrade Bank Rating`.
-10. [ ] Explanation panel.
-11. [ ] Stress testing widget: `Bank Run`, `TARGET2 Outage`, ES 99%.
-12. [ ] Recommendation card.
-13. [ ] Approve button.
-14. [ ] Before/after ROI block.
+10. [x] Backend explanation payload для panel.
+11. [x] Backend stress testing payload: `Bank Run`, `TARGET2 Outage`, ES 99%.
+12. [x] Backend recommendation / contingency payload.
+13. [x] Backend approval endpoint.
+14. [x] Backend before/after ROI payload.
 15. [ ] Demo script.
 
 Без этих пунктов MVP не продает идею прогнозного управления ликвидностью.

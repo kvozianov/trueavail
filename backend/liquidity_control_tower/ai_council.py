@@ -5,7 +5,7 @@ import json
 import os
 from typing import Any
 
-from .config import AI_COUNCIL_TIMEOUT_SECONDS, DEFAULT_OPENAI_MODEL
+from .config import AI_COUNCIL_TIMEOUT_SECONDS, DEFAULT_ANTHROPIC_MODEL, DEFAULT_OPENAI_MODEL
 from .explainability import build_explanation
 from .forecasting import run_phase1_forecast
 from .roi import build_roi_summary
@@ -18,6 +18,14 @@ try:
 except Exception:
     OpenAI = None
     OPENAI_SDK_AVAILABLE = False
+
+try:
+    from anthropic import Anthropic
+
+    ANTHROPIC_SDK_AVAILABLE = True
+except Exception:
+    Anthropic = None
+    ANTHROPIC_SDK_AVAILABLE = False
 
 
 ADVISORS = [
@@ -42,6 +50,19 @@ ADVISORS = [
         "lens": "Reviews CCRI downgrade, concentration, exposure limits, auditability, and defensibility.",
     },
 ]
+
+
+MIXED_PROVIDER_BY_ADVISOR = {
+    "Contrarian Risk Officer": "anthropic",
+    "Quant/Data Scientist": "openai",
+    "Treasury Operator": "openai",
+    "CFO Lens": "anthropic",
+    "Regulatory/Bank Exposure Lens": "anthropic",
+}
+
+ANTHROPIC_MODEL_ALIASES = {
+    "claude-sonnet-4-5": DEFAULT_ANTHROPIC_MODEL,
+}
 
 
 COUNCIL_FORMULAS = {
@@ -92,6 +113,8 @@ def build_council_facts(
             "solver_engine": optimizer.get("solver_engine"),
             "transfers": optimizer.get("transfers", []),
             "total_transfer_cost": optimizer.get("total_transfer_cost", 0.0),
+            "infeasible_reason": optimizer.get("infeasible_reason"),
+            "survival_min_balances": optimizer.get("survival_min_balances", {}),
             "audit_events": optimizer.get("audit_events", []),
         },
         "approval_gate": stress.get("approval_gate"),
@@ -133,7 +156,7 @@ def frame_council_question(facts: dict[str, Any]) -> str:
     )
 
 
-def _client() -> Any:
+def _openai_client() -> Any:
     if not OPENAI_SDK_AVAILABLE or OpenAI is None:
         return None
     if not os.getenv("OPENAI_API_KEY"):
@@ -141,22 +164,117 @@ def _client() -> Any:
     return OpenAI(timeout=AI_COUNCIL_TIMEOUT_SECONDS)
 
 
-def _response_text(response: Any) -> str:
+def _client() -> Any:
+    return _openai_client()
+
+
+def _anthropic_client() -> Any:
+    if not ANTHROPIC_SDK_AVAILABLE or Anthropic is None:
+        return None
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        return None
+    return Anthropic(timeout=AI_COUNCIL_TIMEOUT_SECONDS)
+
+
+def _openai_response_text(response: Any) -> str:
     text = getattr(response, "output_text", None)
     if text:
         return str(text).strip()
     return str(response).strip()
 
 
+def _anthropic_response_text(response: Any) -> str:
+    blocks = getattr(response, "content", [])
+    parts: list[str] = []
+    for block in blocks:
+        text = getattr(block, "text", None)
+        if text:
+            parts.append(str(text))
+    if parts:
+        return "\n".join(parts).strip()
+    return str(response).strip()
+
+
 def _call_openai(prompt: str, model: str) -> str:
-    client = _client()
+    client = _openai_client()
     if client is None:
         raise RuntimeError("OpenAI SDK or OPENAI_API_KEY is not available.")
     response = client.responses.create(
         model=model,
         input=prompt,
     )
-    return _response_text(response)
+    return _openai_response_text(response)
+
+
+def _call_anthropic(prompt: str, model: str) -> str:
+    client = _anthropic_client()
+    if client is None:
+        raise RuntimeError("Anthropic SDK or ANTHROPIC_API_KEY is not available.")
+    response = client.messages.create(
+        model=model,
+        max_tokens=900,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return _anthropic_response_text(response)
+
+
+def _call_provider(prompt: str, provider: str, openai_model: str, anthropic_model: str) -> str:
+    if provider == "anthropic":
+        return _call_anthropic(prompt, anthropic_model)
+    if provider == "openai":
+        return _call_openai(prompt, openai_model)
+    raise ValueError(f"Unsupported AI provider {provider!r}.")
+
+
+def _provider_available(provider: str) -> bool:
+    if provider == "openai":
+        return _openai_client() is not None
+    if provider == "anthropic":
+        return _anthropic_client() is not None
+    if provider == "mock":
+        return True
+    return False
+
+
+def _resolve_provider_mode(mode: str, provider: str | None) -> str:
+    selected = (provider or os.getenv("AI_COUNCIL_PROVIDER") or "").strip().lower()
+    selected_mode = mode.strip().lower()
+
+    if selected_mode == "mock":
+        return "mock"
+    if selected:
+        return selected
+    if selected_mode in {"openai", "anthropic", "mixed", "mock"}:
+        return selected_mode
+    if selected_mode == "live":
+        return "openai"
+    if selected_mode == "mock":
+        return "mock"
+    if _provider_available("openai"):
+        return "openai"
+    if _provider_available("anthropic"):
+        return "anthropic"
+    return "mock"
+
+
+def _advisor_provider(advisor: dict[str, str], provider_mode: str) -> str:
+    if provider_mode == "mixed":
+        return MIXED_PROVIDER_BY_ADVISOR.get(advisor["advisor"], "openai")
+    if provider_mode in {"openai", "anthropic"}:
+        return provider_mode
+    return "mock"
+
+
+def _live_providers_for_mode(provider_mode: str) -> set[str]:
+    if provider_mode == "mixed":
+        return {"openai", "anthropic"}
+    if provider_mode in {"openai", "anthropic"}:
+        return {provider_mode}
+    return set()
+
+
+def _normalise_anthropic_model(model: str) -> str:
+    return ANTHROPIC_MODEL_ALIASES.get(model.strip(), model.strip())
 
 
 def _advisor_prompt(advisor: dict[str, str], framed_question: str, facts: dict[str, Any]) -> str:
@@ -224,15 +342,28 @@ def _mock_advisor_response(advisor: dict[str, str], facts: dict[str, Any]) -> st
     hhi = facts["risk"]["hhi_after_stress"]["value"]
     es99 = facts["risk"]["expected_shortfall_99"]
     transfers = facts["optimizer"]["transfers"]
+    optimizer_status = facts["optimizer"]["status"]
     gate = facts.get("approval_gate") or {}
     gate_decision = gate.get("decision", "not_checked")
-    transfer_text = "no transfer is required" if not transfers else (
-        f"move {transfers[0]['currency']} {transfers[0]['amount']:,.0f} "
-        f"from {transfers[0]['source_bank_id']} to {transfers[0]['destination_bank_id']}"
-    )
+    if transfers:
+        transfer_text = (
+            f"move {transfers[0]['currency']} {transfers[0]['amount']:,.0f} "
+            f"from {transfers[0]['source_bank_id']} to {transfers[0]['destination_bank_id']}"
+        )
+    elif optimizer_status == "infeasible":
+        transfer_text = "no feasible transfer plan was found under survival and exposure constraints"
+    else:
+        transfer_text = "no transfer is required"
     name = advisor["advisor"]
 
     if "Contrarian" in name:
+        if optimizer_status == "infeasible":
+            return (
+                f"The weak point is no longer a bad transfer; it is an infeasible survival problem. "
+                f"HHI remains {hhi:.3f}, ES99 is {es99:,.0f}, and the governance gate says {gate_decision}. "
+                "Present this as a blocked optimizer case that requires contingency funding, payment throttling, "
+                "or confirmed fallback rails, with the infeasibility reason visible."
+            )
         return (
             f"The weak point is not the math; it is execution risk. HHI remains {hhi:.3f}, above 0.25, "
             f"and ES99 is {es99:,.0f}. The governance gate says {gate_decision}. Present the recommendation "
@@ -247,17 +378,29 @@ def _mock_advisor_response(advisor: dict[str, str], facts: dict[str, Any]) -> st
         )
     if "Treasury" in name:
         return (
-            f"The action is operationally clean if it is executable before cut-off: {transfer_text}. "
-            "The user needs source, destination, amount, cost, deadline, and post-balance in one card. "
-            "The decision should stay human-approved, because treasury teams will trust a clear transfer "
-            "instruction more than an autonomous money movement story."
+            f"Treasury execution should treat this as a contingency case: {transfer_text}. "
+            "The user needs the blocker, missing funding amount, settlement rail status, and next action in one card. "
+            "The decision should stay human-approved because an infeasible optimizer output is an escalation, not a money-movement instruction."
         )
     if "CFO" in name:
+        if optimizer_status == "infeasible":
+            return (
+                f"The CFO story is not a cheap-transfer ROI story anymore: avoided liquidity gap is "
+                f"{facts['roi']['avoided_liquidity_gap']:,.0f}, ES99 is {es99:,.0f}, and the optimizer found "
+                "no feasible route under survival floors. Lead with business exposure and contingency funding, "
+                "then show why the model refused a false-positive recommendation."
+            )
         return (
             f"The CFO story is strong: avoided liquidity gap is "
             f"{facts['roi']['avoided_liquidity_gap']:,.0f}, released reserve is "
             f"{facts['roi']['released_idle_reserve']:,.0f}, while transfer cost is only "
             f"{facts['optimizer']['total_transfer_cost']:,.2f}. Lead with the economics, then show the math."
+        )
+    if optimizer_status == "infeasible":
+        return (
+            "The exposure story is defensible because the engine refuses to fabricate a transfer when CCRI "
+            f"limits and survival floors conflict. Optimizer result: {transfer_text}. Keep the survival floors, "
+            "solver status, infeasibility reason, and audit events visible for review."
         )
     return (
         f"The exposure story is defensible because CCRI downgrade changes max exposure constraints and "
@@ -319,28 +462,37 @@ def run_ai_council(
     mode: str = "auto",
     peer_review: bool = True,
     model: str | None = None,
+    provider: str | None = None,
+    anthropic_model: str | None = None,
 ) -> dict[str, Any]:
-    selected_model = model or os.getenv("OPENAI_MODEL") or DEFAULT_OPENAI_MODEL
+    selected_openai_model = model or os.getenv("OPENAI_MODEL") or DEFAULT_OPENAI_MODEL
+    selected_anthropic_model = _normalise_anthropic_model(
+        anthropic_model or os.getenv("ANTHROPIC_MODEL") or DEFAULT_ANTHROPIC_MODEL
+    )
     facts = build_council_facts(scenario_id, downgrade_bank_id)
     framed_question = frame_council_question(facts)
-    live_available = _client() is not None
-    should_live = mode == "live" or (mode == "auto" and live_available)
-    fallback_reason = None
+    provider_mode = _resolve_provider_mode(mode, provider)
+    live_provider_status = {
+        "openai": _provider_available("openai"),
+        "anthropic": _provider_available("anthropic"),
+    }
+    live_available = any(live_provider_status.values())
+    fallback_reasons: list[str] = []
 
-    if mode == "mock":
-        should_live = False
-        fallback_reason = "mode=mock"
-    elif mode == "live" and not live_available:
-        should_live = False
-        fallback_reason = "OpenAI SDK or OPENAI_API_KEY is not available."
-    elif mode == "auto" and not live_available:
-        fallback_reason = "OPENAI_API_KEY not set or OpenAI SDK unavailable; using deterministic council."
+    requested_live_providers = _live_providers_for_mode(provider_mode)
+    if provider_mode == "mock":
+        fallback_reasons.append("provider=mock")
+    for live_provider in requested_live_providers:
+        if not live_provider_status[live_provider]:
+            env_name = "OPENAI_API_KEY" if live_provider == "openai" else "ANTHROPIC_API_KEY"
+            fallback_reasons.append(f"{live_provider} unavailable; {env_name} not set or SDK unavailable")
 
-    if not should_live:
+    if not requested_live_providers or not any(live_provider_status[p] for p in requested_live_providers):
         advisor_responses = [
             {
                 "advisor": advisor["advisor"],
                 "lens": advisor["lens"],
+                "provider": "mock",
                 "response": _mock_advisor_response(advisor, facts),
             }
             for advisor in ADVISORS
@@ -349,6 +501,7 @@ def run_ai_council(
             [
                 {
                     "reviewer": advisor["advisor"],
+                    "provider": "mock",
                     "response": _mock_peer_review(advisor),
                 }
                 for advisor in ADVISORS
@@ -359,9 +512,13 @@ def run_ai_council(
         verdict = _mock_verdict(facts)
         return {
             "mode": "mock",
-            "model": selected_model,
+            "provider_mode": provider_mode,
+            "model": selected_openai_model,
+            "openai_model": selected_openai_model,
+            "anthropic_model": selected_anthropic_model,
             "live_available": live_available,
-            "fallback_reason": fallback_reason,
+            "provider_status": live_provider_status,
+            "fallback_reason": "; ".join(fallback_reasons) if fallback_reasons else "No live provider available.",
             "framed_question": framed_question,
             "facts": facts,
             "advisor_responses": advisor_responses,
@@ -370,39 +527,86 @@ def run_ai_council(
             "formulas_used": COUNCIL_FORMULAS,
         }
 
+    def provider_for_advisor(advisor: dict[str, str]) -> str:
+        assigned = _advisor_provider(advisor, provider_mode)
+        if assigned == "mock":
+            return "mock"
+        if _provider_available(assigned):
+            return assigned
+        fallback_reasons.append(f"{assigned} unavailable for {advisor['advisor']}; used mock fallback")
+        return "mock"
+
     try:
         def advisor_call(idx: int, advisor: dict[str, str]) -> dict[str, str]:
+            selected_provider = provider_for_advisor(advisor)
+            prompt = _advisor_prompt(advisor, framed_question, facts)
+            if selected_provider == "mock":
+                response = _mock_advisor_response(advisor, facts)
+            else:
+                response = _call_provider(
+                    prompt,
+                    selected_provider,
+                    selected_openai_model,
+                    selected_anthropic_model,
+                )
             return {
                 "advisor": advisor["advisor"],
                 "lens": advisor["lens"],
-                "response": _call_openai(_advisor_prompt(advisor, framed_question, facts), selected_model),
+                "provider": selected_provider,
+                "response": response,
             }
 
         advisor_responses = _run_parallel(ADVISORS, advisor_call)
 
         if peer_review:
             def review_call(idx: int, advisor: dict[str, str]) -> dict[str, str]:
+                selected_provider = provider_for_advisor(advisor)
+                if selected_provider == "mock":
+                    response = _mock_peer_review(advisor)
+                else:
+                    response = _call_provider(
+                        _review_prompt(advisor, framed_question, advisor_responses),
+                        selected_provider,
+                        selected_openai_model,
+                        selected_anthropic_model,
+                    )
                 return {
                     "reviewer": advisor["advisor"],
-                    "response": _call_openai(
-                        _review_prompt(advisor, framed_question, advisor_responses),
-                        selected_model,
-                    ),
+                    "provider": selected_provider,
+                    "response": response,
                 }
 
             peer_reviews = _run_parallel(ADVISORS, review_call)
         else:
             peer_reviews = []
 
-        verdict = _call_openai(
-            _chairman_prompt(framed_question, advisor_responses, peer_reviews),
-            selected_model,
+        chairman_provider = "openai" if provider_mode == "mixed" else next(iter(requested_live_providers), "mock")
+        if chairman_provider != "mock" and not _provider_available(chairman_provider):
+            fallback_reasons.append(f"{chairman_provider} unavailable for chairman; used mock fallback")
+            chairman_provider = "mock"
+        verdict = (
+            _mock_verdict(facts)
+            if chairman_provider == "mock"
+            else _call_provider(
+                _chairman_prompt(framed_question, advisor_responses, peer_reviews),
+                chairman_provider,
+                selected_openai_model,
+                selected_anthropic_model,
+            )
         )
         return {
             "mode": "live",
-            "model": selected_model,
+            "provider_mode": provider_mode,
+            "model": (
+                selected_openai_model
+                if provider_mode in {"openai", "mixed"}
+                else selected_anthropic_model
+            ),
+            "openai_model": selected_openai_model,
+            "anthropic_model": selected_anthropic_model,
             "live_available": True,
-            "fallback_reason": None,
+            "provider_status": live_provider_status,
+            "fallback_reason": "; ".join(dict.fromkeys(fallback_reasons)) or None,
             "framed_question": framed_question,
             "facts": facts,
             "advisor_responses": advisor_responses,
@@ -415,14 +619,19 @@ def run_ai_council(
             {
                 "advisor": advisor["advisor"],
                 "lens": advisor["lens"],
+                "provider": "mock",
                 "response": _mock_advisor_response(advisor, facts),
             }
             for advisor in ADVISORS
         ]
         return {
             "mode": "mock",
-            "model": selected_model,
+            "provider_mode": provider_mode,
+            "model": selected_openai_model,
+            "openai_model": selected_openai_model,
+            "anthropic_model": selected_anthropic_model,
             "live_available": live_available,
+            "provider_status": live_provider_status,
             "fallback_reason": f"Live AI council failed: {exc.__class__.__name__}: {exc}",
             "framed_question": framed_question,
             "facts": facts,

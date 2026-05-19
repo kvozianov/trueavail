@@ -13,6 +13,12 @@ BASE_FEATURE_COLUMNS = [
     "is_holiday",
     "is_month_end",
     "is_payroll_day",
+    "known_event_count",
+    "known_event_expected_net_flow",
+    "event_payroll_day",
+    "event_merchant_payout_cycle",
+    "event_bank_holiday",
+    "event_shopping_peak",
     "hour_sin",
     "hour_cos",
     "net_flow_lag_1",
@@ -59,6 +65,60 @@ def add_calendar_features(frame: pd.DataFrame, holidays: pd.DataFrame) -> pd.Dat
     result["is_month_end"] = timestamps.dt.is_month_end.astype(int)
     result["is_payroll_day"] = timestamps.dt.day.isin([15, 25, 28]).astype(int)
     return result
+
+
+def _empty_known_event_features(frame: pd.DataFrame) -> pd.DataFrame:
+    result = frame.copy()
+    result["known_event_count"] = 0
+    result["known_event_expected_net_flow"] = 0.0
+    result["event_payroll_day"] = 0
+    result["event_merchant_payout_cycle"] = 0
+    result["event_bank_holiday"] = 0
+    result["event_shopping_peak"] = 0
+    return result
+
+
+def add_known_event_features(
+    frame: pd.DataFrame,
+    known_events: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    result = _empty_known_event_features(frame)
+    if known_events is None or known_events.empty:
+        return result
+
+    events = known_events.copy()
+    events["event_date_key"] = pd.to_datetime(events["event_date"], utc=True).dt.strftime("%Y-%m-%d")
+    result["event_date_key"] = pd.to_datetime(result["timestamp"], utc=True).dt.strftime("%Y-%m-%d")
+
+    for idx, row in result.iterrows():
+        matches = events.loc[events["event_date_key"] == row["event_date_key"]].copy()
+        if matches.empty:
+            continue
+
+        for col in ("account_id", "bank_id", "currency"):
+            if col not in result.columns:
+                continue
+            values = matches[col].fillna("").astype(str)
+            matches = matches.loc[(values == "") | (values == str(row[col]))]
+
+        if matches.empty:
+            continue
+
+        signed_amounts = []
+        for event in matches.to_dict("records"):
+            amount = float(event.get("expected_amount", 0.0) or 0.0)
+            direction = str(event.get("impact_direction", "neutral"))
+            signed_amounts.append(amount if direction == "inflow" else (-amount if direction == "outflow" else 0.0))
+
+        event_types = set(matches["event_type"].astype(str).tolist())
+        result.at[idx, "known_event_count"] = int(len(matches))
+        result.at[idx, "known_event_expected_net_flow"] = float(sum(signed_amounts))
+        result.at[idx, "event_payroll_day"] = int("payroll_day" in event_types)
+        result.at[idx, "event_merchant_payout_cycle"] = int("merchant_payout_cycle" in event_types)
+        result.at[idx, "event_bank_holiday"] = int("bank_holiday" in event_types)
+        result.at[idx, "event_shopping_peak"] = int("shopping_peak" in event_types)
+
+    return result.drop(columns=["event_date_key"])
 
 
 def add_mad_zscore_flags(
@@ -148,6 +208,7 @@ def build_scheduled_cashflow_frame(
 def build_feature_matrix(
     history: pd.DataFrame,
     holidays: pd.DataFrame,
+    known_events: pd.DataFrame | None = None,
     alpha: float = EWMA_ALPHA,
     anomaly_threshold: float = MAD_ZSCORE_THRESHOLD,
 ) -> tuple[pd.DataFrame, dict[str, object]]:
@@ -155,6 +216,7 @@ def build_feature_matrix(
     frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True)
     frame = add_cyclical_time_features(frame)
     frame = add_calendar_features(frame, holidays)
+    frame = add_known_event_features(frame, known_events)
     frame = add_mad_zscore_flags(frame, threshold=anomaly_threshold)
     frame = add_rolling_features(frame, alpha=alpha)
 
@@ -167,10 +229,38 @@ def build_feature_matrix(
         "anomaly_rows": int(frame["is_anomaly_mad"].sum()),
         "anomaly_threshold": float(anomaly_threshold),
         "ewma_alpha": float(alpha),
+        "known_event_rows": int(0 if known_events is None else len(known_events)),
         "feature_columns": BASE_FEATURE_COLUMNS,
     }
 
     return frame, summary
+
+
+def summarize_anomaly_flags(
+    feature_frame: pd.DataFrame,
+    limit: int = 8,
+    threshold: float = MAD_ZSCORE_THRESHOLD,
+) -> list[dict[str, object]]:
+    anomalies = feature_frame.loc[feature_frame["is_anomaly_mad"]].copy()
+    if anomalies.empty:
+        return []
+
+    anomalies = anomalies.sort_values("mad_zscore", ascending=False).head(limit)
+    return [
+        {
+            "date": pd.Timestamp(row["timestamp"]).strftime("%Y-%m-%d"),
+            "account_id": str(row["account_id"]),
+            "bank_id": str(row.get("bank_id", "")),
+            "currency": str(row["currency"]),
+            "net_flow": float(row["net_flow"]),
+            "rolling_median": float(row["rolling_median"]) if pd.notna(row["rolling_median"]) else None,
+            "rolling_mad": float(row["rolling_mad"]) if pd.notna(row["rolling_mad"]) else None,
+            "mad_zscore": float(row["mad_zscore"]),
+            "threshold": float(threshold),
+            "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        }
+        for row in anomalies.to_dict("records")
+    ]
 
 
 def latest_feature_state(feature_frame: pd.DataFrame) -> pd.DataFrame:

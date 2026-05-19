@@ -21,6 +21,7 @@ except Exception:
 OPTIMIZER_FORMULAS = {
     "objective": "min sum_i sum_j variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j",
     "balance_floor": "Balance_b + inflow_transfers_b - outflow_transfers_b >= B_min_b",
+    "survival_floor": "Balance_after_a >= max(B_min_a, Balance_now_a + gap_p05_a)",
     "source_liquidity": "sum_j x_b_j <= max(0, Balance_b - B_min_b)",
     "route_binary": "x_i_j <= M * route_used_i_j",
     "ccri_exposure": "sum_accounts Balance_bank_after <= MaxExposure(CCRI_bank)",
@@ -236,11 +237,26 @@ def _bank_exposures(balances: pd.DataFrame) -> dict[str, float]:
 def _validate_solution(
     balances: pd.DataFrame,
     exposure_limits: dict[str, float],
+    survival_min_balances: dict[str, float] | None = None,
 ) -> str | None:
-    floor_breaches = balances.loc[balances["settled_balance"] + OPTIMIZER_EPSILON < balances["required_buffer"]]
+    survival_min_balances = survival_min_balances or {}
+    working = balances.copy()
+    working["effective_required_buffer"] = working.apply(
+        lambda row: max(
+            float(row["required_buffer"]),
+            float(survival_min_balances.get(str(row["account_id"]), float(row["required_buffer"]))),
+        ),
+        axis=1,
+    )
+    floor_breaches = working.loc[
+        working["settled_balance"] + OPTIMIZER_EPSILON < working["effective_required_buffer"]
+    ]
     if not floor_breaches.empty:
-        account_ids = ", ".join(floor_breaches["account_id"].astype(str).tolist())
-        return f"Balance floor breached for accounts: {account_ids}."
+        account_ids = ", ".join(
+            f"{row['account_id']} needs {float(row['effective_required_buffer']):,.0f}"
+            for row in floor_breaches.to_dict("records")
+        )
+        return f"Balance survival floor breached for accounts: {account_ids}."
 
     exposures = _bank_exposures(balances)
     over_limit = [
@@ -259,6 +275,7 @@ def _solve_with_pulp(
     balances: pd.DataFrame,
     routes: list[Route],
     exposure_limits: dict[str, float],
+    survival_min_balances: dict[str, float] | None = None,
 ) -> tuple[str, list[dict[str, object]], str | None]:
     if not PULP_AVAILABLE:
         return "error", [], "PuLP is not installed."
@@ -267,6 +284,7 @@ def _solve_with_pulp(
 
     problem = pulp.LpProblem("liquidity_rebalance", pulp.LpMinimize)
     big_m = max(float(balances["settled_balance"].sum()), 1.0)
+    survival_min_balances = survival_min_balances or {}
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="Constructing LpVariable", category=DeprecationWarning)
         route_vars = {
@@ -302,8 +320,12 @@ def _solve_with_pulp(
         )
         outgoing = pulp.lpSum(route_vars[route.key] for route in routes if route.source_account_id == account_id)
         final_balance = float(account["settled_balance"]) + incoming - outgoing
-        problem += final_balance >= float(account["required_buffer"])
-        problem += outgoing <= max(0.0, float(account["settled_balance"]) - float(account["required_buffer"]))
+        effective_floor = max(
+            float(account["required_buffer"]),
+            float(survival_min_balances.get(str(account_id), float(account["required_buffer"]))),
+        )
+        problem += final_balance >= effective_floor
+        problem += outgoing <= max(0.0, float(account["settled_balance"]) - effective_floor)
 
     for exposure_key, limit in exposure_limits.items():
         bank_id, currency = exposure_key.split(":", 1)
@@ -339,12 +361,14 @@ def _solve_with_greedy_fallback(
     balances: pd.DataFrame,
     routes: list[Route],
     exposure_limits: dict[str, float],
+    survival_min_balances: dict[str, float] | None = None,
 ) -> tuple[str, list[dict[str, object]], str | None]:
     if not routes:
         return "infeasible", [], "No transfer routes are available."
 
     working = balances.copy()
     transfers: list[dict[str, object]] = []
+    survival_min_balances = survival_min_balances or {}
 
     def account_row(account_id: str) -> pd.Series:
         return working.loc[working["account_id"] == account_id].iloc[0]
@@ -359,7 +383,11 @@ def _solve_with_greedy_fallback(
 
     def free_liquidity(account_id: str) -> float:
         row = account_row(account_id)
-        return max(0.0, float(row["settled_balance"]) - float(row["required_buffer"]))
+        effective_floor = max(
+            float(row["required_buffer"]),
+            float(survival_min_balances.get(str(account_id), float(row["required_buffer"]))),
+        )
+        return max(0.0, float(row["settled_balance"]) - effective_floor)
 
     def destination_capacity(account_id: str) -> float:
         row = account_row(account_id)
@@ -397,10 +425,17 @@ def _solve_with_greedy_fallback(
             apply(route, amount)
             excess = current_exposure(bank_id, currency) - limit
 
-    deficit_accounts = working.loc[working["settled_balance"] < working["required_buffer"]]
+    working["effective_required_buffer"] = working.apply(
+        lambda row: max(
+            float(row["required_buffer"]),
+            float(survival_min_balances.get(str(row["account_id"]), float(row["required_buffer"]))),
+        ),
+        axis=1,
+    )
+    deficit_accounts = working.loc[working["settled_balance"] < working["effective_required_buffer"]]
     for deficit_account in deficit_accounts.to_dict("records"):
         account_id = deficit_account["account_id"]
-        deficit = float(deficit_account["required_buffer"]) - float(deficit_account["settled_balance"])
+        deficit = float(deficit_account["effective_required_buffer"]) - float(deficit_account["settled_balance"])
         while deficit > OPTIMIZER_EPSILON:
             candidate_routes = [
                 route
@@ -414,9 +449,12 @@ def _solve_with_greedy_fallback(
             route = candidate_routes[0]
             amount = min(deficit, free_liquidity(route.source_account_id))
             apply(route, amount)
-            deficit = float(account_row(account_id)["required_buffer"]) - float(account_row(account_id)["settled_balance"])
+            deficit = (
+                float(account_row(account_id)["effective_required_buffer"])
+                - float(account_row(account_id)["settled_balance"])
+            )
 
-    validation_error = _validate_solution(working, exposure_limits)
+    validation_error = _validate_solution(working, exposure_limits, survival_min_balances)
     if validation_error:
         return "infeasible", transfers, validation_error
 
@@ -429,6 +467,7 @@ def solve_liquidity_rebalance(
     transfer_costs: pd.DataFrame | None = None,
     downgrade_bank_id: str | None = None,
     downgrade_score_delta: int = DOWNGRADE_SCORE_DELTA,
+    survival_min_balances: dict[str, float] | None = None,
 ) -> dict[str, object]:
     data = load_demo_data()
     balances_df = _normalise_balances(balances if balances is not None else data["balances"])
@@ -451,15 +490,40 @@ def solve_liquidity_rebalance(
         key: value for key, value in exposure_limits.items() if key in movable_route_keys
     }
     hhi_before = calculate_hhi(balances_df)
+    survival_min_balances = {
+        str(account_id): float(value)
+        for account_id, value in (survival_min_balances or {}).items()
+        if float(value) > 0
+    }
+    if survival_min_balances:
+        audit_events.append(
+            {
+                "event_type": "survival_floor_constraints",
+                "message": (
+                    "Applied forecast p05 survival floors: "
+                    + ", ".join(
+                        f"{account_id}>={value:,.0f}"
+                        for account_id, value in sorted(survival_min_balances.items())
+                    )
+                    + "."
+                ),
+            }
+        )
 
     if PULP_AVAILABLE:
-        status, transfers, infeasible_reason = _solve_with_pulp(balances_df, routes, exposure_limits)
+        status, transfers, infeasible_reason = _solve_with_pulp(
+            balances_df,
+            routes,
+            exposure_limits,
+            survival_min_balances,
+        )
         solver_engine = "pulp-cbc"
     else:
         status, transfers, infeasible_reason = _solve_with_greedy_fallback(
             balances_df,
             routes,
             exposure_limits,
+            survival_min_balances,
         )
         solver_engine = "greedy-fallback-no-pulp"
         if status == "optimal":
@@ -471,7 +535,7 @@ def solve_liquidity_rebalance(
             )
 
     post_balances = _post_balances_from_transfers(balances_df, transfers)
-    validation_error = _validate_solution(post_balances, exposure_limits)
+    validation_error = _validate_solution(post_balances, exposure_limits, survival_min_balances)
     if status == "optimal" and validation_error:
         status = "infeasible"
         infeasible_reason = validation_error
@@ -489,6 +553,7 @@ def solve_liquidity_rebalance(
         "transfers": transfers if status == "optimal" else [],
         "post_transfer_balances": post_balances.to_dict("records"),
         "bank_exposure_limits": {key: float(value) for key, value in exposure_limits.items()},
+        "survival_min_balances": survival_min_balances,
         "audit_events": audit_events,
         "infeasible_reason": infeasible_reason if status != "optimal" else None,
         "formulas": OPTIMIZER_FORMULAS,

@@ -1,0 +1,6 @@
+event_id,event_date,event_type,account_id,bank_id,currency,impact_direction,expected_amount,description
+event-atlas-eur-merchant-payout,2026-05-19,merchant_payout_cycle,atlas-eur-operating,atlas,EUR,outflow,4100000,Large scheduled merchant payout creates the visible EUR gap.
+event-eu-bank-holiday,2026-05-20,bank_holiday,,atlas,EUR,neutral,0,Mock EU bank holiday delays card clearing settlement by one business day.
+event-atlas-card-clearing,2026-05-21,card_settlement_delay,atlas-eur-operating,atlas,EUR,inflow,2550000,Observed card clearing inflow is lower and later than expected.
+event-uk-bank-holiday,2026-05-25,bank_holiday,meridian-gbp-operating,meridian,GBP,neutral,0,Mock UK bank holiday affects GBP operating settlement timing.
+event-month-end-payroll,2026-05-28,payroll_day,atlas-usd-operating,atlas,USD,outflow,1800000,Month-end payroll reserve pressure in USD operating account.

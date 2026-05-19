@@ -5,6 +5,7 @@ uvicorn[standard]>=0.30
 pydantic>=2.8
 python-dotenv>=1.0
 openai>=2.37
+anthropic>=0.102
 lightgbm>=4.5
 scikit-learn>=1.8
 pulp>=2.9

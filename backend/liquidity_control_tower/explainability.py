@@ -27,6 +27,12 @@ def _formula_cards() -> list[dict[str, str]]:
             "interpretation": "Uses median and MAD to flag outliers without being distorted by the outlier itself.",
         },
         {
+            "key": "known_events",
+            "title": "Known event calendar",
+            "formula": FORECAST_FORMULAS["known_events"],
+            "interpretation": "Turns payroll, payout cycles, bank holidays, and special events into model features.",
+        },
+        {
             "key": "pinball_loss",
             "title": "Quantile forecast band",
             "formula": FORECAST_FORMULAS["pinball_loss"],
@@ -70,6 +76,19 @@ def _forecast_root_causes(forecast: dict[str, object]) -> list[dict[str, object]
                 "formula_key": "risk_constraint",
             }
         )
+
+        known_events = first_breach.get("known_events", [])
+        if known_events:
+            event = known_events[0]
+            causes.append(
+                {
+                    "type": "known_event",
+                    "title": f"Known event: {event['event_type']}",
+                    "detail": str(event["description"]),
+                    "amount": float(event["expected_amount"]),
+                    "formula_key": "known_events",
+                }
+            )
 
     feature_quality = forecast["feature_quality"]
     causes.append(
@@ -210,6 +229,8 @@ def build_explanation(
     root_causes = _forecast_root_causes(forecast) + _stress_root_causes(stress)
     data_quality_notes = [
         f"Feature rows: {forecast['feature_quality']['rows_total']}; trainable rows: {forecast['feature_quality']['rows_trainable']}.",
+        f"Known calendar events loaded: {forecast['feature_quality'].get('known_event_rows', 0)}.",
+        f"MAD anomaly examples exposed: {len(forecast.get('anomaly_flags', []))}.",
         f"Forecast model path: {forecast['model_type']}.",
         f"Stress scenario: {stress['scenario_name']} with {len(stress['coefficients'])} bank/currency coefficients.",
     ]

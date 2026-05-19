@@ -1,0 +1,2844 @@
+{
+  "ai_council": {
+    "advisor_responses": [
+      {
+        "advisor": "Contrarian Risk Officer",
+        "lens": "Actively hunts for hidden failure modes, false confidence, operational blockers, and tail risks.",
+        "provider": "mock",
+        "response": "The weak point is no longer a bad transfer; it is an infeasible survival problem. HHI remains 0.352, ES99 is 2,134,782, and the governance gate says reject. Present this as a blocked optimizer case that requires contingency funding, payment throttling, or confirmed fallback rails, with the infeasibility reason visible."
+      },
+      {
+        "advisor": "Quant/Data Scientist",
+        "lens": "Checks whether the forecast band, anomaly logic, ES99, HHI, and optimizer constraints are mathematically coherent.",
+        "provider": "mock",
+        "response": "The numerical chain is coherent: p05 breach drives downside risk, MAD filtering protects training data, ES99 is 2,134,782, and HHI flags concentration. The MIP output is valid if all post-transfer balances remain above B_min and the p05 breach is not worsened. I would emphasize that the LLM council is interpreting model outputs, not replacing LightGBM quantiles or PuLP constraints."
+      },
+      {
+        "advisor": "Treasury Operator",
+        "lens": "Focuses on whether the action is executable before cut-off and whether the transfer plan fits real treasury workflow.",
+        "provider": "mock",
+        "response": "Treasury execution should treat this as a contingency case: no feasible transfer plan was found under survival and exposure constraints. The user needs the blocker, missing funding amount, settlement rail status, and next action in one card. The decision should stay human-approved because an infeasible optimizer output is an escalation, not a money-movement instruction."
+      },
+      {
+        "advisor": "CFO Lens",
+        "lens": "Converts the recommendation into business value, liquidity release, cost, and executive-level tradeoffs.",
+        "provider": "mock",
+        "response": "The CFO story is not a cheap-transfer ROI story anymore: avoided liquidity gap is 2,136,774, ES99 is 2,134,782, and the optimizer found no feasible route under survival floors. Lead with business exposure and contingency funding, then show why the model refused a false-positive recommendation."
+      },
+      {
+        "advisor": "Regulatory/Bank Exposure Lens",
+        "lens": "Reviews CCRI downgrade, concentration, exposure limits, auditability, and defensibility.",
+        "provider": "mock",
+        "response": "The exposure story is defensible because the engine refuses to fabricate a transfer when CCRI limits and survival floors conflict. Optimizer result: no feasible transfer plan was found under survival and exposure constraints. Keep the survival floors, solver status, infeasibility reason, and audit events visible for review."
+      }
+    ],
+    "anthropic_model": "claude-sonnet-4-5-20250929",
+    "facts": {
+      "approval_gate": {
+        "blockers": [
+          "Optimizer status is infeasible, not optimal."
+        ],
+        "can_auto_approve": false,
+        "checked_formulas": {
+          "approval_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+          "forecast_gap": "gap_p05(account) = max(0, -min_t usable_liquidity_p05(t, account))",
+          "net_transfer_impact": "net_impact(account) = inflows_to_account - outflows_from_account",
+          "target2_feasibility": "TARGET2 outage blocks automatic approval for interbank EUR routes without fallback rail confirmation"
+        },
+        "decision": "reject",
+        "forecast_gaps_by_account": {
+          "atlas-eur-operating": 2136773.6317645735,
+          "atlas-usd-operating": 0.0,
+          "meridian-gbp-operating": 0.0,
+          "nova-eur-reserve": 0.0,
+          "orion-eur-safeguard": 0.0
+        },
+        "net_transfer_impact_by_account": {},
+        "required_next_actions": [
+          "Resolve infeasibility or switch to contingency liquidity actions.",
+          "Attach a funding or payment-throttling plan for the p05 breach.",
+          "Show residual concentration risk and do not claim full de-risking."
+        ],
+        "severity": "red",
+        "warnings": [
+          "Forecast breach is not directly funded by the selected transfers: atlas-eur-operating gap 2,136,774.",
+          "HHI after stress is 0.352, above threshold 0.25."
+        ]
+      },
+      "explanation": {
+        "risk_status": "Red",
+        "root_causes": [
+          {
+            "amount": -2116421.3027657485,
+            "detail": "atlas-eur-operating reaches EUR p05 usable liquidity of -2,116,421, below required buffer on 2026-05-19.",
+            "formula_key": "risk_constraint",
+            "title": "Downside forecast breaches buffer",
+            "type": "forecast_breach"
+          },
+          {
+            "amount": 4100000.0,
+            "detail": "Large scheduled merchant payout creates the visible EUR gap.",
+            "formula_key": "known_events",
+            "title": "Known event: merchant_payout_cycle",
+            "type": "known_event"
+          },
+          {
+            "amount": 11.0,
+            "detail": "11 historical rows were flagged with MAD Z-Score before training/forecasting.",
+            "formula_key": "mad_zscore",
+            "title": "Anomaly-aware feature pipeline",
+            "type": "feature_quality"
+          },
+          {
+            "amount": 2021000.0,
+            "detail": "Stress coefficients reduced total settled liquidity by 2,021,000.",
+            "formula_key": "stress_balance",
+            "title": "TARGET2 Outage balance haircut",
+            "type": "stress_loss"
+          },
+          {
+            "amount": 2134782.3,
+            "detail": "ES 99% is 2,134,782, the mean of the worst 1% stress losses.",
+            "formula_key": "expected_shortfall_99",
+            "title": "Tail-loss estimate",
+            "type": "expected_shortfall"
+          },
+          {
+            "amount": 0.35186229087871157,
+            "detail": "HHI after stress is 0.352, above threshold 0.25.",
+            "formula_key": "hhi",
+            "title": "HHI concentration remains elevated",
+            "type": "concentration"
+          },
+          {
+            "amount": null,
+            "detail": "Optimizer status is infeasible, not optimal.",
+            "formula_key": "approval_gate",
+            "title": "Decision gate: reject",
+            "type": "governance_gate"
+          }
+        ],
+        "timeline": [
+          {
+            "date": "2026-05-18",
+            "detail": "Feature pipeline produced quantile balance corridor and HHI concentration signal.",
+            "label": "Forecast generated"
+          },
+          {
+            "date": "2026-05-19",
+            "detail": "atlas-eur-operating breaches required buffer under p05/p50 corridor.",
+            "label": "First liquidity breach"
+          },
+          {
+            "date": "2026-05-18",
+            "detail": "Stress test applies deterministic coefficients and ES 99% of 2,134,782.",
+            "label": "TARGET2 Outage"
+          },
+          {
+            "date": "2026-05-18",
+            "detail": "Solver status infeasible via pulp-cbc; 0 transfer route(s) selected; governance gate reject.",
+            "label": "Optimizer recommendation"
+          }
+        ]
+      },
+      "forecast": {
+        "feature_quality": {
+          "anomaly_rows": 11,
+          "anomaly_threshold": 4.0,
+          "ewma_alpha": 0.35,
+          "feature_columns": [
+            "day_of_week",
+            "is_weekend",
+            "is_holiday",
+            "is_month_end",
+            "is_payroll_day",
+            "known_event_count",
+            "known_event_expected_net_flow",
+            "event_payroll_day",
+            "event_merchant_payout_cycle",
+            "event_bank_holiday",
+            "event_shopping_peak",
+            "hour_sin",
+            "hour_cos",
+            "net_flow_lag_1",
+            "net_flow_lag_2",
+            "net_flow_lag_7",
+            "balance_lag_1",
+            "rolling_net_flow_mean_7",
+            "rolling_net_flow_volatility_7",
+            "ewma_net_flow",
+            "mad_zscore"
+          ],
+          "known_event_rows": 5,
+          "model_components": [
+            "lightgbm_quantile",
+            "sklearn_gbdt_quantile",
+            "ewma_volatility_baseline"
+          ],
+          "model_weights": {
+            "ewma_volatility_baseline": 0.15,
+            "lightgbm_quantile": 0.55,
+            "sklearn_gbdt_quantile": 0.3
+          },
+          "rows_total": 600,
+          "rows_trainable": 549
+        },
+        "first_breach": {
+          "account_id": "atlas-eur-operating",
+          "balance_p05": -1116421.3027657485,
+          "balance_p50": -1070299.2265911978,
+          "balance_p95": -1044959.131619073,
+          "bank_id": "atlas",
+          "bank_name": "Atlas Bank",
+          "breach": true,
+          "currency": "EUR",
+          "date": "2026-05-19",
+          "known_events": [
+            {
+              "description": "Large scheduled merchant payout creates the visible EUR gap.",
+              "event_id": "event-atlas-eur-merchant-payout",
+              "event_type": "merchant_payout_cycle",
+              "expected_amount": 4100000.0,
+              "impact_direction": "outflow"
+            }
+          ],
+          "required_buffer": 1000000.0,
+          "risk_status": "Red",
+          "scheduled_net_flow": -4100000.0,
+          "usable_liquidity_p05": -2116421.3027657485,
+          "usable_liquidity_p50": -2070299.2265911978,
+          "usable_liquidity_p95": -2044959.131619073
+        },
+        "metrics": {
+          "alert_lead_time_days": 1,
+          "backtest_windows": 549,
+          "band_coverage": 0.8633879781420765,
+          "median_wape": 1.0366792424281894,
+          "model_version": "ensemble-quantile:phase1-demo-v1"
+        },
+        "model_type": "ensemble-quantile"
+      },
+      "formulas": {
+        "approval": "source_balance -= x_i_j; destination_balance += x_i_j",
+        "expected_shortfall_99": "ES_99 = mean(losses in the worst 1% tail)",
+        "forecast_breach": "breach if balance_p05(t,b,c) < B_min(b,c)",
+        "governance_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+        "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+        "optimizer_objective": "min sum variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j"
+      },
+      "optimizer": {
+        "audit_events": [
+          {
+            "bank_id": "atlas",
+            "event_type": "bank_rating_downgrade",
+            "message": "CCRI for atlas dropped from 82 to 57; max exposure share changed from 0.45 to 0.24.",
+            "new_ccri_score": 57.0,
+            "new_max_exposure_share": 0.24,
+            "old_ccri_score": 82.0,
+            "old_max_exposure_share": 0.45
+          },
+          {
+            "event_type": "survival_floor_constraints",
+            "message": "Applied forecast p05 survival floors: atlas-eur-operating>=4,536,774."
+          }
+        ],
+        "infeasible_reason": "PuLP solver status: Infeasible.",
+        "solver_engine": "pulp-cbc",
+        "status": "infeasible",
+        "survival_min_balances": {
+          "atlas-eur-operating": 4536773.631764574
+        },
+        "total_transfer_cost": 0.0,
+        "transfers": []
+      },
+      "risk": {
+        "accounts_below_buffer": [],
+        "expected_shortfall_99": 2134782.3,
+        "hhi_after_stress": {
+          "alert": true,
+          "contributions": {
+            "atlas": 0.27577499207050565,
+            "meridian": 0.02284338437949223,
+            "nova": 0.033286132282395665,
+            "orion": 0.019957782146317982
+          },
+          "threshold": 0.25,
+          "value": 0.35186229087871157
+        },
+        "hhi_before": {
+          "alert": true,
+          "contributions": {
+            "atlas": 0.263098246135553,
+            "meridian": 0.020232609988109395,
+            "nova": 0.039313317479191444,
+            "orion": 0.021477407847800233
+          },
+          "threshold": 0.25,
+          "value": 0.344121581450654
+        },
+        "total_stress_loss": 2021000.0
+      },
+      "roi": {
+        "avoided_liquidity_gap": 2136773.6317645735,
+        "expected_shortfall_99": 2134782.3,
+        "optimizer_cost": 0.0,
+        "released_idle_reserve": 5800000.0,
+        "summary": "The backend identifies 2,136,774 of downside liquidity gap and ES 99% at 2,134,782, then refuses to price a false-positive transfer because survival floors and exposure limits are infeasible together. Governance decision: reject."
+      },
+      "scenario": {
+        "downgrade_bank_id": "atlas",
+        "id": "target2_outage",
+        "name": "TARGET2 Outage"
+      }
+    },
+    "fallback_reason": "provider=mock",
+    "formulas_used": {
+      "approval": "source_balance -= x_i_j; destination_balance += x_i_j",
+      "expected_shortfall_99": "ES_99 = mean(losses in the worst 1% tail)",
+      "forecast_breach": "breach if balance_p05(t,b,c) < B_min(b,c)",
+      "governance_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+      "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+      "optimizer_objective": "min sum variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j"
+    },
+    "framed_question": "Evaluate whether the Liquidity Control Tower should recommend and approve the current treasury action. The mathematical engine has already produced forecast, stress, HHI, CCRI, ES99, and MIP optimizer outputs. Your job is not to recalculate the model, but to challenge and interpret the recommendation from your assigned lens.\n\nScenario: TARGET2 Outage (target2_outage); downgraded bank: atlas.\nForecast first breach: {'date': '2026-05-19', 'account_id': 'atlas-eur-operating', 'bank_id': 'atlas', 'bank_name': 'Atlas Bank', 'currency': 'EUR', 'required_buffer': 1000000.0, 'scheduled_net_flow': -4100000.0, 'known_events': [{'event_id': 'event-atlas-eur-merchant-payout', 'event_type': 'merchant_payout_cycle', 'impact_direction': 'outflow', 'expected_amount': 4100000.0, 'description': 'Large scheduled merchant payout creates the visible EUR gap.'}], 'balance_p05': -1116421.3027657485, 'balance_p50': -1070299.2265911978, 'balance_p95': -1044959.131619073, 'usable_liquidity_p05': -2116421.3027657485, 'usable_liquidity_p50': -2070299.2265911978, 'usable_liquidity_p95': -2044959.131619073, 'risk_status': 'Red', 'breach': True}.\nHHI after stress: 0.352; ES99: 2,134,782; stress loss: 2,021,000.\nOptimizer status: infeasible via pulp-cbc; transfer routes: 0; transfer cost: 0.00.\nGovernance gate: reject.\nROI: avoided gap 2,136,774, released reserve 5,800,000.\n\nReturn a direct assessment for a hackathon jury and treasury user.",
+    "live_available": true,
+    "mode": "mock",
+    "model": "gpt-5.2",
+    "openai_model": "gpt-5.2",
+    "peer_reviews": [
+      {
+        "provider": "mock",
+        "response": "Strongest response is the one tying numerical risk to a concrete human-approved action. The biggest blind spot is pretending the transfer removes all residual concentration risk. All responses should make clearer that AI is only a governance layer over deterministic math.",
+        "reviewer": "Contrarian Risk Officer"
+      },
+      {
+        "provider": "mock",
+        "response": "Strongest response is the one tying numerical risk to a concrete human-approved action. The biggest blind spot is pretending the transfer removes all residual concentration risk. All responses should make clearer that AI is only a governance layer over deterministic math.",
+        "reviewer": "Quant/Data Scientist"
+      },
+      {
+        "provider": "mock",
+        "response": "Strongest response is the one tying numerical risk to a concrete human-approved action. The biggest blind spot is pretending the transfer removes all residual concentration risk. All responses should make clearer that AI is only a governance layer over deterministic math.",
+        "reviewer": "Treasury Operator"
+      },
+      {
+        "provider": "mock",
+        "response": "Strongest response is the one tying numerical risk to a concrete human-approved action. The biggest blind spot is pretending the transfer removes all residual concentration risk. All responses should make clearer that AI is only a governance layer over deterministic math.",
+        "reviewer": "CFO Lens"
+      },
+      {
+        "provider": "mock",
+        "response": "Strongest response is the one tying numerical risk to a concrete human-approved action. The biggest blind spot is pretending the transfer removes all residual concentration risk. All responses should make clearer that AI is only a governance layer over deterministic math.",
+        "reviewer": "Regulatory/Bank Exposure Lens"
+      }
+    ],
+    "provider_mode": "mock",
+    "provider_status": {
+      "anthropic": true,
+      "openai": true
+    },
+    "verdict": "## Where the Council Agrees\nThe council agrees the mathematical core should stay authoritative: quantile forecast, HHI, ES99, and PuLP constraints drive the decision. The AI layer should explain and challenge, not calculate.\n\n## Where the Council Clashes\nThe CFO lens wants to lead with released reserve and avoided gap, while the risk lenses warn that HHI remains elevated and should not be oversold as fully solved.\n\n## Blind Spots the Council Caught\nResidual concentration risk and execution timing need to remain visible after the recommendation. The demo should show auditability, not just a polished verdict.\n\n## The Recommendation\nUse the council as a governance and explanation layer. The deterministic gate decision is reject; for this scenario, reject auto-approval and require manual treasury review, while clearly showing remaining HHI, blockers, warnings, and the approval log.\n\n## The One Thing to Do First\nAdd the AI Council panel after the optimizer card, with five advisor opinions and a chairman verdict."
+  },
+  "contingency": {
+    "actions": [
+      {
+        "account_id": "atlas-eur-operating",
+        "action_type": "prefund_breached_account",
+        "amount": 2136773.6317645735,
+        "candidate_rails": [
+          "on-us book transfer",
+          "prefunded correspondent account",
+          "intraday credit line"
+        ],
+        "currency": "EUR",
+        "deadline": "2026-05-19",
+        "description": "Prefund atlas-eur-operating by at least EUR 2,136,774 before 2026-05-19 to restore the p05 survival floor.",
+        "formula": "gap_p05(account) = max(0, -min_t usable_liquidity_p05(t, account))",
+        "priority": "critical"
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "action_type": "payment_throttle",
+        "amount": 2136773.6317645735,
+        "business_reason": "scheduled merchant payout",
+        "counterparty": "Top merchants payout batch",
+        "currency": "EUR",
+        "deadline": "2026-05-19T18:00:00Z",
+        "description": "Delay or partially throttle EUR 2,136,774 pending outflow to preserve liquidity for the p05 breach.",
+        "formula": "deferrable_coverage = min(gap_p05, sum eligible_outflows_before_cutoff)",
+        "priority": "high",
+        "transaction_id": "flow-eur-merchant-payout"
+      }
+    ],
+    "approval_gate_decision": "reject",
+    "deferrable_coverage": 2136773.6317645735,
+    "downgrade_bank_id": "atlas",
+    "formulas": {
+      "contingency_priority": "priority = fund breached account first, then throttle non-critical outflows, then request intraday credit",
+      "credit_line_need": "credit_line_need = max(0, gap_p05 - deferrable_coverage)",
+      "deferrable_coverage": "deferrable_coverage = min(gap_p05, sum eligible_outflows_before_cutoff)",
+      "gap_p05": "gap_p05(account) = max(0, -min_t usable_liquidity_p05(t, account))"
+    },
+    "intraday_credit_need": 0.0,
+    "optimizer_infeasible_reason": "PuLP solver status: Infeasible.",
+    "optimizer_status": "infeasible",
+    "plan_status": "contingency_required",
+    "scenario_id": "target2_outage",
+    "total_p05_gap": 2136773.6317645735
+  },
+  "explanation": {
+    "affected_account_id": "atlas-eur-operating",
+    "affected_currency": "EUR",
+    "data_quality_notes": [
+      "Feature rows: 600; trainable rows: 549.",
+      "Known calendar events loaded: 5.",
+      "MAD anomaly examples exposed: 8.",
+      "Forecast model path: ensemble-quantile.",
+      "Stress scenario: TARGET2 Outage with 5 bank/currency coefficients."
+    ],
+    "formula_cards": [
+      {
+        "formula": "hour_sin = sin(2*pi*h/24), hour_cos = cos(2*pi*h/24)",
+        "interpretation": "Encodes hour of day so 23:00 and 00:00 are close in feature space.",
+        "key": "cyclical_hour",
+        "title": "Cyclical transaction hour"
+      },
+      {
+        "formula": "EWMA_t = alpha*y_t + (1-alpha)*EWMA_{t-1}",
+        "interpretation": "Weights recent cash-flow history more heavily than older observations.",
+        "key": "ewma",
+        "title": "EWMA liquidity momentum"
+      },
+      {
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "interpretation": "Uses median and MAD to flag outliers without being distorted by the outlier itself.",
+        "key": "mad_zscore",
+        "title": "Robust anomaly score"
+      },
+      {
+        "formula": "x_event(t,a) = 1 if known calendar event applies to account a on date t",
+        "interpretation": "Turns payroll, payout cycles, bank holidays, and special events into model features.",
+        "key": "known_events",
+        "title": "Known event calendar"
+      },
+      {
+        "formula": "L_q(y, y_hat) = max(q*(y-y_hat), (q-1)*(y-y_hat))",
+        "interpretation": "Trains p05, p50, and p95 forecasts so treasury sees downside and upside corridors.",
+        "key": "pinball_loss",
+        "title": "Quantile forecast band"
+      },
+      {
+        "formula": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+        "interpretation": "Squares bank balance shares, so one oversized bank exposure raises risk quickly.",
+        "key": "hhi",
+        "title": "Bank concentration"
+      },
+      {
+        "formula": "min sum_i sum_j variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j",
+        "interpretation": "Chooses transfer routes that satisfy limits while minimizing variable and fixed costs.",
+        "key": "optimizer",
+        "title": "Minimum-cost rebalance"
+      },
+      {
+        "formula": "ES_99 = mean(losses in the worst 1% tail)",
+        "interpretation": "Reports the average loss in the worst 1% of deterministic demo stress outcomes.",
+        "key": "expected_shortfall_99",
+        "title": "Expected Shortfall 99%"
+      }
+    ],
+    "risk_status": "Red",
+    "root_causes": [
+      {
+        "amount": -2116421.3027657485,
+        "detail": "atlas-eur-operating reaches EUR p05 usable liquidity of -2,116,421, below required buffer on 2026-05-19.",
+        "formula_key": "risk_constraint",
+        "title": "Downside forecast breaches buffer",
+        "type": "forecast_breach"
+      },
+      {
+        "amount": 4100000.0,
+        "detail": "Large scheduled merchant payout creates the visible EUR gap.",
+        "formula_key": "known_events",
+        "title": "Known event: merchant_payout_cycle",
+        "type": "known_event"
+      },
+      {
+        "amount": 11.0,
+        "detail": "11 historical rows were flagged with MAD Z-Score before training/forecasting.",
+        "formula_key": "mad_zscore",
+        "title": "Anomaly-aware feature pipeline",
+        "type": "feature_quality"
+      },
+      {
+        "amount": 2021000.0,
+        "detail": "Stress coefficients reduced total settled liquidity by 2,021,000.",
+        "formula_key": "stress_balance",
+        "title": "TARGET2 Outage balance haircut",
+        "type": "stress_loss"
+      },
+      {
+        "amount": 2134782.3,
+        "detail": "ES 99% is 2,134,782, the mean of the worst 1% stress losses.",
+        "formula_key": "expected_shortfall_99",
+        "title": "Tail-loss estimate",
+        "type": "expected_shortfall"
+      },
+      {
+        "amount": 0.35186229087871157,
+        "detail": "HHI after stress is 0.352, above threshold 0.25.",
+        "formula_key": "hhi",
+        "title": "HHI concentration remains elevated",
+        "type": "concentration"
+      },
+      {
+        "amount": null,
+        "detail": "Optimizer status is infeasible, not optimal.",
+        "formula_key": "approval_gate",
+        "title": "Decision gate: reject",
+        "type": "governance_gate"
+      }
+    ],
+    "summary": "Liquidity risk is driven by a downside forecast breach, elevated bank concentration, and stress-adjusted balance haircuts. The optimizer converts those signals into a transfer plan, then the governance gate checks whether the plan can be safely approved.",
+    "timeline": [
+      {
+        "date": "2026-05-18",
+        "detail": "Feature pipeline produced quantile balance corridor and HHI concentration signal.",
+        "label": "Forecast generated"
+      },
+      {
+        "date": "2026-05-19",
+        "detail": "atlas-eur-operating breaches required buffer under p05/p50 corridor.",
+        "label": "First liquidity breach"
+      },
+      {
+        "date": "2026-05-18",
+        "detail": "Stress test applies deterministic coefficients and ES 99% of 2,134,782.",
+        "label": "TARGET2 Outage"
+      },
+      {
+        "date": "2026-05-18",
+        "detail": "Solver status infeasible via pulp-cbc; 0 transfer route(s) selected; governance gate reject.",
+        "label": "Optimizer recommendation"
+      }
+    ]
+  },
+  "forecast": {
+    "anomaly_flags": [
+      {
+        "account_id": "atlas-eur-operating",
+        "bank_id": "atlas",
+        "currency": "EUR",
+        "date": "2026-05-02",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 22.39893572934124,
+        "net_flow": -796775.7514754148,
+        "rolling_mad": 24194.882999964535,
+        "rolling_median": 6703.942917554621,
+        "threshold": 4.0
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "bank_id": "atlas",
+        "currency": "EUR",
+        "date": "2026-02-25",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 17.865011036460437,
+        "net_flow": -734211.7165981573,
+        "rolling_mad": 28692.96959997795,
+        "rolling_median": 25769.36745732735,
+        "threshold": 4.0
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "bank_id": "atlas",
+        "currency": "EUR",
+        "date": "2026-04-05",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 16.895770750997368,
+        "net_flow": -778901.39006743,
+        "rolling_mad": 31442.289717294683,
+        "rolling_median": 8717.58244762171,
+        "threshold": 4.0
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "bank_id": "atlas",
+        "currency": "USD",
+        "date": "2026-01-30",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 12.635978656574785,
+        "net_flow": -359979.2323519247,
+        "rolling_mad": 18301.045358242198,
+        "rolling_median": -17125.582704883323,
+        "threshold": 4.0
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "bank_id": "atlas",
+        "currency": "EUR",
+        "date": "2026-01-30",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 7.398413115671714,
+        "net_flow": -112785.64634123787,
+        "rolling_mad": 11050.375846351033,
+        "rolling_median": 8424.680777531652,
+        "threshold": 4.0
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "bank_id": "atlas",
+        "currency": "USD",
+        "date": "2026-02-27",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 6.436903536994516,
+        "net_flow": -393185.66125251615,
+        "rolling_mad": 41473.62665929014,
+        "rolling_median": 2611.8057762938333,
+        "threshold": 4.0
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "bank_id": "meridian",
+        "currency": "GBP",
+        "date": "2026-01-30",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 6.258240721638821,
+        "net_flow": -147054.79317105465,
+        "rolling_mad": 15376.72924613209,
+        "rolling_median": -4382.307622944366,
+        "threshold": 4.0
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "bank_id": "meridian",
+        "currency": "GBP",
+        "date": "2026-02-27",
+        "formula": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+        "mad_zscore": 5.801535932160307,
+        "net_flow": -155179.5345098718,
+        "rolling_mad": 18389.39507269209,
+        "rolling_median": 2994.2207061429435,
+        "threshold": 4.0
+      }
+    ],
+    "fallback_reason": null,
+    "feature_quality": {
+      "anomaly_rows": 11,
+      "anomaly_threshold": 4.0,
+      "ewma_alpha": 0.35,
+      "feature_columns": [
+        "day_of_week",
+        "is_weekend",
+        "is_holiday",
+        "is_month_end",
+        "is_payroll_day",
+        "known_event_count",
+        "known_event_expected_net_flow",
+        "event_payroll_day",
+        "event_merchant_payout_cycle",
+        "event_bank_holiday",
+        "event_shopping_peak",
+        "hour_sin",
+        "hour_cos",
+        "net_flow_lag_1",
+        "net_flow_lag_2",
+        "net_flow_lag_7",
+        "balance_lag_1",
+        "rolling_net_flow_mean_7",
+        "rolling_net_flow_volatility_7",
+        "ewma_net_flow",
+        "mad_zscore"
+      ],
+      "known_event_rows": 5,
+      "model_components": [
+        "lightgbm_quantile",
+        "sklearn_gbdt_quantile",
+        "ewma_volatility_baseline"
+      ],
+      "model_weights": {
+        "ewma_volatility_baseline": 0.15,
+        "lightgbm_quantile": 0.55,
+        "sklearn_gbdt_quantile": 0.3
+      },
+      "rows_total": 600,
+      "rows_trainable": 549
+    },
+    "first_breach": {
+      "account_id": "atlas-eur-operating",
+      "balance_p05": -1116421.3027657485,
+      "balance_p50": -1070299.2265911978,
+      "balance_p95": -1044959.131619073,
+      "bank_id": "atlas",
+      "bank_name": "Atlas Bank",
+      "breach": true,
+      "currency": "EUR",
+      "date": "2026-05-19",
+      "known_events": [
+        {
+          "description": "Large scheduled merchant payout creates the visible EUR gap.",
+          "event_id": "event-atlas-eur-merchant-payout",
+          "event_type": "merchant_payout_cycle",
+          "expected_amount": 4100000.0,
+          "impact_direction": "outflow"
+        }
+      ],
+      "required_buffer": 1000000.0,
+      "risk_status": "Red",
+      "scheduled_net_flow": -4100000.0,
+      "usable_liquidity_p05": -2116421.3027657485,
+      "usable_liquidity_p50": -2070299.2265911978,
+      "usable_liquidity_p95": -2044959.131619073
+    },
+    "forecast": [
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": -1116421.3027657485,
+        "balance_p50": -1070299.2265911978,
+        "balance_p95": -1044959.131619073,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-19",
+        "known_events": [
+          {
+            "description": "Large scheduled merchant payout creates the visible EUR gap.",
+            "event_id": "event-atlas-eur-merchant-payout",
+            "event_type": "merchant_payout_cycle",
+            "expected_amount": 4100000.0,
+            "impact_direction": "outflow"
+          }
+        ],
+        "required_buffer": 1000000.0,
+        "risk_status": "Red",
+        "scheduled_net_flow": -4100000.0,
+        "usable_liquidity_p05": -2116421.3027657485,
+        "usable_liquidity_p50": -2070299.2265911978,
+        "usable_liquidity_p95": -2044959.131619073
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4575549.111318649,
+        "balance_p50": 4628150.241069649,
+        "balance_p95": 4694900.746729039,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-19",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3375549.111318649,
+        "usable_liquidity_p50": 3428150.2410696493,
+        "usable_liquidity_p95": 3494900.7467290387
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3386798.7864323556,
+        "balance_p50": 3442378.8363455576,
+        "balance_p95": 3495461.249180515,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-19",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2486798.7864323556,
+        "usable_liquidity_p50": 2542378.8363455576,
+        "usable_liquidity_p95": 2595461.249180515
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 8834396.28025189,
+        "balance_p50": 8948080.437546674,
+        "balance_p95": 9039161.50740781,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-19",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 6834396.28025189,
+        "usable_liquidity_p50": 6948080.437546674,
+        "usable_liquidity_p95": 7039161.507407811
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 3271821.7060927316,
+        "balance_p50": 3298248.54811742,
+        "balance_p95": 3351245.1422429066,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-19",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2371821.7060927316,
+        "usable_liquidity_p50": 2398248.54811742,
+        "usable_liquidity_p95": 2451245.1422429066
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": -1136773.6317645735,
+        "balance_p50": -1062588.0407401805,
+        "balance_p95": -990923.4969736044,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-20",
+        "known_events": [
+          {
+            "description": "Mock EU bank holiday delays card clearing settlement by one business day.",
+            "event_id": "event-eu-bank-holiday",
+            "event_type": "bank_holiday",
+            "expected_amount": 0.0,
+            "impact_direction": "neutral"
+          }
+        ],
+        "required_buffer": 1000000.0,
+        "risk_status": "Red",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -2136773.6317645735,
+        "usable_liquidity_p50": -2062588.0407401805,
+        "usable_liquidity_p95": -1990923.4969736044
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4544954.791257446,
+        "balance_p50": 4638302.545538415,
+        "balance_p95": 4781093.202794627,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-20",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3344954.7912574457,
+        "usable_liquidity_p50": 3438302.545538415,
+        "usable_liquidity_p95": 3581093.2027946273
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3368902.8855403326,
+        "balance_p50": 3458112.2354550483,
+        "balance_p95": 3575127.75301866,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-20",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2468902.8855403326,
+        "usable_liquidity_p50": 2558112.2354550483,
+        "usable_liquidity_p95": 2675127.75301866
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 8755353.061061097,
+        "balance_p50": 8981073.410708927,
+        "balance_p95": 9166103.023762261,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-20",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 6755353.061061097,
+        "usable_liquidity_p50": 6981073.410708927,
+        "usable_liquidity_p95": 7166103.0237622615
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 3238638.932939632,
+        "balance_p50": 3295722.415183154,
+        "balance_p95": 3401878.4096145467,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-20",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2338638.932939632,
+        "usable_liquidity_p50": 2395722.415183154,
+        "usable_liquidity_p95": 2501878.4096145467
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 1148293.7297812514,
+        "balance_p50": 1239643.0352206442,
+        "balance_p95": 1393852.9811658016,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-21",
+        "known_events": [
+          {
+            "description": "Observed card clearing inflow is lower and later than expected.",
+            "event_id": "event-atlas-card-clearing",
+            "event_type": "card_settlement_delay",
+            "expected_amount": 2550000.0,
+            "impact_direction": "inflow"
+          }
+        ],
+        "required_buffer": 1000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 2350000.0,
+        "usable_liquidity_p05": 148293.7297812514,
+        "usable_liquidity_p50": 239643.0352206442,
+        "usable_liquidity_p95": 393852.98116580164
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4460517.412136044,
+        "balance_p50": 4571169.914264756,
+        "balance_p95": 4833716.654851397,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-21",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3260517.4121360444,
+        "usable_liquidity_p50": 3371169.9142647563,
+        "usable_liquidity_p95": 3633716.6548513966
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3304311.605954291,
+        "balance_p50": 3408562.3730016784,
+        "balance_p95": 3627157.540869158,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-21",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2404311.605954291,
+        "usable_liquidity_p50": 2508562.3730016784,
+        "usable_liquidity_p95": 2727157.540869158
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 8635663.595476871,
+        "balance_p50": 8935691.468294587,
+        "balance_p95": 9248073.663474998,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-21",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 6635663.595476871,
+        "usable_liquidity_p50": 6935691.468294587,
+        "usable_liquidity_p95": 7248073.6634749975
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 3168550.832762071,
+        "balance_p50": 3240261.0142671815,
+        "balance_p95": 3434665.561794556,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-21",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2268550.832762071,
+        "usable_liquidity_p50": 2340261.0142671815,
+        "usable_liquidity_p95": 2534665.561794556
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 1087916.4327211485,
+        "balance_p50": 1231391.5589630888,
+        "balance_p95": 1431011.4942044013,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-22",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 87916.43272114848,
+        "usable_liquidity_p50": 231391.55896308878,
+        "usable_liquidity_p95": 431011.4942044013
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 5329479.701718905,
+        "balance_p50": 5511963.546873323,
+        "balance_p95": 5840544.192011971,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-22",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 950000.0,
+        "usable_liquidity_p05": 4129479.701718905,
+        "usable_liquidity_p50": 4311963.546873323,
+        "usable_liquidity_p95": 4640544.192011971
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3244698.4890941996,
+        "balance_p50": 3404489.572712798,
+        "balance_p95": 3682155.820809817,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-22",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2344698.4890941996,
+        "usable_liquidity_p50": 2504489.572712798,
+        "usable_liquidity_p95": 2782155.820809817
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 10118135.224590477,
+        "balance_p50": 10529461.159384381,
+        "balance_p95": 10937502.985051997,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-22",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 1600000.0,
+        "usable_liquidity_p05": 8118135.224590477,
+        "usable_liquidity_p50": 8529461.159384381,
+        "usable_liquidity_p95": 8937502.985051997
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 2205307.123245658,
+        "balance_p50": 2323689.210885902,
+        "balance_p95": 2570176.5802141475,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-22",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": -900000.0,
+        "usable_liquidity_p05": 1305307.123245658,
+        "usable_liquidity_p50": 1423689.210885902,
+        "usable_liquidity_p95": 1670176.5802141475
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 1031024.5127651603,
+        "balance_p50": 1233711.1508355963,
+        "balance_p95": 1470276.4994910667,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-23",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 31024.512765160296,
+        "usable_liquidity_p50": 233711.15083559626,
+        "usable_liquidity_p95": 470276.4994910667
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 5250873.490524586,
+        "balance_p50": 5513591.872125965,
+        "balance_p95": 5901064.342532289,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-23",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 4050873.4905245863,
+        "usable_liquidity_p50": 4313591.872125965,
+        "usable_liquidity_p95": 4701064.342532289
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3188365.209045668,
+        "balance_p50": 3411778.904700892,
+        "balance_p95": 3739772.7455307413,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-23",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2288365.209045668,
+        "usable_liquidity_p50": 2511778.904700892,
+        "usable_liquidity_p95": 2839772.7455307413
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9997544.597740404,
+        "balance_p50": 10527000.450781872,
+        "balance_p95": 11033480.394518372,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-23",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7997544.597740404,
+        "usable_liquidity_p50": 8527000.450781872,
+        "usable_liquidity_p95": 9033480.394518372
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 2142970.952547268,
+        "balance_p50": 2313759.753480602,
+        "balance_p95": 2608051.8643567283,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-23",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1242970.952547268,
+        "usable_liquidity_p50": 1413759.753480602,
+        "usable_liquidity_p95": 1708051.8643567283
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 977494.9267442657,
+        "balance_p50": 1255250.1089862701,
+        "balance_p95": 1512097.380612714,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-24",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -22505.073255734285,
+        "usable_liquidity_p50": 255250.10898627015,
+        "usable_liquidity_p95": 512097.380612714
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 5172354.016303152,
+        "balance_p50": 5525770.551029131,
+        "balance_p95": 5965819.322572287,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-24",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3972354.016303152,
+        "usable_liquidity_p50": 4325770.551029131,
+        "usable_liquidity_p95": 4765819.322572287
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3133866.342306327,
+        "balance_p50": 3438271.171307074,
+        "balance_p95": 3800716.037816022,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-24",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2233866.342306327,
+        "usable_liquidity_p50": 2538271.171307074,
+        "usable_liquidity_p95": 2900716.037816022
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9876239.02825108,
+        "balance_p50": 10546456.113542408,
+        "balance_p95": 11136329.765220907,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-24",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7876239.02825108,
+        "usable_liquidity_p50": 8546456.113542408,
+        "usable_liquidity_p95": 9136329.765220907
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 2085246.9772229888,
+        "balance_p50": 2313435.775312136,
+        "balance_p95": 2648674.5060458775,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-24",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1185246.9772229888,
+        "usable_liquidity_p50": 1413435.775312136,
+        "usable_liquidity_p95": 1748674.5060458775
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 947739.8068719018,
+        "balance_p50": 1284499.4819885353,
+        "balance_p95": 1582547.1912354284,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-25",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -52260.19312809815,
+        "usable_liquidity_p50": 284499.48198853526,
+        "usable_liquidity_p95": 582547.1912354284
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 5124479.443784949,
+        "balance_p50": 5553891.603121744,
+        "balance_p95": 6087316.613686338,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-25",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3924479.4437849494,
+        "usable_liquidity_p50": 4353891.603121744,
+        "usable_liquidity_p95": 4887316.613686338
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3103104.893383568,
+        "balance_p50": 3480457.9983436544,
+        "balance_p95": 3915235.8946770574,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-25",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2203104.893383568,
+        "usable_liquidity_p50": 2580457.9983436544,
+        "usable_liquidity_p95": 3015235.8946770574
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9768581.542790636,
+        "balance_p50": 10595438.280535778,
+        "balance_p95": 11321245.330936339,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-25",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7768581.542790636,
+        "usable_liquidity_p50": 8595438.280535778,
+        "usable_liquidity_p95": 9321245.330936339
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 2048150.472717283,
+        "balance_p50": 2313719.0880976543,
+        "balance_p95": 2717230.0219903383,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-25",
+        "known_events": [
+          {
+            "description": "Mock UK bank holiday affects GBP operating settlement timing.",
+            "event_id": "event-uk-bank-holiday",
+            "event_type": "bank_holiday",
+            "expected_amount": 0.0,
+            "impact_direction": "neutral"
+          }
+        ],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1148150.472717283,
+        "usable_liquidity_p50": 1413719.0880976543,
+        "usable_liquidity_p95": 1817230.0219903383
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 914051.6306998311,
+        "balance_p50": 1313719.9905992635,
+        "balance_p95": 1653894.4034265296,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-26",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -85948.36930016894,
+        "usable_liquidity_p50": 313719.99059926346,
+        "usable_liquidity_p95": 653894.4034265296
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 5072787.899971489,
+        "balance_p50": 5582728.337950807,
+        "balance_p95": 6210831.003066316,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-26",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3872787.899971489,
+        "usable_liquidity_p50": 4382728.337950807,
+        "usable_liquidity_p95": 5010831.003066316
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3069216.702712414,
+        "balance_p50": 3522632.5475182906,
+        "balance_p95": 4030975.5466192397,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-26",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2169216.702712414,
+        "usable_liquidity_p50": 2622632.5475182906,
+        "usable_liquidity_p95": 3130975.5466192397
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9655055.657031538,
+        "balance_p50": 10644929.676665004,
+        "balance_p95": 11511150.921520242,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-26",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7655055.657031538,
+        "usable_liquidity_p50": 8644929.676665004,
+        "usable_liquidity_p95": 9511150.921520242
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 2005948.602673922,
+        "balance_p50": 2314132.512073182,
+        "balance_p95": 2786828.4920855532,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-26",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1105948.602673922,
+        "usable_liquidity_p50": 1414132.512073182,
+        "usable_liquidity_p95": 1886828.4920855532
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 878765.7467025196,
+        "balance_p50": 1321056.5699077828,
+        "balance_p95": 1722114.379985489,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-27",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -121234.2532974804,
+        "usable_liquidity_p50": 321056.56990778283,
+        "usable_liquidity_p95": 722114.379985489
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 5018507.957226557,
+        "balance_p50": 5593416.1075519165,
+        "balance_p95": 6321780.012080321,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-27",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3818507.9572265567,
+        "usable_liquidity_p50": 4393416.1075519165,
+        "usable_liquidity_p95": 5121780.012080321
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 3033396.915034192,
+        "balance_p50": 3538206.602634463,
+        "balance_p95": 4128247.249256946,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-27",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2133396.915034192,
+        "usable_liquidity_p50": 2638206.602634463,
+        "usable_liquidity_p95": 3228247.249256946
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9534326.593423907,
+        "balance_p50": 10679023.197521647,
+        "balance_p95": 11681979.377680313,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-27",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7534326.593423907,
+        "usable_liquidity_p50": 8679023.197521647,
+        "usable_liquidity_p95": 9681979.377680313
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 1960414.2627150149,
+        "balance_p50": 2313294.9823082397,
+        "balance_p95": 2853190.532601649,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-27",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1060414.2627150149,
+        "usable_liquidity_p50": 1413294.9823082397,
+        "usable_liquidity_p95": 1953190.532601649
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 801003.3298015071,
+        "balance_p50": 1272995.452765459,
+        "balance_p95": 1769642.1400731755,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-28",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -198996.67019849294,
+        "usable_liquidity_p50": 272995.45276545896,
+        "usable_liquidity_p95": 769642.1400731755
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4913236.335125032,
+        "balance_p50": 5526317.249204311,
+        "balance_p95": 6396818.21375396,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-28",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3713236.335125032,
+        "usable_liquidity_p50": 4326317.249204311,
+        "usable_liquidity_p95": 5196818.21375396
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 2953252.623998115,
+        "balance_p50": 3488584.823929514,
+        "balance_p95": 4197131.648163053,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-28",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 2053252.6239981148,
+        "usable_liquidity_p50": 2588584.823929514,
+        "usable_liquidity_p95": 3297131.648163053
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9376906.34436871,
+        "balance_p50": 10634313.415024811,
+        "balance_p95": 11803549.650351183,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-28",
+        "known_events": [
+          {
+            "description": "Month-end payroll reserve pressure in USD operating account.",
+            "event_id": "event-month-end-payroll",
+            "event_type": "payroll_day",
+            "expected_amount": 1800000.0,
+            "impact_direction": "outflow"
+          }
+        ],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7376906.344368709,
+        "usable_liquidity_p50": 8634313.415024811,
+        "usable_liquidity_p95": 9803549.650351183
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 1879573.5759616804,
+        "balance_p50": 2259203.0639275494,
+        "balance_p95": 2899824.0439468157,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-28",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 979573.5759616804,
+        "usable_liquidity_p50": 1359203.0639275494,
+        "usable_liquidity_p95": 1999824.0439468157
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 728310.3201295614,
+        "balance_p50": 1264516.065887448,
+        "balance_p95": 1818660.5444827066,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-29",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -271689.67987043865,
+        "usable_liquidity_p50": 264516.0658874479,
+        "usable_liquidity_p95": 818660.5444827066
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4812414.452516298,
+        "balance_p50": 5517436.658799395,
+        "balance_p95": 6474081.477079164,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-29",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3612414.452516298,
+        "usable_liquidity_p50": 4317436.658799395,
+        "usable_liquidity_p95": 5274081.477079164
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 2878793.2638126328,
+        "balance_p50": 3484415.0787550984,
+        "balance_p95": 4266782.281658033,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-29",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1978793.2638126328,
+        "usable_liquidity_p50": 2584415.0787550984,
+        "usable_liquidity_p95": 3366782.281658033
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9224523.45391707,
+        "balance_p50": 10628752.679331873,
+        "balance_p95": 11929172.637927964,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-29",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7224523.453917069,
+        "usable_liquidity_p50": 8628752.679331873,
+        "usable_liquidity_p95": 9929172.637927964
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 1805700.1348308509,
+        "balance_p50": 2243658.606714486,
+        "balance_p95": 2948019.486317257,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-29",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 905700.1348308509,
+        "usable_liquidity_p50": 1343658.6067144861,
+        "usable_liquidity_p95": 2048019.486317257
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 659966.1745100229,
+        "balance_p50": 1266657.8874759998,
+        "balance_p95": 1869022.2348650114,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-30",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -340033.82548997714,
+        "usable_liquidity_p50": 266657.88747599977,
+        "usable_liquidity_p95": 869022.2348650114
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4715305.527491712,
+        "balance_p50": 5519319.0901015205,
+        "balance_p95": 6553612.553528718,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-30",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3515305.527491712,
+        "usable_liquidity_p50": 4319319.0901015205,
+        "usable_liquidity_p95": 5353612.553528718
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 2808627.497865312,
+        "balance_p50": 3491628.793732475,
+        "balance_p95": 4338080.458256312,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-30",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1908627.4978653118,
+        "usable_liquidity_p50": 2591628.793732475,
+        "usable_liquidity_p95": 3438080.4582563117
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 9071321.295388032,
+        "balance_p50": 10626814.237838833,
+        "balance_p95": 12058806.11329224,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-30",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 7071321.295388032,
+        "usable_liquidity_p50": 8626814.237838833,
+        "usable_liquidity_p95": 10058806.11329224
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 1733292.5810225904,
+        "balance_p50": 2234530.4793203953,
+        "balance_p95": 2997568.8135921266,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-30",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 833292.5810225904,
+        "usable_liquidity_p50": 1334530.4793203953,
+        "usable_liquidity_p95": 2097568.8135921266
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 595684.2410659097,
+        "balance_p50": 1293007.91281428,
+        "balance_p95": 1922344.483733549,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-05-31",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -404315.75893409026,
+        "usable_liquidity_p50": 293007.91281428,
+        "usable_liquidity_p95": 922344.483733549
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4617997.122567481,
+        "balance_p50": 5534965.394757592,
+        "balance_p95": 6636680.04429326,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-31",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3417997.1225674814,
+        "usable_liquidity_p50": 4334965.394757592,
+        "usable_liquidity_p95": 5436680.04429326
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 2738849.1959021115,
+        "balance_p50": 3521667.839414026,
+        "balance_p95": 4412372.161418236,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-05-31",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1838849.1959021115,
+        "usable_liquidity_p50": 2621667.839414026,
+        "usable_liquidity_p95": 3512372.161418236
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 8916452.223393658,
+        "balance_p50": 10649986.753748741,
+        "balance_p95": 12193217.810769575,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-05-31",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 6916452.223393658,
+        "usable_liquidity_p50": 8649986.753748741,
+        "usable_liquidity_p95": 10193217.810769575
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 1665958.1536140053,
+        "balance_p50": 2240709.3151351525,
+        "balance_p95": 3049540.362735124,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-05-31",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 765958.1536140053,
+        "usable_liquidity_p50": 1340709.3151351525,
+        "usable_liquidity_p95": 2149540.362735124
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "balance_p05": 555166.3745060014,
+        "balance_p50": 1322149.1303757865,
+        "balance_p95": 2002808.2904968972,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": true,
+        "currency": "EUR",
+        "date": "2026-06-01",
+        "known_events": [],
+        "required_buffer": 1000000.0,
+        "risk_status": "Yellow",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": -444833.62549399864,
+        "usable_liquidity_p50": 322149.13037578645,
+        "usable_liquidity_p95": 1002808.2904968972
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "balance_p05": 4552945.240874747,
+        "balance_p50": 5563915.468750147,
+        "balance_p95": 6775070.654876479,
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-06-01",
+        "known_events": [],
+        "required_buffer": 1200000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 3352945.240874747,
+        "usable_liquidity_p50": 4363915.468750147,
+        "usable_liquidity_p95": 5575070.654876479
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "balance_p05": 2695171.8266232903,
+        "balance_p50": 3563808.661061286,
+        "balance_p95": 4539122.741910316,
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "breach": false,
+        "currency": "EUR",
+        "date": "2026-06-01",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 1795171.8266232903,
+        "usable_liquidity_p50": 2663808.661061286,
+        "usable_liquidity_p95": 3639122.741910316
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "balance_p05": 8779543.644218508,
+        "balance_p50": 10699711.097174684,
+        "balance_p95": 12408019.964818515,
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "breach": false,
+        "currency": "USD",
+        "date": "2026-06-01",
+        "known_events": [],
+        "required_buffer": 2000000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 6779543.644218508,
+        "usable_liquidity_p50": 8699711.097174684,
+        "usable_liquidity_p95": 10408019.964818515
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "balance_p05": 1619053.1047294925,
+        "balance_p50": 2241480.1570994905,
+        "balance_p95": 3128393.379813139,
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "breach": false,
+        "currency": "GBP",
+        "date": "2026-06-01",
+        "known_events": [],
+        "required_buffer": 900000.0,
+        "risk_status": "Green",
+        "scheduled_net_flow": 0.0,
+        "usable_liquidity_p05": 719053.1047294925,
+        "usable_liquidity_p50": 1341480.1570994905,
+        "usable_liquidity_p95": 2228393.379813139
+      }
+    ],
+    "formulas": {
+      "cyclical_hour": "hour_sin = sin(2*pi*h/24), hour_cos = cos(2*pi*h/24)",
+      "ensemble_quantile": "q_hat_ens = sum_m w_m*q_hat_m + w_ewma*q_hat_ewma, sum(w)=1",
+      "ewma": "EWMA_t = alpha*y_t + (1-alpha)*EWMA_{t-1}",
+      "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+      "known_events": "x_event(t,a) = 1 if known calendar event applies to account a on date t",
+      "mad_zscore": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+      "pinball_loss": "L_q(y, y_hat) = max(q*(y-y_hat), (q-1)*(y-y_hat))",
+      "risk_constraint": "breach if balance_p05(t,b,c) < B_min(b,c)"
+    },
+    "generated_at": "2026-05-18T09:00:00Z",
+    "hhi": {
+      "alert": true,
+      "contributions": {
+        "atlas": 0.263098246135553,
+        "meridian": 0.020232609988109395,
+        "nova": 0.039313317479191444,
+        "orion": 0.021477407847800233
+      },
+      "threshold": 0.25,
+      "value": 0.344121581450654
+    },
+    "known_events": [
+      {
+        "account_id": "atlas-eur-operating",
+        "bank_id": "atlas",
+        "currency": "EUR",
+        "description": "Large scheduled merchant payout creates the visible EUR gap.",
+        "event_date": "2026-05-19",
+        "event_id": "event-atlas-eur-merchant-payout",
+        "event_type": "merchant_payout_cycle",
+        "expected_amount": 4100000.0,
+        "impact_direction": "outflow"
+      },
+      {
+        "account_id": null,
+        "bank_id": "atlas",
+        "currency": "EUR",
+        "description": "Mock EU bank holiday delays card clearing settlement by one business day.",
+        "event_date": "2026-05-20",
+        "event_id": "event-eu-bank-holiday",
+        "event_type": "bank_holiday",
+        "expected_amount": 0.0,
+        "impact_direction": "neutral"
+      },
+      {
+        "account_id": "atlas-eur-operating",
+        "bank_id": "atlas",
+        "currency": "EUR",
+        "description": "Observed card clearing inflow is lower and later than expected.",
+        "event_date": "2026-05-21",
+        "event_id": "event-atlas-card-clearing",
+        "event_type": "card_settlement_delay",
+        "expected_amount": 2550000.0,
+        "impact_direction": "inflow"
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "bank_id": "meridian",
+        "currency": "GBP",
+        "description": "Mock UK bank holiday affects GBP operating settlement timing.",
+        "event_date": "2026-05-25",
+        "event_id": "event-uk-bank-holiday",
+        "event_type": "bank_holiday",
+        "expected_amount": 0.0,
+        "impact_direction": "neutral"
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "bank_id": "atlas",
+        "currency": "USD",
+        "description": "Month-end payroll reserve pressure in USD operating account.",
+        "event_date": "2026-05-28",
+        "event_id": "event-month-end-payroll",
+        "event_type": "payroll_day",
+        "expected_amount": 1800000.0,
+        "impact_direction": "outflow"
+      }
+    ],
+    "metrics": {
+      "alert_lead_time_days": 1,
+      "backtest_windows": 549,
+      "band_coverage": 0.8633879781420765,
+      "median_wape": 1.0366792424281894,
+      "model_version": "ensemble-quantile:phase1-demo-v1"
+    },
+    "model_available": true,
+    "model_components": [
+      "lightgbm_quantile",
+      "sklearn_gbdt_quantile",
+      "ewma_volatility_baseline"
+    ],
+    "model_type": "ensemble-quantile",
+    "model_weights": {
+      "ewma_volatility_baseline": 0.15,
+      "lightgbm_quantile": 0.55,
+      "sklearn_gbdt_quantile": 0.3
+    }
+  },
+  "primary_recommendation": {
+    "audit_events": [
+      {
+        "bank_id": "atlas",
+        "event_type": "bank_rating_downgrade",
+        "message": "CCRI for atlas dropped from 82 to 57; max exposure share changed from 0.45 to 0.24.",
+        "new_ccri_score": 57.0,
+        "new_max_exposure_share": 0.24,
+        "old_ccri_score": 82.0,
+        "old_max_exposure_share": 0.45
+      },
+      {
+        "event_type": "survival_floor_constraints",
+        "message": "Applied forecast p05 survival floors: atlas-eur-operating>=4,296,774."
+      }
+    ],
+    "bank_exposure_limits": {
+      "atlas:EUR": 2265120.0,
+      "nova:EUR": 5190900.0,
+      "orion:EUR": 4247100.0
+    },
+    "formulas": {
+      "balance_floor": "Balance_b + inflow_transfers_b - outflow_transfers_b >= B_min_b",
+      "ccri_exposure": "sum_accounts Balance_bank_after <= MaxExposure(CCRI_bank)",
+      "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+      "objective": "min sum_i sum_j variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j",
+      "route_binary": "x_i_j <= M * route_used_i_j",
+      "source_liquidity": "sum_j x_b_j <= max(0, Balance_b - B_min_b)",
+      "survival_floor": "Balance_after_a >= max(B_min_a, Balance_now_a + gap_p05_a)"
+    },
+    "hhi_after": {
+      "alert": true,
+      "contributions": {
+        "atlas": 0.22126449131662762,
+        "meridian": 0.023558680367766364,
+        "nova": 0.04376420754628795,
+        "orion": 0.02786397719154164
+      },
+      "threshold": 0.25,
+      "value": 0.3164513564222236
+    },
+    "hhi_before": {
+      "alert": true,
+      "contributions": {
+        "atlas": 0.22126449131662762,
+        "meridian": 0.023558680367766364,
+        "nova": 0.04376420754628795,
+        "orion": 0.02786397719154164
+      },
+      "threshold": 0.25,
+      "value": 0.3164513564222236
+    },
+    "infeasible_reason": "PuLP solver status: Infeasible.",
+    "objective_value": 0.0,
+    "post_transfer_balances": [
+      {
+        "account_id": "atlas-eur-operating",
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "currency": "EUR",
+        "required_buffer": 1000000.0,
+        "settled_balance": 2160000.0
+      },
+      {
+        "account_id": "nova-eur-reserve",
+        "bank_id": "nova",
+        "bank_name": "Nova Bank",
+        "currency": "EUR",
+        "required_buffer": 1200000.0,
+        "settled_balance": 4048000.0
+      },
+      {
+        "account_id": "orion-eur-safeguard",
+        "bank_id": "orion",
+        "bank_name": "Orion Bank",
+        "currency": "EUR",
+        "required_buffer": 900000.0,
+        "settled_balance": 3230000.0
+      },
+      {
+        "account_id": "atlas-usd-operating",
+        "bank_id": "atlas",
+        "bank_name": "Atlas Bank",
+        "currency": "USD",
+        "required_buffer": 2000000.0,
+        "settled_balance": 6942000.0
+      },
+      {
+        "account_id": "meridian-gbp-operating",
+        "bank_id": "meridian",
+        "bank_name": "Meridian Bank",
+        "currency": "GBP",
+        "required_buffer": 900000.0,
+        "settled_balance": 2970000.0
+      }
+    ],
+    "solver_engine": "pulp-cbc",
+    "status": "infeasible",
+    "survival_min_balances": {
+      "atlas-eur-operating": 4296773.631764574
+    },
+    "total_transfer_cost": 0.0,
+    "transfers": []
+  },
+  "roi": {
+    "approval_gate": {
+      "blockers": [
+        "Optimizer status is infeasible, not optimal."
+      ],
+      "can_auto_approve": false,
+      "checked_formulas": {
+        "approval_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+        "forecast_gap": "gap_p05(account) = max(0, -min_t usable_liquidity_p05(t, account))",
+        "net_transfer_impact": "net_impact(account) = inflows_to_account - outflows_from_account",
+        "target2_feasibility": "TARGET2 outage blocks automatic approval for interbank EUR routes without fallback rail confirmation"
+      },
+      "decision": "reject",
+      "forecast_gaps_by_account": {
+        "atlas-eur-operating": 2136773.6317645735,
+        "atlas-usd-operating": 0.0,
+        "meridian-gbp-operating": 0.0,
+        "nova-eur-reserve": 0.0,
+        "orion-eur-safeguard": 0.0
+      },
+      "net_transfer_impact_by_account": {},
+      "required_next_actions": [
+        "Resolve infeasibility or switch to contingency liquidity actions.",
+        "Attach a funding or payment-throttling plan for the p05 breach.",
+        "Show residual concentration risk and do not claim full de-risking."
+      ],
+      "severity": "red",
+      "warnings": [
+        "Forecast breach is not directly funded by the selected transfers: atlas-eur-operating gap 2,136,774.",
+        "HHI after stress is 0.352, above threshold 0.25."
+      ]
+    },
+    "avoided_liquidity_gap": 2136773.6317645735,
+    "expected_shortfall_99": 2134782.3,
+    "formulas": {
+      "avoided_liquidity_gap": "avoided_gap = max(0, -min_forecast_usable_liquidity_p05)",
+      "es99": "ES_99 = mean(losses in the worst 1% tail)",
+      "optimizer_cost": "optimizer_cost = sum route variable costs + fixed fees",
+      "released_idle_reserve": "released_reserve = max(0, before_required_reserve - optimized_required_reserve)"
+    },
+    "metrics": [
+      {
+        "after": "reject",
+        "before": "not checked",
+        "explanation": "Control gate over optimizer output: p05 breach direction, HHI, and rail feasibility.",
+        "label": "Governance decision",
+        "unit": "status"
+      },
+      {
+        "after": 2021000.0,
+        "before": 4157773.6317645735,
+        "explanation": "Forecast downside gap plus stress loss before and after optimizer action.",
+        "label": "At-risk liquidity",
+        "unit": "currency"
+      },
+      {
+        "after": 2134782.3,
+        "before": 2134782.3,
+        "explanation": "Tail-loss metric is scenario severity, not directly eliminated by one transfer.",
+        "label": "Expected Shortfall 99%",
+        "unit": "currency"
+      },
+      {
+        "after": 9200000.0,
+        "before": 15000000.0,
+        "explanation": "Demo CFO metric showing reduced idle buffer after forecast + optimizer controls.",
+        "label": "Reserve requirement",
+        "unit": "currency"
+      },
+      {
+        "after": "5-6 h/week",
+        "before": "12 h/week",
+        "explanation": "Decision-support flow reduces manual reconciliation and emergency calls.",
+        "label": "Manual treasury work",
+        "unit": "hours"
+      },
+      {
+        "after": 0.0,
+        "before": 0.0,
+        "explanation": "No route cost because the optimizer found no feasible transfer plan.",
+        "label": "Optimizer transfer cost",
+        "unit": "currency"
+      }
+    ],
+    "optimizer_cost": 0.0,
+    "released_idle_reserve": 5800000.0,
+    "summary": "The backend identifies 2,136,774 of downside liquidity gap and ES 99% at 2,134,782, then refuses to price a false-positive transfer because survival floors and exposure limits are infeasible together. Governance decision: reject."
+  },
+  "stress_scenarios": {
+    "bank_run": {
+      "accounts_below_buffer": [],
+      "approval_gate": {
+        "blockers": [
+          "Optimizer status is infeasible, not optimal."
+        ],
+        "can_auto_approve": false,
+        "checked_formulas": {
+          "approval_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+          "forecast_gap": "gap_p05(account) = max(0, -min_t usable_liquidity_p05(t, account))",
+          "net_transfer_impact": "net_impact(account) = inflows_to_account - outflows_from_account",
+          "target2_feasibility": "TARGET2 outage blocks automatic approval for interbank EUR routes without fallback rail confirmation"
+        },
+        "decision": "reject",
+        "forecast_gaps_by_account": {
+          "atlas-eur-operating": 2136773.6317645735,
+          "atlas-usd-operating": 0.0,
+          "meridian-gbp-operating": 0.0,
+          "nova-eur-reserve": 0.0,
+          "orion-eur-safeguard": 0.0
+        },
+        "net_transfer_impact_by_account": {},
+        "required_next_actions": [
+          "Resolve infeasibility or switch to contingency liquidity actions.",
+          "Attach a funding or payment-throttling plan for the p05 breach.",
+          "Show residual concentration risk and do not claim full de-risking."
+        ],
+        "severity": "red",
+        "warnings": [
+          "Forecast breach is not directly funded by the selected transfers: atlas-eur-operating gap 2,136,774.",
+          "HHI after stress is 0.316, above threshold 0.25."
+        ]
+      },
+      "balances": [
+        {
+          "account_id": "atlas-eur-operating",
+          "balance_after": 2160000.0,
+          "balance_before": 3000000.0,
+          "bank_id": "atlas",
+          "bank_name": "Atlas Bank",
+          "below_buffer": false,
+          "currency": "EUR",
+          "loss_amount": 840000.0,
+          "loss_percent": 0.28,
+          "required_buffer": 1000000.0
+        },
+        {
+          "account_id": "nova-eur-reserve",
+          "balance_after": 4048000.0,
+          "balance_before": 4600000.0,
+          "bank_id": "nova",
+          "bank_name": "Nova Bank",
+          "below_buffer": false,
+          "currency": "EUR",
+          "loss_amount": 552000.0,
+          "loss_percent": 0.12,
+          "required_buffer": 1200000.0
+        },
+        {
+          "account_id": "orion-eur-safeguard",
+          "balance_after": 3230000.0,
+          "balance_before": 3400000.0,
+          "bank_id": "orion",
+          "bank_name": "Orion Bank",
+          "below_buffer": false,
+          "currency": "EUR",
+          "loss_amount": 170000.0,
+          "loss_percent": 0.05,
+          "required_buffer": 900000.0
+        },
+        {
+          "account_id": "atlas-usd-operating",
+          "balance_after": 6942000.0,
+          "balance_before": 8900000.0,
+          "bank_id": "atlas",
+          "bank_name": "Atlas Bank",
+          "below_buffer": false,
+          "currency": "USD",
+          "loss_amount": 1958000.0,
+          "loss_percent": 0.22,
+          "required_buffer": 2000000.0
+        },
+        {
+          "account_id": "meridian-gbp-operating",
+          "balance_after": 2970000.0,
+          "balance_before": 3300000.0,
+          "bank_id": "meridian",
+          "bank_name": "Meridian Bank",
+          "below_buffer": false,
+          "currency": "GBP",
+          "loss_amount": 330000.0,
+          "loss_percent": 0.1,
+          "required_buffer": 900000.0
+        }
+      ],
+      "coefficients": [
+        {
+          "balance_multiplier": 0.72,
+          "bank_id": "atlas",
+          "currency": "EUR",
+          "description": "Retail and merchant outflow shock hits Atlas EUR operating liquidity",
+          "inflow_delay_days": 0
+        },
+        {
+          "balance_multiplier": 0.88,
+          "bank_id": "nova",
+          "currency": "EUR",
+          "description": "Reserve bank also sees withdrawal pressure",
+          "inflow_delay_days": 0
+        },
+        {
+          "balance_multiplier": 0.95,
+          "bank_id": "orion",
+          "currency": "EUR",
+          "description": "Safeguarding bank remains relatively stable",
+          "inflow_delay_days": 0
+        },
+        {
+          "balance_multiplier": 0.78,
+          "bank_id": "atlas",
+          "currency": "USD",
+          "description": "USD operating liquidity suffers cross-market confidence shock",
+          "inflow_delay_days": 0
+        },
+        {
+          "balance_multiplier": 0.9,
+          "bank_id": "meridian",
+          "currency": "GBP",
+          "description": "GBP liquidity sees moderate withdrawal pressure",
+          "inflow_delay_days": 0
+        }
+      ],
+      "expected_shortfall_99": {
+        "confidence_level": 0.99,
+        "formula": "ES_99 = mean(losses in the worst 1% tail)",
+        "losses": [
+          4454065.0
+        ],
+        "tail_count": 1,
+        "value": 4454065.0
+      },
+      "formulas": {
+        "approval_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+        "buffer_breach": "breach if stressed_balance(account) < B_min(account)",
+        "expected_shortfall_99": "ES_99 = mean(losses in the worst 1% tail)",
+        "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+        "optimizer": "min sum_i sum_j variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j",
+        "stress_balance": "Balance_after(b,c) = Balance_before(b,c) * stress_multiplier(s,b,c)",
+        "stress_loss": "Loss = max(0, Balance_before - Balance_after)",
+        "survival_floor": "Balance_after_a >= max(B_min_a, Balance_now_a + gap_p05_a)"
+      },
+      "hhi_after": {
+        "alert": true,
+        "contributions": {
+          "atlas": 0.22126449131662762,
+          "meridian": 0.023558680367766364,
+          "nova": 0.04376420754628795,
+          "orion": 0.02786397719154164
+        },
+        "threshold": 0.25,
+        "value": 0.3164513564222236
+      },
+      "hhi_before": {
+        "alert": true,
+        "contributions": {
+          "atlas": 0.263098246135553,
+          "meridian": 0.020232609988109395,
+          "nova": 0.039313317479191444,
+          "orion": 0.021477407847800233
+        },
+        "threshold": 0.25,
+        "value": 0.344121581450654
+      },
+      "optimizer_recommendation": {
+        "audit_events": [
+          {
+            "bank_id": "atlas",
+            "event_type": "bank_rating_downgrade",
+            "message": "CCRI for atlas dropped from 82 to 57; max exposure share changed from 0.45 to 0.24.",
+            "new_ccri_score": 57.0,
+            "new_max_exposure_share": 0.24,
+            "old_ccri_score": 82.0,
+            "old_max_exposure_share": 0.45
+          },
+          {
+            "event_type": "survival_floor_constraints",
+            "message": "Applied forecast p05 survival floors: atlas-eur-operating>=4,296,774."
+          }
+        ],
+        "bank_exposure_limits": {
+          "atlas:EUR": 2265120.0,
+          "nova:EUR": 5190900.0,
+          "orion:EUR": 4247100.0
+        },
+        "formulas": {
+          "balance_floor": "Balance_b + inflow_transfers_b - outflow_transfers_b >= B_min_b",
+          "ccri_exposure": "sum_accounts Balance_bank_after <= MaxExposure(CCRI_bank)",
+          "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+          "objective": "min sum_i sum_j variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j",
+          "route_binary": "x_i_j <= M * route_used_i_j",
+          "source_liquidity": "sum_j x_b_j <= max(0, Balance_b - B_min_b)",
+          "survival_floor": "Balance_after_a >= max(B_min_a, Balance_now_a + gap_p05_a)"
+        },
+        "hhi_after": {
+          "alert": true,
+          "contributions": {
+            "atlas": 0.22126449131662762,
+            "meridian": 0.023558680367766364,
+            "nova": 0.04376420754628795,
+            "orion": 0.02786397719154164
+          },
+          "threshold": 0.25,
+          "value": 0.3164513564222236
+        },
+        "hhi_before": {
+          "alert": true,
+          "contributions": {
+            "atlas": 0.22126449131662762,
+            "meridian": 0.023558680367766364,
+            "nova": 0.04376420754628795,
+            "orion": 0.02786397719154164
+          },
+          "threshold": 0.25,
+          "value": 0.3164513564222236
+        },
+        "infeasible_reason": "PuLP solver status: Infeasible.",
+        "objective_value": 0.0,
+        "post_transfer_balances": [
+          {
+            "account_id": "atlas-eur-operating",
+            "bank_id": "atlas",
+            "bank_name": "Atlas Bank",
+            "currency": "EUR",
+            "required_buffer": 1000000.0,
+            "settled_balance": 2160000.0
+          },
+          {
+            "account_id": "nova-eur-reserve",
+            "bank_id": "nova",
+            "bank_name": "Nova Bank",
+            "currency": "EUR",
+            "required_buffer": 1200000.0,
+            "settled_balance": 4048000.0
+          },
+          {
+            "account_id": "orion-eur-safeguard",
+            "bank_id": "orion",
+            "bank_name": "Orion Bank",
+            "currency": "EUR",
+            "required_buffer": 900000.0,
+            "settled_balance": 3230000.0
+          },
+          {
+            "account_id": "atlas-usd-operating",
+            "bank_id": "atlas",
+            "bank_name": "Atlas Bank",
+            "currency": "USD",
+            "required_buffer": 2000000.0,
+            "settled_balance": 6942000.0
+          },
+          {
+            "account_id": "meridian-gbp-operating",
+            "bank_id": "meridian",
+            "bank_name": "Meridian Bank",
+            "currency": "GBP",
+            "required_buffer": 900000.0,
+            "settled_balance": 2970000.0
+          }
+        ],
+        "solver_engine": "pulp-cbc",
+        "status": "infeasible",
+        "survival_min_balances": {
+          "atlas-eur-operating": 4296773.631764574
+        },
+        "total_transfer_cost": 0.0,
+        "transfers": []
+      },
+      "scenario_id": "bank_run",
+      "scenario_name": "Bank Run",
+      "total_balance_after": 19350000.0,
+      "total_balance_before": 23200000.0,
+      "total_loss": 3850000.0
+    },
+    "target2_outage": {
+      "accounts_below_buffer": [],
+      "approval_gate": {
+        "blockers": [
+          "Optimizer status is infeasible, not optimal."
+        ],
+        "can_auto_approve": false,
+        "checked_formulas": {
+          "approval_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+          "forecast_gap": "gap_p05(account) = max(0, -min_t usable_liquidity_p05(t, account))",
+          "net_transfer_impact": "net_impact(account) = inflows_to_account - outflows_from_account",
+          "target2_feasibility": "TARGET2 outage blocks automatic approval for interbank EUR routes without fallback rail confirmation"
+        },
+        "decision": "reject",
+        "forecast_gaps_by_account": {
+          "atlas-eur-operating": 2136773.6317645735,
+          "atlas-usd-operating": 0.0,
+          "meridian-gbp-operating": 0.0,
+          "nova-eur-reserve": 0.0,
+          "orion-eur-safeguard": 0.0
+        },
+        "net_transfer_impact_by_account": {},
+        "required_next_actions": [
+          "Resolve infeasibility or switch to contingency liquidity actions.",
+          "Attach a funding or payment-throttling plan for the p05 breach.",
+          "Show residual concentration risk and do not claim full de-risking."
+        ],
+        "severity": "red",
+        "warnings": [
+          "Forecast breach is not directly funded by the selected transfers: atlas-eur-operating gap 2,136,774.",
+          "HHI after stress is 0.352, above threshold 0.25."
+        ]
+      },
+      "balances": [
+        {
+          "account_id": "atlas-eur-operating",
+          "balance_after": 2400000.0,
+          "balance_before": 3000000.0,
+          "bank_id": "atlas",
+          "bank_name": "Atlas Bank",
+          "below_buffer": false,
+          "currency": "EUR",
+          "loss_amount": 600000.0,
+          "loss_percent": 0.2,
+          "required_buffer": 1000000.0
+        },
+        {
+          "account_id": "nova-eur-reserve",
+          "balance_after": 3864000.0,
+          "balance_before": 4600000.0,
+          "bank_id": "nova",
+          "bank_name": "Nova Bank",
+          "below_buffer": false,
+          "currency": "EUR",
+          "loss_amount": 736000.0,
+          "loss_percent": 0.16,
+          "required_buffer": 1200000.0
+        },
+        {
+          "account_id": "orion-eur-safeguard",
+          "balance_after": 2992000.0,
+          "balance_before": 3400000.0,
+          "bank_id": "orion",
+          "bank_name": "Orion Bank",
+          "below_buffer": false,
+          "currency": "EUR",
+          "loss_amount": 408000.0,
+          "loss_percent": 0.12,
+          "required_buffer": 900000.0
+        },
+        {
+          "account_id": "atlas-usd-operating",
+          "balance_after": 8722000.0,
+          "balance_before": 8900000.0,
+          "bank_id": "atlas",
+          "bank_name": "Atlas Bank",
+          "below_buffer": false,
+          "currency": "USD",
+          "loss_amount": 178000.0,
+          "loss_percent": 0.02,
+          "required_buffer": 2000000.0
+        },
+        {
+          "account_id": "meridian-gbp-operating",
+          "balance_after": 3201000.0,
+          "balance_before": 3300000.0,
+          "bank_id": "meridian",
+          "bank_name": "Meridian Bank",
+          "below_buffer": false,
+          "currency": "GBP",
+          "loss_amount": 99000.0,
+          "loss_percent": 0.03,
+          "required_buffer": 900000.0
+        }
+      ],
+      "coefficients": [
+        {
+          "balance_multiplier": 0.8,
+          "bank_id": "atlas",
+          "currency": "EUR",
+          "description": "EUR settlement outage delays expected inflows and reduces usable balances",
+          "inflow_delay_days": 2
+        },
+        {
+          "balance_multiplier": 0.84,
+          "bank_id": "nova",
+          "currency": "EUR",
+          "description": "EUR reserve account haircut from infrastructure outage",
+          "inflow_delay_days": 2
+        },
+        {
+          "balance_multiplier": 0.88,
+          "bank_id": "orion",
+          "currency": "EUR",
+          "description": "EUR safeguarding balance remains usable but delayed",
+          "inflow_delay_days": 2
+        },
+        {
+          "balance_multiplier": 0.98,
+          "bank_id": "atlas",
+          "currency": "USD",
+          "description": "USD mostly unaffected by TARGET2 outage",
+          "inflow_delay_days": 0
+        },
+        {
+          "balance_multiplier": 0.97,
+          "bank_id": "meridian",
+          "currency": "GBP",
+          "description": "GBP mostly unaffected by TARGET2 outage",
+          "inflow_delay_days": 0
+        }
+      ],
+      "expected_shortfall_99": {
+        "confidence_level": 0.99,
+        "formula": "ES_99 = mean(losses in the worst 1% tail)",
+        "losses": [
+          2134782.3
+        ],
+        "tail_count": 1,
+        "value": 2134782.3
+      },
+      "formulas": {
+        "approval_gate": "approve only if optimizer is optimal, p05 breach is not worsened, HHI is within policy, and rails are feasible",
+        "buffer_breach": "breach if stressed_balance(account) < B_min(account)",
+        "expected_shortfall_99": "ES_99 = mean(losses in the worst 1% tail)",
+        "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+        "optimizer": "min sum_i sum_j variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j",
+        "stress_balance": "Balance_after(b,c) = Balance_before(b,c) * stress_multiplier(s,b,c)",
+        "stress_loss": "Loss = max(0, Balance_before - Balance_after)",
+        "survival_floor": "Balance_after_a >= max(B_min_a, Balance_now_a + gap_p05_a)"
+      },
+      "hhi_after": {
+        "alert": true,
+        "contributions": {
+          "atlas": 0.27577499207050565,
+          "meridian": 0.02284338437949223,
+          "nova": 0.033286132282395665,
+          "orion": 0.019957782146317982
+        },
+        "threshold": 0.25,
+        "value": 0.35186229087871157
+      },
+      "hhi_before": {
+        "alert": true,
+        "contributions": {
+          "atlas": 0.263098246135553,
+          "meridian": 0.020232609988109395,
+          "nova": 0.039313317479191444,
+          "orion": 0.021477407847800233
+        },
+        "threshold": 0.25,
+        "value": 0.344121581450654
+      },
+      "optimizer_recommendation": {
+        "audit_events": [
+          {
+            "event_type": "survival_floor_constraints",
+            "message": "Applied forecast p05 survival floors: atlas-eur-operating>=4,536,774."
+          }
+        ],
+        "bank_exposure_limits": {
+          "atlas:EUR": 4165200.0,
+          "nova:EUR": 5090800.0,
+          "orion:EUR": 4165200.0
+        },
+        "formulas": {
+          "balance_floor": "Balance_b + inflow_transfers_b - outflow_transfers_b >= B_min_b",
+          "ccri_exposure": "sum_accounts Balance_bank_after <= MaxExposure(CCRI_bank)",
+          "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
+          "objective": "min sum_i sum_j variable_cost_i_j*x_i_j + fixed_fee_i_j*route_used_i_j",
+          "route_binary": "x_i_j <= M * route_used_i_j",
+          "source_liquidity": "sum_j x_b_j <= max(0, Balance_b - B_min_b)",
+          "survival_floor": "Balance_after_a >= max(B_min_a, Balance_now_a + gap_p05_a)"
+        },
+        "hhi_after": {
+          "alert": true,
+          "contributions": {
+            "atlas": 0.27577499207050565,
+            "meridian": 0.02284338437949223,
+            "nova": 0.033286132282395665,
+            "orion": 0.019957782146317982
+          },
+          "threshold": 0.25,
+          "value": 0.35186229087871157
+        },
+        "hhi_before": {
+          "alert": true,
+          "contributions": {
+            "atlas": 0.27577499207050565,
+            "meridian": 0.02284338437949223,
+            "nova": 0.033286132282395665,
+            "orion": 0.019957782146317982
+          },
+          "threshold": 0.25,
+          "value": 0.35186229087871157
+        },
+        "infeasible_reason": "PuLP solver status: Infeasible.",
+        "objective_value": 0.0,
+        "post_transfer_balances": [
+          {
+            "account_id": "atlas-eur-operating",
+            "bank_id": "atlas",
+            "bank_name": "Atlas Bank",
+            "currency": "EUR",
+            "required_buffer": 1000000.0,
+            "settled_balance": 2400000.0
+          },
+          {
+            "account_id": "nova-eur-reserve",
+            "bank_id": "nova",
+            "bank_name": "Nova Bank",
+            "currency": "EUR",
+            "required_buffer": 1200000.0,
+            "settled_balance": 3864000.0
+          },
+          {
+            "account_id": "orion-eur-safeguard",
+            "bank_id": "orion",
+            "bank_name": "Orion Bank",
+            "currency": "EUR",
+            "required_buffer": 900000.0,
+            "settled_balance": 2992000.0
+          },
+          {
+            "account_id": "atlas-usd-operating",
+            "bank_id": "atlas",
+            "bank_name": "Atlas Bank",
+            "currency": "USD",
+            "required_buffer": 2000000.0,
+            "settled_balance": 8722000.0
+          },
+          {
+            "account_id": "meridian-gbp-operating",
+            "bank_id": "meridian",
+            "bank_name": "Meridian Bank",
+            "currency": "GBP",
+            "required_buffer": 900000.0,
+            "settled_balance": 3201000.0
+          }
+        ],
+        "solver_engine": "pulp-cbc",
+        "status": "infeasible",
+        "survival_min_balances": {
+          "atlas-eur-operating": 4536773.631764574
+        },
+        "total_transfer_cost": 0.0,
+        "transfers": []
+      },
+      "scenario_id": "target2_outage",
+      "scenario_name": "TARGET2 Outage",
+      "total_balance_after": 21179000.0,
+      "total_balance_before": 23200000.0,
+      "total_loss": 2021000.0
+    }
+  }
+}

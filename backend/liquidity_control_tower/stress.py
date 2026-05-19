@@ -18,6 +18,7 @@ STRESS_FORMULAS = {
     "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
     "optimizer": OPTIMIZER_FORMULAS["objective"],
     "approval_gate": GOVERNANCE_FORMULAS["approval_gate"],
+    "survival_floor": OPTIMIZER_FORMULAS["survival_floor"],
 }
 
 
@@ -129,6 +130,27 @@ def calculate_expected_shortfall_99(losses: list[float]) -> dict[str, object]:
     }
 
 
+def survival_min_balances_from_forecast(
+    forecast: dict[str, object],
+    balances: pd.DataFrame,
+) -> dict[str, float]:
+    current_by_account = {
+        str(row["account_id"]): float(row["settled_balance"])
+        for row in balances.to_dict("records")
+    }
+    floors: dict[str, float] = {}
+    for point in forecast.get("forecast", []):
+        gap = max(0.0, -float(point.get("usable_liquidity_p05", 0.0)))
+        if gap <= 0:
+            continue
+        account_id = str(point["account_id"])
+        current_balance = current_by_account.get(account_id)
+        if current_balance is None:
+            continue
+        floors[account_id] = max(floors.get(account_id, 0.0), current_balance + gap)
+    return floors
+
+
 def run_stress_scenario(
     scenario_id: str,
     run_optimizer: bool = True,
@@ -146,7 +168,12 @@ def run_stress_scenario(
 
     optimizer_response = None
     approval_gate = None
+    forecast = None
     if run_optimizer:
+        from .forecasting import run_phase1_forecast
+
+        forecast = run_phase1_forecast(horizon_days=14)
+        survival_min_balances = survival_min_balances_from_forecast(forecast, stressed)
         optimizer_response = solve_liquidity_rebalance(
             balances=stressed[
                 [
@@ -161,6 +188,7 @@ def run_stress_scenario(
             bank_risk_scores=data["bank_risk_scores"],
             transfer_costs=data["transfer_costs"],
             downgrade_bank_id=downgrade_bank_id,
+            survival_min_balances=survival_min_balances,
         )
 
     balance_points = [
@@ -183,9 +211,6 @@ def run_stress_scenario(
     ]
 
     if optimizer_response is not None:
-        from .forecasting import run_phase1_forecast
-
-        forecast = run_phase1_forecast(horizon_days=14)
         approval_gate = validate_recommendation_gate(
             scenario_id=scenario_id,
             optimizer_response=optimizer_response,

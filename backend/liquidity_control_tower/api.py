@@ -3,6 +3,16 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from .ai_council import run_ai_council
+from .config import (
+    DEFAULT_FORECAST_HORIZON_DAYS,
+    DEFAULT_HISTORY_DAYS,
+    DEMO_HISTORY_SEED,
+    DEMO_NOW,
+    EWMA_ALPHA,
+    HHI_ALERT_THRESHOLD,
+    MAD_ZSCORE_THRESHOLD,
+)
+from .contingency import build_contingency_plan
 from .explainability import build_explanation
 from .forecasting import run_phase1_forecast
 from .optimizer import solve_liquidity_rebalance
@@ -12,6 +22,8 @@ from .schemas import (
     ApprovalResponse,
     AICouncilRequest,
     AICouncilResponse,
+    ContingencyPlanRequest,
+    ContingencyPlanResponse,
     ExplanationRequest,
     ExplanationResponse,
     ForecastRequest,
@@ -37,6 +49,40 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/demo/metadata")
+def demo_metadata() -> dict[str, object]:
+    return {
+        "product": "Liquidity Control Tower",
+        "version": app.version,
+        "demo_clock": DEMO_NOW,
+        "demo_history_seed": DEMO_HISTORY_SEED,
+        "default_forecast_horizon_days": DEFAULT_FORECAST_HORIZON_DAYS,
+        "default_history_days": DEFAULT_HISTORY_DAYS,
+        "math_parameters": {
+            "ewma_alpha": EWMA_ALPHA,
+            "mad_zscore_threshold": MAD_ZSCORE_THRESHOLD,
+            "hhi_alert_threshold": HHI_ALERT_THRESHOLD,
+            "forecast_quantiles": [0.05, 0.50, 0.95],
+            "ensemble_weights": {
+                "lightgbm_quantile": 0.55,
+                "sklearn_gbdt_quantile": 0.30,
+                "ewma_volatility_baseline": 0.15,
+            },
+        },
+        "ui_ready_endpoints": [
+            "GET /api/demo/snapshot",
+            "GET /api/demo/metadata",
+            "POST /api/forecast/run",
+            "POST /api/stress/run",
+            "POST /api/optimizer/rebalance",
+            "POST /api/explainability/summary",
+            "POST /api/roi/summary",
+            "POST /api/contingency/plan",
+            "POST /api/ai-council/review",
+        ],
+    }
+
+
 @app.post("/api/forecast/run", response_model=ForecastRunResponse)
 def run_forecast(request: ForecastRequest) -> dict[str, object]:
     return run_phase1_forecast(
@@ -58,6 +104,7 @@ def rebalance(request: OptimizerRequest) -> dict[str, object]:
         balances=balances,
         downgrade_bank_id=request.downgrade_bank_id,
         downgrade_score_delta=request.downgrade_score_delta,
+        survival_min_balances=request.survival_min_balances,
     )
 
 
@@ -100,14 +147,24 @@ def roi_summary(request: RoiRequest) -> dict[str, object]:
     )
 
 
+@app.post("/api/contingency/plan", response_model=ContingencyPlanResponse)
+def contingency_plan(request: ContingencyPlanRequest) -> dict[str, object]:
+    return build_contingency_plan(
+        scenario_id=request.scenario_id,
+        downgrade_bank_id=request.downgrade_bank_id,
+    )
+
+
 @app.post("/api/ai-council/review", response_model=AICouncilResponse)
 def ai_council_review(request: AICouncilRequest) -> dict[str, object]:
     return run_ai_council(
         scenario_id=request.scenario_id,
         downgrade_bank_id=request.downgrade_bank_id,
         mode=request.mode,
+        provider=request.provider,
         peer_review=request.peer_review,
         model=request.model,
+        anthropic_model=request.anthropic_model,
     )
 
 
@@ -132,6 +189,10 @@ def demo_snapshot() -> dict[str, object]:
         scenario_id="target2_outage",
         downgrade_bank_id="atlas",
     )
+    contingency = build_contingency_plan(
+        scenario_id="target2_outage",
+        downgrade_bank_id="atlas",
+    )
     ai_council = run_ai_council(
         scenario_id="target2_outage",
         downgrade_bank_id="atlas",
@@ -148,5 +209,6 @@ def demo_snapshot() -> dict[str, object]:
         "primary_recommendation": bank_run["optimizer_recommendation"],
         "explanation": explanation,
         "roi": roi,
+        "contingency": contingency,
         "ai_council": ai_council,
     }

@@ -5,8 +5,11 @@ import pandas as pd
 from fastapi.testclient import TestClient
 
 from backend.liquidity_control_tower.api import app
+from backend.liquidity_control_tower.contingency import build_contingency_plan
+from backend.liquidity_control_tower.data_loader import load_demo_data
 from backend.liquidity_control_tower.explainability import build_explanation
 from backend.liquidity_control_tower.governance import validate_recommendation_gate
+from backend.liquidity_control_tower.optimizer import solve_liquidity_rebalance
 from backend.liquidity_control_tower.roi import build_roi_summary
 from backend.liquidity_control_tower.stress import (
     apply_transfer_approval,
@@ -48,7 +51,7 @@ class Phase3BackendFlowTests(unittest.TestCase):
         self.assertGreater(stress["expected_shortfall_99"]["value"], stress["total_loss"])
         self.assertEqual(len(stress["coefficients"]), 5)
 
-    def test_target2_stress_with_downgrade_returns_optimizer_transfer(self) -> None:
+    def test_target2_stress_with_downgrade_returns_infeasible_survival_conflict(self) -> None:
         stress = run_stress_scenario(
             "target2_outage",
             run_optimizer=True,
@@ -57,9 +60,9 @@ class Phase3BackendFlowTests(unittest.TestCase):
         optimizer = stress["optimizer_recommendation"]
 
         self.assertIsNotNone(optimizer)
-        self.assertEqual(optimizer["status"], "optimal")
-        self.assertGreater(len(optimizer["transfers"]), 0)
-        self.assertEqual(optimizer["transfers"][0]["source_bank_id"], "atlas")
+        self.assertEqual(optimizer["status"], "infeasible")
+        self.assertEqual(len(optimizer["transfers"]), 0)
+        self.assertIn("atlas-eur-operating", optimizer["survival_min_balances"])
         self.assertEqual(stress["approval_gate"]["decision"], "reject")
         self.assertTrue(stress["approval_gate"]["blockers"])
 
@@ -98,15 +101,11 @@ class Phase3BackendFlowTests(unittest.TestCase):
         self.assertLess(gate["net_transfer_impact_by_account"]["atlas-eur-operating"], 0)
 
     def test_approval_applies_transfer_and_creates_audit_log(self) -> None:
-        stress = run_stress_scenario(
-            "target2_outage",
-            run_optimizer=True,
-            downgrade_bank_id="atlas",
-        )
-        optimizer = stress["optimizer_recommendation"]
+        data = load_demo_data()
+        optimizer = solve_liquidity_rebalance(downgrade_bank_id="atlas")
 
         approval = apply_transfer_approval(
-            balances=pd.DataFrame(approval_balances_from_stress(stress)),
+            balances=data["balances"],
             transfers=optimizer["transfers"],
             approved_by="treasury@example.com",
             reason="unit test approval",
@@ -131,22 +130,19 @@ class Phase3BackendFlowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["scenario_id"], "target2_outage")
-        self.assertEqual(body["optimizer_recommendation"]["status"], "optimal")
+        self.assertEqual(body["optimizer_recommendation"]["status"], "infeasible")
         self.assertEqual(body["approval_gate"]["decision"], "reject")
 
     def test_approval_api_endpoint(self) -> None:
-        stress = run_stress_scenario(
-            "target2_outage",
-            run_optimizer=True,
-            downgrade_bank_id="atlas",
-        )
+        data = load_demo_data()
+        optimizer = solve_liquidity_rebalance(downgrade_bank_id="atlas")
         client = TestClient(app)
 
         response = client.post(
             "/api/recommendation/approve",
             json={
-                "balances": approval_balances_from_stress(stress),
-                "transfers": stress["optimizer_recommendation"]["transfers"],
+                "balances": data["balances"].to_dict("records"),
+                "transfers": optimizer["transfers"],
                 "approved_by": "treasury@example.com",
                 "reason": "API approval test",
             },
@@ -156,7 +152,7 @@ class Phase3BackendFlowTests(unittest.TestCase):
         body = response.json()
         self.assertTrue(body["approved"])
         self.assertGreater(body["total_transfer_amount"], 0)
-        self.assertEqual(len(body["audit_log"]), len(stress["optimizer_recommendation"]["transfers"]))
+        self.assertEqual(len(body["audit_log"]), len(optimizer["transfers"]))
 
     def test_demo_snapshot_endpoint(self) -> None:
         client = TestClient(app)
@@ -170,6 +166,66 @@ class Phase3BackendFlowTests(unittest.TestCase):
         self.assertIn("target2_outage", body["stress_scenarios"])
         self.assertIn("explanation", body)
         self.assertIn("roi", body)
+        self.assertIn("contingency", body)
+
+    def test_demo_metadata_endpoint(self) -> None:
+        client = TestClient(app)
+
+        response = client.get("/api/demo/metadata")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["product"], "Liquidity Control Tower")
+        self.assertEqual(body["demo_history_seed"], 42)
+        self.assertEqual(body["math_parameters"]["forecast_quantiles"], [0.05, 0.5, 0.95])
+        self.assertIn("GET /api/demo/snapshot", body["ui_ready_endpoints"])
+
+    def test_openapi_contract_contains_ui_handoff_endpoints(self) -> None:
+        client = TestClient(app)
+
+        response = client.get("/openapi.json")
+
+        self.assertEqual(response.status_code, 200)
+        paths = response.json()["paths"]
+        for path in (
+            "/api/demo/snapshot",
+            "/api/demo/metadata",
+            "/api/forecast/run",
+            "/api/stress/run",
+            "/api/optimizer/rebalance",
+            "/api/explainability/summary",
+            "/api/roi/summary",
+            "/api/contingency/plan",
+            "/api/ai-council/review",
+        ):
+            self.assertIn(path, paths)
+
+    def test_contingency_plan_returns_actions_when_optimizer_is_infeasible(self) -> None:
+        plan = build_contingency_plan("target2_outage", "atlas")
+
+        self.assertEqual(plan["plan_status"], "contingency_required")
+        self.assertEqual(plan["optimizer_status"], "infeasible")
+        self.assertGreater(plan["total_p05_gap"], 0)
+        self.assertGreater(len(plan["actions"]), 0)
+        self.assertTrue(
+            any(action["action_type"] == "prefund_breached_account" for action in plan["actions"])
+        )
+        self.assertTrue(any(action["action_type"] == "payment_throttle" for action in plan["actions"]))
+        self.assertIn("credit_line_need", plan["formulas"])
+
+    def test_contingency_api_endpoint(self) -> None:
+        client = TestClient(app)
+
+        response = client.post(
+            "/api/contingency/plan",
+            json={"scenario_id": "target2_outage", "downgrade_bank_id": "atlas"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["plan_status"], "contingency_required")
+        self.assertGreater(body["total_p05_gap"], 0)
+        self.assertGreater(len(body["actions"]), 0)
 
     def test_explainability_summary_contains_root_causes_and_formulas(self) -> None:
         explanation = build_explanation("target2_outage", "atlas")
@@ -213,7 +269,7 @@ class Phase3BackendFlowTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertGreater(body["optimizer_cost"], 0)
+        self.assertGreaterEqual(body["optimizer_cost"], 0)
         self.assertIn("released_idle_reserve", body)
         self.assertEqual(body["approval_gate"]["decision"], "reject")
 

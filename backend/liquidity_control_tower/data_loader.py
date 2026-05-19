@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .config import DATA_DIR, DEFAULT_HISTORY_DAYS, DEMO_NOW
+from .config import DATA_DIR, DEFAULT_HISTORY_DAYS, DEMO_HISTORY_SEED, DEMO_NOW
 from .settlement import to_timestamp
 
 
@@ -25,6 +25,7 @@ def load_demo_data() -> dict[str, pd.DataFrame]:
         "transfer_costs": _read_csv("transfer_costs.csv"),
         "observed_movements": observed,
         "stress_scenarios": _read_csv("stress_scenarios.csv"),
+        "known_events": _read_csv("known_events.csv", parse_dates=["event_date"]),
     }
 
 
@@ -32,7 +33,7 @@ def generate_synthetic_daily_history(
     balances: pd.DataFrame,
     as_of: str | pd.Timestamp = DEMO_NOW,
     history_days: int = DEFAULT_HISTORY_DAYS,
-    seed: int = 42,
+    seed: int = DEMO_HISTORY_SEED,
 ) -> pd.DataFrame:
     """Generate repeatable account-level history for model training.
 

@@ -17,9 +17,11 @@ from .features import (
     BASE_FEATURE_COLUMNS,
     add_calendar_features,
     add_cyclical_time_features,
+    add_known_event_features,
     build_feature_matrix,
     build_scheduled_cashflow_frame,
     latest_feature_state,
+    summarize_anomaly_flags,
 )
 from .risk import calculate_hhi, risk_status_from_quantiles
 from .settlement import to_timestamp
@@ -32,15 +34,61 @@ except Exception:
     LGBMRegressor = None
     LIGHTGBM_AVAILABLE = False
 
+try:
+    from sklearn.ensemble import GradientBoostingRegressor
+
+    SKLEARN_AVAILABLE = True
+except Exception:
+    GradientBoostingRegressor = None
+    SKLEARN_AVAILABLE = False
+
+
+QUANTILES = (0.05, 0.50, 0.95)
+EWMA_BASELINE_WEIGHT = 0.15
+MODEL_FAMILY_WEIGHTS = {
+    "lightgbm_quantile": 0.55,
+    "sklearn_gbdt_quantile": 0.30,
+}
+
 
 FORMULAS = {
     "cyclical_hour": "hour_sin = sin(2*pi*h/24), hour_cos = cos(2*pi*h/24)",
     "ewma": "EWMA_t = alpha*y_t + (1-alpha)*EWMA_{t-1}",
     "mad_zscore": "z_t = |y_t - median_W| / (1.4826*MAD_W), anomaly if z_t > 4",
+    "known_events": "x_event(t,a) = 1 if known calendar event applies to account a on date t",
     "pinball_loss": "L_q(y, y_hat) = max(q*(y-y_hat), (q-1)*(y-y_hat))",
+    "ensemble_quantile": "q_hat_ens = sum_m w_m*q_hat_m + w_ewma*q_hat_ewma, sum(w)=1",
     "risk_constraint": "breach if balance_p05(t,b,c) < B_min(b,c)",
     "hhi": "HHI = sum_b (Balance_b / sum_b' Balance_b')^2",
 }
+
+
+@dataclass(frozen=True)
+class WeightedModel:
+    name: str
+    weight: float
+    model: object
+
+
+class WeightedQuantileEnsemble:
+    def __init__(self, components: list[WeightedModel]) -> None:
+        self.components = components
+        self.total_weight = sum(component.weight for component in components)
+
+    def predict(self, features: pd.DataFrame) -> np.ndarray:
+        if self.total_weight <= 0:
+            raise ValueError("WeightedQuantileEnsemble needs at least one positive model weight")
+
+        blended: np.ndarray | None = None
+        for component in self.components:
+            prediction = np.asarray(component.model.predict(features), dtype=float)
+            weighted = prediction * component.weight
+            blended = weighted if blended is None else blended + weighted
+
+        if blended is None:
+            raise ValueError("WeightedQuantileEnsemble has no components")
+
+        return blended / self.total_weight
 
 
 @dataclass
@@ -50,51 +98,131 @@ class QuantileModelBundle:
     fallback_reason: str | None
     models: dict[float, object]
     residual_scale_by_account: dict[str, float]
+    component_models: list[str]
+    model_weights: dict[str, float]
 
 
-def _train_lightgbm_quantile_models(trainable: pd.DataFrame) -> QuantileModelBundle:
-    if not LIGHTGBM_AVAILABLE:
+def _fallback_model_bundle(trainable: pd.DataFrame, reason: str) -> QuantileModelBundle:
+    return QuantileModelBundle(
+        model_type="ewma-volatility-fallback",
+        available=False,
+        fallback_reason=reason,
+        models={},
+        residual_scale_by_account=_residual_scale_by_account(trainable),
+        component_models=["ewma_volatility_baseline"],
+        model_weights={"ewma_volatility_baseline": 1.0},
+    )
+
+
+def _train_quantile_ensemble_models(trainable: pd.DataFrame) -> QuantileModelBundle:
+    if not LIGHTGBM_AVAILABLE and not SKLEARN_AVAILABLE:
         return QuantileModelBundle(
             model_type="ewma-volatility-fallback",
             available=False,
-            fallback_reason="lightgbm is not installed; using EWMA plus rolling volatility quantile fallback",
+            fallback_reason=(
+                "lightgbm and scikit-learn are not installed; using EWMA plus rolling "
+                "volatility quantile fallback"
+            ),
             models={},
             residual_scale_by_account=_residual_scale_by_account(trainable),
+            component_models=["ewma_volatility_baseline"],
+            model_weights={"ewma_volatility_baseline": 1.0},
         )
 
     if len(trainable) < 60:
-        return QuantileModelBundle(
-            model_type="ewma-volatility-fallback",
-            available=False,
-            fallback_reason="not enough trainable rows for LightGBM; using EWMA plus rolling volatility quantile fallback",
-            models={},
-            residual_scale_by_account=_residual_scale_by_account(trainable),
+        return _fallback_model_bundle(
+            trainable,
+            "not enough trainable rows for quantile ensemble; using EWMA plus rolling volatility quantile fallback",
         )
 
     X = trainable[BASE_FEATURE_COLUMNS].astype(float)
     y = trainable["target_next_net_flow"].astype(float)
-    models: dict[float, object] = {}
+    components_by_quantile: dict[float, list[WeightedModel]] = {quantile: [] for quantile in QUANTILES}
+    trained_component_names: list[str] = []
 
-    for quantile in (0.05, 0.50, 0.95):
-        model = LGBMRegressor(
-            objective="quantile",
-            alpha=quantile,
-            n_estimators=160,
-            learning_rate=0.045,
-            num_leaves=15,
-            min_child_samples=8,
-            random_state=42,
-            verbosity=-1,
+    if LIGHTGBM_AVAILABLE:
+        for quantile in QUANTILES:
+            model = LGBMRegressor(
+                objective="quantile",
+                alpha=quantile,
+                n_estimators=120,
+                learning_rate=0.045,
+                num_leaves=15,
+                min_child_samples=8,
+                random_state=42,
+                verbosity=-1,
+            )
+            model.fit(X, y)
+            components_by_quantile[quantile].append(
+                WeightedModel(
+                    name="lightgbm_quantile",
+                    weight=MODEL_FAMILY_WEIGHTS["lightgbm_quantile"],
+                    model=model,
+                )
+            )
+        trained_component_names.append("lightgbm_quantile")
+
+    if SKLEARN_AVAILABLE:
+        for quantile in QUANTILES:
+            model = GradientBoostingRegressor(
+                loss="quantile",
+                alpha=quantile,
+                n_estimators=90,
+                learning_rate=0.055,
+                max_depth=3,
+                min_samples_leaf=6,
+                random_state=42,
+            )
+            model.fit(X, y)
+            components_by_quantile[quantile].append(
+                WeightedModel(
+                    name="sklearn_gbdt_quantile",
+                    weight=MODEL_FAMILY_WEIGHTS["sklearn_gbdt_quantile"],
+                    model=model,
+                )
+            )
+        trained_component_names.append("sklearn_gbdt_quantile")
+
+    if not trained_component_names:
+        return _fallback_model_bundle(
+            trainable,
+            "no quantile model family could be trained; using EWMA plus rolling volatility quantile fallback",
         )
-        model.fit(X, y)
-        models[quantile] = model
+
+    ml_raw_weight = sum(MODEL_FAMILY_WEIGHTS[name] for name in trained_component_names)
+    ml_target_weight = 1.0 - EWMA_BASELINE_WEIGHT
+    model_weights = {
+        name: (MODEL_FAMILY_WEIGHTS[name] / ml_raw_weight) * ml_target_weight
+        for name in trained_component_names
+    }
+    model_weights["ewma_volatility_baseline"] = EWMA_BASELINE_WEIGHT
+
+    models = {
+        quantile: WeightedQuantileEnsemble(components)
+        for quantile, components in components_by_quantile.items()
+        if components
+    }
+    if set(models) != set(QUANTILES):
+        return _fallback_model_bundle(
+            trainable,
+            "quantile ensemble did not train all required q=0.05/0.50/0.95 models",
+        )
+
+    if len(trained_component_names) > 1:
+        model_type = "ensemble-quantile"
+    elif trained_component_names[0] == "lightgbm_quantile":
+        model_type = "lightgbm-quantile"
+    else:
+        model_type = "sklearn-gbdt-quantile"
 
     return QuantileModelBundle(
-        model_type="lightgbm-quantile",
+        model_type=model_type,
         available=True,
         fallback_reason=None,
         models=models,
         residual_scale_by_account=_residual_scale_by_account(trainable),
+        component_models=trained_component_names + ["ewma_volatility_baseline"],
+        model_weights=model_weights,
     )
 
 
@@ -134,6 +262,7 @@ def _future_feature_row(
     account_state: pd.Series,
     forecast_date: pd.Timestamp,
     holidays: pd.DataFrame,
+    known_events: pd.DataFrame,
     synthetic_net_flow: float,
 ) -> pd.DataFrame:
     row = pd.DataFrame(
@@ -159,7 +288,38 @@ def _future_feature_row(
     )
     row = add_cyclical_time_features(row)
     row = add_calendar_features(row, holidays)
+    row = add_known_event_features(row, known_events)
     return row
+
+
+def _known_events_for_point(
+    known_events: pd.DataFrame,
+    forecast_key: str,
+    account: dict[str, object],
+) -> list[dict[str, object]]:
+    if known_events.empty:
+        return []
+
+    events = known_events.copy()
+    events["event_date_key"] = pd.to_datetime(events["event_date"], utc=True).dt.strftime("%Y-%m-%d")
+    matches = events.loc[events["event_date_key"] == forecast_key].copy()
+    if matches.empty:
+        return []
+
+    for col in ("account_id", "bank_id", "currency"):
+        values = matches[col].fillna("").astype(str)
+        matches = matches.loc[(values == "") | (values == str(account[col]))]
+
+    return [
+        {
+            "event_id": str(row["event_id"]),
+            "event_type": str(row["event_type"]),
+            "impact_direction": str(row["impact_direction"]),
+            "expected_amount": float(row["expected_amount"]),
+            "description": str(row["description"]),
+        }
+        for row in matches.to_dict("records")
+    ]
 
 
 def _predict_model_flows(
@@ -169,13 +329,27 @@ def _predict_model_flows(
     fallback_scale: float,
     horizon_step: int,
 ) -> tuple[float, float, float]:
+    uncertainty = 1.64 * fallback_scale * np.sqrt(max(1, horizon_step))
+    fallback_predictions = {
+        0.05: fallback_center - uncertainty,
+        0.50: fallback_center,
+        0.95: fallback_center + uncertainty,
+    }
+
     if bundle.available and bundle.models:
         X = feature_row[BASE_FEATURE_COLUMNS].astype(float)
         predictions = {q: float(model.predict(X)[0]) for q, model in bundle.models.items()}
-        return predictions[0.05], predictions[0.50], predictions[0.95]
+        baseline_weight = bundle.model_weights.get("ewma_volatility_baseline", EWMA_BASELINE_WEIGHT)
+        ml_weight = max(0.0, 1.0 - baseline_weight)
+        blended = {
+            quantile: (ml_weight * predictions[quantile])
+            + (baseline_weight * fallback_predictions[quantile])
+            for quantile in QUANTILES
+        }
+        ordered = sorted(blended.values())
+        return ordered[0], ordered[1], ordered[2]
 
-    uncertainty = 1.64 * fallback_scale * np.sqrt(max(1, horizon_step))
-    return fallback_center - uncertainty, fallback_center, fallback_center + uncertainty
+    return fallback_predictions[0.05], fallback_predictions[0.50], fallback_predictions[0.95]
 
 
 def _build_forecast_points(
@@ -227,6 +401,7 @@ def _build_forecast_points(
                 state,
                 forecast_date,
                 data["holidays"],
+                data["known_events"],
                 synthetic_net_flow=fallback_center,
             )
             flow_p05, flow_p50, flow_p95 = _predict_model_flows(
@@ -256,6 +431,7 @@ def _build_forecast_points(
                     "currency": account["currency"],
                     "required_buffer": required_buffer,
                     "scheduled_net_flow": scheduled_net_flow,
+                    "known_events": _known_events_for_point(data["known_events"], forecast_key, account),
                     "balance_p05": balance_p05,
                     "balance_p50": balance_p50,
                     "balance_p95": balance_p95,
@@ -326,19 +502,19 @@ def run_phase1_forecast(
     feature_frame, feature_summary = build_feature_matrix(
         history,
         data["holidays"],
+        data["known_events"],
         alpha=EWMA_ALPHA,
         anomaly_threshold=MAD_ZSCORE_THRESHOLD,
     )
     trainable = feature_frame.dropna(subset=BASE_FEATURE_COLUMNS + ["target_next_net_flow"]).copy()
     trainable = trainable.loc[~trainable["is_anomaly_mad"]].copy()
 
-    bundle = _train_lightgbm_quantile_models(trainable) if prefer_lightgbm else QuantileModelBundle(
-        model_type="ewma-volatility-fallback",
-        available=False,
-        fallback_reason="prefer_lightgbm=false",
-        models={},
-        residual_scale_by_account=_residual_scale_by_account(trainable),
+    bundle = _train_quantile_ensemble_models(trainable) if prefer_lightgbm else _fallback_model_bundle(
+        trainable,
+        "prefer_lightgbm=false",
     )
+    feature_summary["model_components"] = bundle.component_models
+    feature_summary["model_weights"] = bundle.model_weights
 
     forecast = _build_forecast_points(data, feature_frame, bundle, as_of_ts, horizon_days)
     first_breach = next((point for point in forecast if point["breach"]), None)
@@ -349,7 +525,27 @@ def run_phase1_forecast(
         "model_type": bundle.model_type,
         "model_available": bundle.available,
         "fallback_reason": bundle.fallback_reason,
+        "model_components": bundle.component_models,
+        "model_weights": bundle.model_weights,
         "feature_quality": feature_summary,
+        "known_events": [
+            {
+                "event_id": str(row["event_id"]),
+                "event_date": pd.Timestamp(row["event_date"]).strftime("%Y-%m-%d"),
+                "event_type": str(row["event_type"]),
+                "account_id": None if pd.isna(row["account_id"]) else str(row["account_id"]),
+                "bank_id": None if pd.isna(row["bank_id"]) else str(row["bank_id"]),
+                "currency": str(row["currency"]),
+                "impact_direction": str(row["impact_direction"]),
+                "expected_amount": float(row["expected_amount"]),
+                "description": str(row["description"]),
+            }
+            for row in data["known_events"].to_dict("records")
+        ],
+        "anomaly_flags": summarize_anomaly_flags(
+            feature_frame,
+            threshold=MAD_ZSCORE_THRESHOLD,
+        ),
         "metrics": metrics,
         "hhi": calculate_hhi(data["balances"]),
         "forecast": forecast,

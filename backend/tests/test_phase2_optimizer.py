@@ -61,6 +61,24 @@ class Phase2OptimizerTests(unittest.TestCase):
         self.assertEqual(result["status"], "infeasible")
         self.assertIsNotNone(result["infeasible_reason"])
 
+    def test_optimizer_survival_floor_blocks_draining_forecast_breach_account(self) -> None:
+        data = load_demo_data()
+        atlas_balance = float(
+            data["balances"].loc[
+                data["balances"]["account_id"] == "atlas-eur-operating",
+                "settled_balance",
+            ].iloc[0]
+        )
+
+        result = solve_liquidity_rebalance(
+            downgrade_bank_id="atlas",
+            survival_min_balances={"atlas-eur-operating": atlas_balance + 2_000_000.0},
+        )
+
+        self.assertEqual(result["status"], "infeasible")
+        self.assertIn("atlas-eur-operating", result["survival_min_balances"])
+        self.assertIsNotNone(result["infeasible_reason"])
+
     def test_optimizer_api_endpoint(self) -> None:
         client = TestClient(app)
 
@@ -73,6 +91,21 @@ class Phase2OptimizerTests(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["status"], "optimal")
         self.assertGreater(len(body["transfers"]), 0)
+
+    def test_optimizer_api_accepts_survival_min_balances(self) -> None:
+        client = TestClient(app)
+
+        response = client.post(
+            "/api/optimizer/rebalance",
+            json={
+                "downgrade_bank_id": "atlas",
+                "survival_min_balances": {"atlas-eur-operating": 5_000_000.0},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("atlas-eur-operating", body["survival_min_balances"])
 
 
 if __name__ == "__main__":

@@ -17,16 +17,19 @@ def _env_bool(name: str, default: bool) -> bool:
 
 def main() -> None:
     mode = os.getenv("AI_COUNCIL_MODE", "auto")
+    provider = os.getenv("AI_COUNCIL_PROVIDER")
     peer_review = _env_bool("AI_COUNCIL_PEER_REVIEW", True)
     scenario_id = os.getenv("AI_COUNCIL_SCENARIO", "target2_outage")
     downgrade_bank_id = os.getenv("AI_COUNCIL_DOWNGRADE_BANK", "atlas") or None
     model = os.getenv("OPENAI_MODEL")
+    anthropic_model = os.getenv("ANTHROPIC_MODEL")
     started_at = time.time()
 
     print(
         (
             "Starting AI Council "
-            f"(mode={mode}, model={model or 'default'}, peer_review={peer_review}, "
+            f"(mode={mode}, provider={provider or 'auto'}, openai_model={model or 'default'}, "
+            f"anthropic_model={anthropic_model or 'default'}, peer_review={peer_review}, "
             f"scenario={scenario_id})..."
         ),
         file=sys.stderr,
@@ -42,8 +45,10 @@ def main() -> None:
         scenario_id=scenario_id,
         downgrade_bank_id=downgrade_bank_id,
         mode=mode,
+        provider=provider,
         peer_review=peer_review,
         model=model,
+        anthropic_model=anthropic_model,
     )
     elapsed = time.time() - started_at
     print(f"AI Council finished in {elapsed:.1f}s using {council['mode']} mode.", file=sys.stderr, flush=True)
@@ -51,8 +56,12 @@ def main() -> None:
         json.dumps(
             {
                 "mode": council["mode"],
+                "provider_mode": council.get("provider_mode"),
                 "model": council["model"],
+                "openai_model": council.get("openai_model"),
+                "anthropic_model": council.get("anthropic_model"),
                 "live_available": council["live_available"],
+                "provider_status": council.get("provider_status"),
                 "fallback_reason": council["fallback_reason"],
                 "advisor_count": len(council["advisor_responses"]),
                 "peer_review_count": len(council["peer_reviews"]),

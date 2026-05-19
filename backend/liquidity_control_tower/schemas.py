@@ -20,6 +20,7 @@ class ForecastPoint(BaseModel):
     currency: str
     required_buffer: float
     scheduled_net_flow: float
+    known_events: list[dict[str, object]] = []
     balance_p05: float
     balance_p50: float
     balance_p95: float
@@ -36,7 +37,10 @@ class FeatureQualitySummary(BaseModel):
     anomaly_rows: int
     anomaly_threshold: float
     ewma_alpha: float
+    known_event_rows: int | None = None
     feature_columns: list[str]
+    model_components: list[str] = []
+    model_weights: dict[str, float] = {}
 
 
 class HHIResult(BaseModel):
@@ -54,12 +58,41 @@ class ForecastMetricSummary(BaseModel):
     model_version: str
 
 
+class KnownEventSummary(BaseModel):
+    event_id: str
+    event_date: str
+    event_type: str
+    account_id: str | None = None
+    bank_id: str | None = None
+    currency: str
+    impact_direction: str
+    expected_amount: float
+    description: str
+
+
+class AnomalyFlagSummary(BaseModel):
+    date: str
+    account_id: str
+    bank_id: str
+    currency: str
+    net_flow: float
+    rolling_median: float | None = None
+    rolling_mad: float | None = None
+    mad_zscore: float
+    threshold: float
+    formula: str
+
+
 class ForecastRunResponse(BaseModel):
     generated_at: str
     model_type: str
     model_available: bool
     fallback_reason: str | None
+    model_components: list[str] = []
+    model_weights: dict[str, float] = {}
     feature_quality: FeatureQualitySummary
+    known_events: list[KnownEventSummary] = []
+    anomaly_flags: list[AnomalyFlagSummary] = []
     metrics: ForecastMetricSummary
     hhi: HHIResult
     forecast: list[ForecastPoint]
@@ -80,6 +113,7 @@ class OptimizerRequest(BaseModel):
     balances: list[OptimizerBalanceInput] | None = None
     downgrade_bank_id: str | None = None
     downgrade_score_delta: int = Field(default=25, ge=0, le=100)
+    survival_min_balances: dict[str, float] | None = None
 
 
 class TransferPlanItem(BaseModel):
@@ -114,6 +148,7 @@ class OptimizerResponse(BaseModel):
     transfers: list[TransferPlanItem]
     post_transfer_balances: list[OptimizerBalanceInput]
     bank_exposure_limits: dict[str, float]
+    survival_min_balances: dict[str, float] = {}
     audit_events: list[OptimizerAuditEvent]
     infeasible_reason: str | None = None
     formulas: dict[str, str]
@@ -252,29 +287,71 @@ class RoiResponse(BaseModel):
     formulas: dict[str, str]
 
 
+class ContingencyPlanRequest(BaseModel):
+    scenario_id: Literal["bank_run", "target2_outage"] = "target2_outage"
+    downgrade_bank_id: str | None = "atlas"
+
+
+class ContingencyAction(BaseModel):
+    action_type: str
+    priority: str
+    account_id: str | None = None
+    currency: str
+    amount: float
+    deadline: str
+    description: str
+    candidate_rails: list[str] | None = None
+    transaction_id: str | None = None
+    counterparty: str | None = None
+    business_reason: str | None = None
+    formula: str
+
+
+class ContingencyPlanResponse(BaseModel):
+    scenario_id: str
+    downgrade_bank_id: str | None = None
+    plan_status: str
+    optimizer_status: str | None = None
+    optimizer_infeasible_reason: str | None = None
+    approval_gate_decision: str | None = None
+    total_p05_gap: float
+    deferrable_coverage: float
+    intraday_credit_need: float
+    actions: list[ContingencyAction]
+    formulas: dict[str, str]
+
+
 class AICouncilRequest(BaseModel):
     scenario_id: Literal["bank_run", "target2_outage"] = "target2_outage"
     downgrade_bank_id: str | None = "atlas"
-    mode: Literal["auto", "live", "mock"] = "auto"
+    mode: Literal["auto", "live", "mock", "openai", "anthropic", "mixed"] = "auto"
+    provider: Literal["auto", "openai", "anthropic", "mixed", "mock"] | None = None
     peer_review: bool = True
     model: str | None = None
+    anthropic_model: str | None = None
 
 
 class AICouncilAdvisorResponse(BaseModel):
     advisor: str
     lens: str
+    provider: str | None = None
     response: str
 
 
 class AICouncilPeerReview(BaseModel):
     reviewer: str
+    provider: str | None = None
     response: str
 
 
 class AICouncilResponse(BaseModel):
     mode: Literal["live", "mock"]
+    provider_mode: str | None = None
     model: str
+    openai_model: str | None = None
+    anthropic_model: str | None = None
     live_available: bool
+    provider_status: dict[str, bool] | None = None
     fallback_reason: str | None = None
     framed_question: str
     facts: dict[str, object]

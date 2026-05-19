@@ -1,0 +1,15 @@
+{
+  "artifact_dir": "/Users/kirill/Documents/code/PROJECTS/liquidity-control-tower/liquidity-control-tower/backend/artifacts",
+  "files": [
+    "openapi.json",
+    "demo_snapshot.json",
+    "demo_metadata.json"
+  ],
+  "generated_at": "2026-05-19T12:16:45.348935Z",
+  "notes": [
+    "AI Council inside the golden snapshot is generated in mock mode for deterministic UI work.",
+    "Live OpenAI/Claude council remains available through POST /api/ai-council/review.",
+    "Use demo_metadata.json for fixed demo clock, seed, thresholds, and ensemble weights."
+  ],
+  "primary_endpoint": "GET /api/demo/snapshot"
+}
