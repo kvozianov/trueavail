@@ -26,6 +26,7 @@ const ruPhrases: Record<string, string> = {
   "Live API": "Live API",
   "Replay Snapshot": "Replay-снимок",
   "World liquidity simulation": "Симуляция мировой ликвидности",
+  "Operational map cockpit": "Операционный map cockpit",
   "Judge evidence packet": "Пакет доказательств для жюри",
   "Technical evidence packet": "Технический пакет доказательств",
   "Product landing": "Продуктовая страница",

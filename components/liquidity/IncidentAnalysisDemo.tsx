@@ -38,6 +38,7 @@ type DeepAnalyticsMatrixProps = {
   result: EnsembleAnalysisResult | null;
   onGroupChange: (group: DeepAnalyticsGroup) => void;
   onOpenFunction: (item: DeepAnalyticsFunction) => void;
+  surface?: "demo" | "map";
 };
 
 type DialogFrameProps = {
@@ -216,23 +217,39 @@ export function DeepAnalyticsMatrix({
   result,
   onGroupChange,
   onOpenFunction,
+  surface = "demo",
 }: DeepAnalyticsMatrixProps) {
   const { t, translate } = useLanguage();
   const groups = functionGroups();
   const visibleFunctions = functions.filter((item) => item.group === activeGroup);
+  const isMapSurface = surface === "map";
+  const statusText = isMapSurface
+    ? t("clickable map layer", "кликабельный слой карты")
+    : result
+      ? t("verified in demo")
+      : t("queued for analysis");
 
   return (
-    <section className="deep-analytics anchor-target" id="evidence" aria-label={t("Deep analytics functions from the MVP document", "Функции глубокой аналитики из MVP-документа")}>
+    <section
+      className={isMapSurface ? "deep-analytics deep-analytics--map anchor-target" : "deep-analytics anchor-target"}
+      id="evidence"
+      aria-label={isMapSurface ? t("Operational map layers", "Операционные слои карты") : t("Deep analytics functions from the MVP document", "Функции глубокой аналитики из MVP-документа")}
+    >
       <div className="deep-analytics__header">
         <div className="section-heading">
-          <p className="eyebrow">{t("Deep Analytics For Jury")}</p>
-          <h2>{t("Every MVP function is visible and clickable")}</h2>
+          <p className="eyebrow">{isMapSurface ? t("Map Operations Layers", "Операционные слои карты") : t("Deep Analytics For Jury")}</p>
+          <h2>{isMapSurface ? t("Every function becomes a map control", "Каждая функция становится управлением карты") : t("Every MVP function is visible and clickable")}</h2>
           <p>
-            {t("These cards turn the document functions into a live demo layer: each function has a signal, proof point, endpoint, and jury narrative.")}
+            {isMapSurface
+              ? t(
+                  "This mode treats the same MVP functions as operational layers: forecast overlays, risk filters, route constraints, governance locks, and integration checks.",
+                  "В этом режиме те же MVP-функции работают как операционные слои: forecast overlays, risk filters, route constraints, governance locks и integration checks.",
+                )
+              : t("These cards turn the document functions into a live demo layer: each function has a signal, proof point, endpoint, and jury narrative.")}
           </p>
         </div>
-        <div className="deep-analytics__readout" aria-label={t("Evidence readiness", "Готовность evidence")}>
-          <span>{result ? t("verified in demo") : t("queued for analysis")}</span>
+        <div className="deep-analytics__readout" aria-label={isMapSurface ? t("Active map layers", "Активные слои карты") : t("Evidence readiness", "Готовность evidence")}>
+          <span>{isMapSurface ? t("active map layers", "активные слои карты") : result ? t("verified in demo") : t("queued for analysis")}</span>
           <strong>{visibleFunctions.length}/{functions.length}</strong>
           <p>{translate(activeGroup)}</p>
         </div>
@@ -255,7 +272,7 @@ export function DeepAnalyticsMatrix({
         {visibleFunctions.map((item, index) => (
           <button className="deep-function-card" key={item.id} onClick={() => onOpenFunction(item)} type="button">
             <span className="deep-function-card__index">0{index + 1}</span>
-            <span className="deep-function-card__status">{result ? t("verified in demo") : t("queued for analysis")}</span>
+            <span className="deep-function-card__status">{statusText}</span>
             <strong>{translate(item.title)}</strong>
             <small>{translate(item.metric)}</small>
             <p>{translate(item.signal)}</p>

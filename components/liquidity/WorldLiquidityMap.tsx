@@ -39,6 +39,50 @@ type AccountCountry = "United States" | "Singapore" | "Saudi Arabia" | "Germany"
 type Currency = "USD" | "EUR";
 type TransferSystem = "SWIFT" | "Fedwire" | "TARGET2" | "SEPA" | "MEPS+" | "SARIE";
 type ScenarioState = "clear" | "warning" | "blocked";
+type MapLayerKey = "risk" | "rails" | "calendar" | "nodes";
+type MapLayers = Record<MapLayerKey, boolean>;
+
+const mapOperationalFunctionIds = new Set([
+  "liquidity-forecast",
+  "anomaly-filtering",
+  "known-events",
+  "risk-status",
+  "hhi",
+  "ccri",
+  "mip-optimizer",
+  "stress-testing",
+  "contingency-plan",
+  "recommendation-approval",
+  "explainability",
+  "demo-snapshot",
+]);
+
+const mapLayerCopy: Array<{
+  key: MapLayerKey;
+  label: LocalizedMessage;
+  detail: LocalizedMessage;
+}> = [
+  {
+    key: "risk",
+    label: { en: "Risk zones", ru: "Зоны риска" },
+    detail: { en: "Incident marker, anomaly radius, popup", ru: "Маркер инцидента, радиус аномалии, popup" },
+  },
+  {
+    key: "rails",
+    label: { en: "Transfer rails", ru: "Transfer rails" },
+    detail: { en: "SWIFT/Fedwire/TARGET2 route paths", ru: "Маршруты SWIFT/Fedwire/TARGET2" },
+  },
+  {
+    key: "calendar",
+    label: { en: "Calendar pressure", ru: "Календарное давление" },
+    detail: { en: "Banking-day and seasonality notices", ru: "Banking-day и seasonality notices" },
+  },
+  {
+    key: "nodes",
+    label: { en: "Bank nodes", ru: "Банковские узлы" },
+    detail: { en: "Clickable accounts and selected balance card", ru: "Кликабельные счета и карточка баланса" },
+  },
+];
 type BankingDayState = "open" | "cutoff" | "closed" | "usable";
 type LabelSide = "left" | "right" | "above" | "below";
 type IncidentModal = "details" | "models" | "ticket" | "close" | "function" | null;
@@ -433,8 +477,13 @@ const scenarios: SimulationScenario[] = [
   },
 ];
 
-export function WorldLiquidityMap() {
+type WorldLiquidityMapProps = {
+  surface?: "demo" | "map";
+};
+
+export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) {
   const { language, message, t, translate } = useLanguage();
+  const isMapSurface = surface === "map";
   const addFormRef = useRef<HTMLDivElement>(null);
   const [accounts, setAccounts] = useState<MapAccount[]>(initialAccounts);
   const [selectedId, setSelectedId] = useState(initialAccounts[0].id);
@@ -445,10 +494,17 @@ export function WorldLiquidityMap() {
   const [draftAccountCode, setDraftAccountCode] = useState("GB-USD-9302");
   const [draftCapital, setDraftCapital] = useState("2850000");
   const [draftCondition, setDraftCondition] = useState("auto");
-  const [mapNotice, setMapNotice] = useState<LocalizedMessage>({
-    en: "Map error detected on New York. Run ML analysis to explain the anomaly.",
-    ru: "На карте обнаружена ошибка в New York. Запустите ML-анализ, чтобы объяснить аномалию.",
-  });
+  const [mapNotice, setMapNotice] = useState<LocalizedMessage>(() =>
+    isMapSurface
+      ? {
+          en: "Operational map mode. Select nodes, run scenarios, and inspect liquidity rails.",
+          ru: "Режим операционной карты. Выбирайте узлы, запускайте сценарии и проверяйте liquidity rails.",
+        }
+      : {
+          en: "Map error detected on New York. Run ML analysis to explain the anomaly.",
+          ru: "На карте обнаружена ошибка в New York. Запустите ML-анализ, чтобы объяснить аномалию.",
+        },
+  );
   const [mapError, setMapError] = useState<LocalizedMessage | null>(null);
   const [incidentLifecycle, setIncidentLifecycle] = useState<IncidentLifecycle>("detected");
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStepState[]>(() => createInitialAnalysisSteps());
@@ -466,6 +522,12 @@ export function WorldLiquidityMap() {
   const [ticketError, setTicketError] = useState("");
   const [ticketSubmitting, setTicketSubmitting] = useState(false);
   const [ticketId, setTicketId] = useState("");
+  const [mapLayers, setMapLayers] = useState<MapLayers>({
+    risk: true,
+    rails: true,
+    calendar: true,
+    nodes: true,
+  });
 
   const selected = accounts.find((account) => account.id === selectedId) ?? accounts[0];
   const scenario = scenarios.find((item) => item.id === scenarioId) ?? scenarios[0];
@@ -480,6 +542,29 @@ export function WorldLiquidityMap() {
     const eur = accounts.filter((account) => account.currency === "EUR").reduce((sum, account) => sum + account.capital, 0);
     return { usd, eur };
   }, [accounts]);
+
+  const visibleAnalyticsFunctions = useMemo(
+    () =>
+      isMapSurface
+        ? deepAnalyticsFunctions.filter((item) => mapOperationalFunctionIds.has(item.id))
+        : deepAnalyticsFunctions,
+    [isMapSurface],
+  );
+
+  const activeLayerCount = Object.values(mapLayers).filter(Boolean).length;
+
+  const toggleMapLayer = (key: MapLayerKey) => {
+    const layer = mapLayerCopy.find((item) => item.key === key);
+    const nextVisible = !mapLayers[key];
+    setMapLayers((current) => ({ ...current, [key]: !current[key] }));
+    if (layer) {
+      showNotice(
+        `${layer.label.en} layer ${nextVisible ? "enabled" : "hidden"}.`,
+        `Слой ${layer.label.ru} ${nextVisible ? "включён" : "скрыт"}.`,
+      );
+    }
+    clearMapError();
+  };
 
   const simulation = useMemo(() => {
     const account = accounts.find((item) => item.id === scenario.accountId);
@@ -835,17 +920,25 @@ export function WorldLiquidityMap() {
   };
 
   return (
-    <main className="demo-page map-dashboard" id="main-content">
-      <DemoNav mode="replay" statusText="World liquidity simulation" />
+    <main className={`demo-page map-dashboard map-dashboard--${surface}`} id="main-content">
+      <DemoNav mode="replay" statusText={isMapSurface ? "Operational map cockpit" : "World liquidity simulation"} />
 
       <section className="map-dashboard__hero anchor-target" id="demo-dashboard" aria-labelledby="map-dashboard-title">
         <div className="map-dashboard__hero-copy">
-          <p className="eyebrow">{t("Liquidity Map Simulation")}</p>
-          <h1 id="map-dashboard-title">{t("Global liquidity control map")}</h1>
+          <p className="eyebrow">{isMapSurface ? t("Operational Map", "Операционная карта") : t("Liquidity Map Simulation")}</p>
+          <h1 id="map-dashboard-title">
+            {isMapSurface ? t("Global liquidity map cockpit", "Карта ликвидности в режиме cockpit") : t("Global liquidity control map")}
+          </h1>
           <p>
-            {t("Pick a treasury scenario, watch the affected account light up, and trace which SWIFT or local rail the system uses before it approves, throttles, or blocks the deal.")}
+            {isMapSurface
+              ? t(
+                  "Use this page as the control map: inspect bank nodes, adjust accounts, test settlement routes, and see how rails react to treasury scenarios.",
+                  "Используйте эту страницу как control map: проверяйте банковские узлы, меняйте счета, тестируйте settlement routes и смотрите, как rails реагируют на treasury-сценарии.",
+                )
+              : t("Pick a treasury scenario, watch the affected account light up, and trace which SWIFT or local rail the system uses before it approves, throttles, or blocks the deal.")}
           </p>
           <div className="map-hero-signals" aria-label={t("Map state", "Состояние карты")}>
+            {isMapSurface ? <span>{t("Map cockpit", "Map cockpit")}</span> : null}
             <span>{accounts.length} {t("bank nodes")}</span>
             <span>{scenario.transferLegs.length} {t("active rails")}</span>
             <span>{incidentLifecycle === "incidentClosed" ? t("Incident closed") : simulation.state === "clear" ? t("Program ready") : t("Anomaly detected")}</span>
@@ -870,9 +963,16 @@ export function WorldLiquidityMap() {
 
       <section className="scenario-board" aria-label={t("Jury simulation scenarios", "Сценарии симуляции для жюри")}>
         <div className="section-heading">
-          <p className="eyebrow">{t("Jury Control")}</p>
-          <h2>{t("Choose where the deal lands")}</h2>
-          <p>{t("The selected scenario paints transfer routes on the map and explains the program decision in treasury language.")}</p>
+          <p className="eyebrow">{isMapSurface ? t("Map Control", "Управление картой") : t("Jury Control")}</p>
+          <h2>{isMapSurface ? t("Choose a route to inspect", "Выберите маршрут для проверки") : t("Choose where the deal lands")}</h2>
+          <p>
+            {isMapSurface
+              ? t(
+                  "The selected scenario updates the map layer, rail paths, account panel, and calendar pressure without leaving the cockpit.",
+                  "Выбранный сценарий обновляет карту, rail-маршруты, панель счёта и календарное давление без выхода из cockpit.",
+                )
+              : t("The selected scenario paints transfer routes on the map and explains the program decision in treasury language.")}
+          </p>
         </div>
         <div className="scenario-cards">
           {scenarios.map((item) => (
@@ -890,6 +990,40 @@ export function WorldLiquidityMap() {
         </div>
       </section>
 
+      {isMapSurface ? (
+        <section className="map-layer-control" aria-label={t("Map layer control", "Управление слоями карты")}>
+          <div>
+            <p className="eyebrow">{t("Live Layer Stack", "Live Layer Stack")}</p>
+            <h2>{t("Turn map intelligence on and off", "Включайте и выключайте интеллект карты")}</h2>
+            <p>
+              {t(
+                "This block exists only on Map: it makes the page a control cockpit instead of a jury walkthrough.",
+                "Этот блок есть только на Map: он превращает страницу в control cockpit, а не в walkthrough для жюри.",
+              )}
+            </p>
+          </div>
+          <div className="map-layer-control__meter" aria-label={t("Active layers", "Активные слои")}>
+            <strong>{activeLayerCount}/4</strong>
+            <span>{t("layers active", "активных слоя")}</span>
+          </div>
+          <div className="map-layer-control__grid">
+            {mapLayerCopy.map((layer) => (
+              <button
+                aria-pressed={mapLayers[layer.key]}
+                className={mapLayers[layer.key] ? "map-layer-toggle map-layer-toggle--active" : "map-layer-toggle"}
+                key={layer.key}
+                onClick={() => toggleMapLayer(layer.key)}
+                type="button"
+              >
+                <span>{message(layer.label)}</span>
+                <small>{message(layer.detail)}</small>
+                <em>{mapLayers[layer.key] ? t("Active", "Активен") : t("Hidden", "Скрыт")}</em>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="map-workspace" aria-label={t("World liquidity workspace", "Рабочая зона мировой ликвидности")}>
         <div className="world-map-panel">
           <div className="world-map-panel__topline">
@@ -904,6 +1038,7 @@ export function WorldLiquidityMap() {
             incident={incident}
             incidentLifecycle={incidentLifecycle}
             incidentPopupOpen={incidentPopupOpen}
+            layers={mapLayers}
             selectedId={selected.id}
             selected={selected}
             scenario={simulationRan ? scenario : undefined}
@@ -987,88 +1122,93 @@ export function WorldLiquidityMap() {
         </aside>
       </section>
 
-      <section className="simulation-output" aria-label={t("Simulation output", "Результат симуляции")}>
-        <article className={`simulation-verdict simulation-verdict--${simulation.state}`}>
-          <p className="eyebrow">{t("Program Response")}</p>
-          <h2>{translate(scenario.decision)}</h2>
-          <dl>
-            <div>
-              <dt>{t("Scenario account")}</dt>
-              <dd>{scenarioAccount ? `${scenarioAccount.bank} / ${translate(scenarioAccount.city)}` : scenario.accountId}</dd>
-            </div>
-            <div>
-              <dt>{t("After deal")}</dt>
-              <dd>{formatMoney(simulation.balanceAfterDebit, scenario.currency)}</dd>
-            </div>
-            <div>
-              <dt>{t("After program action")}</dt>
-              <dd>{formatMoney(simulation.balanceAfterProgram, scenario.currency)}</dd>
-            </div>
-          </dl>
-        </article>
+      {!isMapSurface ? (
+        <>
+          <section className="simulation-output" aria-label={t("Simulation output", "Результат симуляции")}>
+            <article className={`simulation-verdict simulation-verdict--${simulation.state}`}>
+              <p className="eyebrow">{t("Program Response")}</p>
+              <h2>{translate(scenario.decision)}</h2>
+              <dl>
+                <div>
+                  <dt>{t("Scenario account")}</dt>
+                  <dd>{scenarioAccount ? `${scenarioAccount.bank} / ${translate(scenarioAccount.city)}` : scenario.accountId}</dd>
+                </div>
+                <div>
+                  <dt>{t("After deal")}</dt>
+                  <dd>{formatMoney(simulation.balanceAfterDebit, scenario.currency)}</dd>
+                </div>
+                <div>
+                  <dt>{t("After program action")}</dt>
+                  <dd>{formatMoney(simulation.balanceAfterProgram, scenario.currency)}</dd>
+                </div>
+              </dl>
+            </article>
 
-        <article className="transfer-ledger">
-          <p className="eyebrow">{t("Transfer Rails")}</p>
-          <h2>{t("Money movement shown on the map")}</h2>
-          <div className="transfer-rows">
-            {scenario.transferLegs.map((leg, index) => (
-              <div className={`transfer-row transfer-row--${leg.state}`} key={`${leg.from}-${leg.to}-${index}`}>
-                <span>{leg.system}</span>
-                <strong>{translate(leg.label)}</strong>
-                <small>{formatMoney(leg.amount, leg.currency)} · {translate(leg.eta)}</small>
-                <em>{translate(leg.calendarNote)}</em>
+            <article className="transfer-ledger">
+              <p className="eyebrow">{t("Transfer Rails")}</p>
+              <h2>{t("Money movement shown on the map")}</h2>
+              <div className="transfer-rows">
+                {scenario.transferLegs.map((leg, index) => (
+                  <div className={`transfer-row transfer-row--${leg.state}`} key={`${leg.from}-${leg.to}-${index}`}>
+                    <span>{leg.system}</span>
+                    <strong>{translate(leg.label)}</strong>
+                    <small>{formatMoney(leg.amount, leg.currency)} · {translate(leg.eta)}</small>
+                    <em>{translate(leg.calendarNote)}</em>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </article>
+            </article>
 
-        <article className="program-steps">
-          <p className="eyebrow">{t("What The Program Does")}</p>
-          <ol>
-            {scenario.programResponse.map((step) => (
-              <li key={step}>{translate(step)}</li>
-            ))}
-          </ol>
-        </article>
-      </section>
+            <article className="program-steps">
+              <p className="eyebrow">{t("What The Program Does")}</p>
+              <ol>
+                {scenario.programResponse.map((step) => (
+                  <li key={step}>{translate(step)}</li>
+                ))}
+              </ol>
+            </article>
+          </section>
 
-      <section className="calendar-seasonality" aria-label={t("Banking days and seasonality")}>
-        <div className="section-heading">
-          <p className="eyebrow">{t("Calendar Engine")}</p>
-          <h2>{t("Banking days and seasonality change usable cash")}</h2>
-          <p>{translate(scenario.calendar.summary)}</p>
-        </div>
-        <div className="banking-day-strip">
-          {scenario.calendar.days.map((day) => (
-            <div className={`banking-day banking-day--${day.state}`} key={`${scenario.id}-${day.label}-${day.region}`}>
-              <span>{translate(day.label)}</span>
-              <strong>{day.region}</strong>
-              <small>{translate(day.note)}</small>
+          <section className="calendar-seasonality" aria-label={t("Banking days and seasonality")}>
+            <div className="section-heading">
+              <p className="eyebrow">{t("Calendar Engine")}</p>
+              <h2>{t("Banking days and seasonality change usable cash")}</h2>
+              <p>{translate(scenario.calendar.summary)}</p>
             </div>
-          ))}
-        </div>
-        <div className="seasonality-panel">
-          <div>
-            <span>{t("Calendar-adjusted effect")}</span>
-            <strong>{translate(scenario.calendar.effect)}</strong>
-          </div>
-          <div className="seasonality-bars" aria-label={t("Seasonality pressure")}>
-            {scenario.calendar.seasonality.map((point) => (
-              <div className="seasonality-bar" key={`${scenario.id}-${point.label}`}>
-                <span style={{ height: `${point.value}%` }} />
-                <small>{translate(point.label)}</small>
+            <div className="banking-day-strip">
+              {scenario.calendar.days.map((day) => (
+                <div className={`banking-day banking-day--${day.state}`} key={`${scenario.id}-${day.label}-${day.region}`}>
+                  <span>{translate(day.label)}</span>
+                  <strong>{day.region}</strong>
+                  <small>{translate(day.note)}</small>
+                </div>
+              ))}
+            </div>
+            <div className="seasonality-panel">
+              <div>
+                <span>{t("Calendar-adjusted effect")}</span>
+                <strong>{translate(scenario.calendar.effect)}</strong>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+              <div className="seasonality-bars" aria-label={t("Seasonality pressure")}>
+                {scenario.calendar.seasonality.map((point) => (
+                  <div className="seasonality-bar" key={`${scenario.id}-${point.label}`}>
+                    <span style={{ height: `${point.value}%` }} />
+                    <small>{translate(point.label)}</small>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </>
+      ) : null}
 
       <DeepAnalyticsMatrix
         activeGroup={activeFunctionGroup}
-        functions={deepAnalyticsFunctions}
+        functions={visibleAnalyticsFunctions}
         result={analysisResult}
         onGroupChange={setActiveFunctionGroup}
         onOpenFunction={openFunctionProof}
+        surface={surface}
       />
 
       <section className="map-control-grid" aria-label={t("Map controls", "Управление картой")}>
@@ -1220,6 +1360,7 @@ function WorldMap({
   incident,
   incidentLifecycle,
   incidentPopupOpen,
+  layers,
   selectedId,
   selected,
   scenario,
@@ -1238,6 +1379,7 @@ function WorldMap({
   incident: LiquidityIncident;
   incidentLifecycle: IncidentLifecycle;
   incidentPopupOpen: boolean;
+  layers: MapLayers;
   selectedId: string;
   selected: MapAccount;
   scenario?: SimulationScenario;
@@ -1319,19 +1461,21 @@ function WorldMap({
             ) : null,
           )}
         </g>
-        <path className="world-map__route-belt" d="M 42 300 C 180 176 315 160 462 210 S 744 322 958 184" />
+        {layers.rails ? <path className="world-map__route-belt" d="M 42 300 C 180 176 315 160 462 210 S 744 322 958 184" /> : null}
       </svg>
-      <TransferLayer accounts={accounts} pointByAccountId={pointByAccountId} scenario={scenario} />
-      <IncidentMapOverlay
-        analysisResult={analysisResult}
-        incident={incident}
-        lifecycle={incidentLifecycle}
-        onOpen={onIncidentSelect}
-        onTogglePopup={onToggleIncidentPopup}
-        point={pointByAccountId.get(incident.accountId) ?? null}
-        popupOpen={incidentPopupOpen}
-      />
-      {accounts.map((account) => {
+      {layers.rails ? <TransferLayer accounts={accounts} pointByAccountId={pointByAccountId} scenario={scenario} /> : null}
+      {layers.risk ? (
+        <IncidentMapOverlay
+          analysisResult={analysisResult}
+          incident={incident}
+          lifecycle={incidentLifecycle}
+          onOpen={onIncidentSelect}
+          onTogglePopup={onToggleIncidentPopup}
+          point={pointByAccountId.get(incident.accountId) ?? null}
+          popupOpen={incidentPopupOpen}
+        />
+      ) : null}
+      {layers.nodes ? accounts.map((account) => {
         const isScenarioAccount = scenario?.accountId === account.id;
         const point = pointByAccountId.get(account.id) ?? projectAccount(account, projection);
         const nodeClassName = [
@@ -1357,27 +1501,29 @@ function WorldMap({
             </span>
           </button>
         );
-      })}
-      <div className={`map-account-popover map-account-popover--${activity.status}`}>
-        <div className="map-account-popover__head">
-          <div>
-            <span>{selected.currency} · {translate(selected.city).toUpperCase()}</span>
-            <strong>{selected.bank}</strong>
+      }) : null}
+      {layers.nodes ? (
+        <div className={`map-account-popover map-account-popover--${activity.status}`}>
+          <div className="map-account-popover__head">
+            <div>
+              <span>{selected.currency} · {translate(selected.city).toUpperCase()}</span>
+              <strong>{selected.bank}</strong>
+            </div>
+            <em>{activity.status === "clear" ? t("Healthy") : activity.status === "warning" ? t("Watch") : t("Blocked")}</em>
           </div>
-          <em>{activity.status === "clear" ? t("Healthy") : activity.status === "warning" ? t("Watch") : t("Blocked")}</em>
-        </div>
-        <strong className="map-account-popover__capital">{shortMoney(selected.capital)}</strong>
-        <small>min {shortMoney(selected.floor)}</small>
-        <div className="map-account-popover__activity">
-          <span>{t("Activity (session)")}</span>
-          <div>
-            <b className="map-activity-in">↙ {formatCompact(activity.inbound, selected.currency)}</b>
-            <b className="map-activity-out">↗ {formatCompact(activity.outbound, selected.currency)}</b>
+          <strong className="map-account-popover__capital">{shortMoney(selected.capital)}</strong>
+          <small>min {shortMoney(selected.floor)}</small>
+          <div className="map-account-popover__activity">
+            <span>{t("Activity (session)")}</span>
+            <div>
+              <b className="map-activity-in">↙ {formatCompact(activity.inbound, selected.currency)}</b>
+              <b className="map-activity-out">↗ {formatCompact(activity.outbound, selected.currency)}</b>
+            </div>
           </div>
+          <p>+{activity.otherAccounts} {t("other accounts at this location")}</p>
         </div>
-        <p>+{activity.otherAccounts} {t("other accounts at this location")}</p>
-      </div>
-      {scenario ? (
+      ) : null}
+      {scenario && layers.calendar ? (
         <div className="map-alert-stack" aria-hidden="true">
           <div className="map-alert map-alert--warning">
             <span>{t("Banking day delay")}</span>
