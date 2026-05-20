@@ -39,7 +39,7 @@ def main() -> None:
             ],
             "primary_endpoint": "GET /api/demo/snapshot",
             "notes": [
-                "AI Council inside the golden snapshot is generated in mock mode for deterministic UI work.",
+                "AI Council inside the deterministic demo snapshot is generated in mock mode for deterministic UI work.",
                 "Live OpenAI/Claude council remains available through POST /api/ai-council/review.",
                 "Use demo_metadata.json for fixed demo clock, seed, thresholds, and ensemble weights.",
             ],

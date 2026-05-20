@@ -5,9 +5,9 @@
     "demo_snapshot.json",
     "demo_metadata.json"
   ],
-  "generated_at": "2026-05-19T12:16:45.348935Z",
+  "generated_at": "2026-05-20T13:59:34.775370Z",
   "notes": [
-    "AI Council inside the golden snapshot is generated in mock mode for deterministic UI work.",
+    "AI Council inside the deterministic demo snapshot is generated in mock mode for deterministic UI work.",
     "Live OpenAI/Claude council remains available through POST /api/ai-council/review.",
     "Use demo_metadata.json for fixed demo clock, seed, thresholds, and ensemble weights."
   ],

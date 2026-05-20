@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { NetworkBackground } from "@/components/liquidity/NetworkBackground";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Liquidity Control Tower",
-  description: "Predictive liquidity control tower for fintech treasury teams.",
+  title: "TrueAvail — Book cash isn’t usable cash.",
+  description: "Book cash isn’t usable cash. Treasury liquidity forecasting, stress testing, governance, and AI Council review.",
 };
 
 export default function RootLayout({
@@ -12,8 +13,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" data-scroll-behavior="smooth">
+      <body>
+        <NetworkBackground />
+        {children}
+      </body>
     </html>
   );
 }
