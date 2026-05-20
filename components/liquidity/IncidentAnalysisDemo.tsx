@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useLanguage } from "@/components/liquidity/LanguageProvider";
+import type { Language } from "@/lib/i18n";
 import type {
   AnalysisStepState,
   DeepAnalyticsFunction,
@@ -63,39 +65,40 @@ export function IncidentAnalysisPanel({
   onCloseIncident,
   onViewModels,
 }: IncidentAnalysisPanelProps) {
+  const { language, t, translate } = useLanguage();
   const running = lifecycle === "analysisRunning";
   const closed = lifecycle === "incidentClosed";
   const completed = Boolean(result);
 
   return (
-    <section className={`incident-console incident-console--${lifecycle}`} aria-label="Incident analytics console">
+    <section className={`incident-console incident-console--${lifecycle}`} aria-label={t("Incident analytics console", "Консоль аналитики инцидента")}>
       <div className="incident-console__header">
         <div>
-          <p className="eyebrow">Map Error Detected</p>
-          <h2>{incident.title}</h2>
-          <p>{incident.description}</p>
+          <p className="eyebrow">{t("Map Error Detected")}</p>
+          <h2>{translate(incident.title)}</h2>
+          <p>{translate(incident.description)}</p>
         </div>
         <span className={`incident-status-badge incident-status-badge--${lifecycle}`}>
-          {statusLabel(lifecycle)}
+          {statusLabel(lifecycle, translate)}
         </span>
       </div>
 
-      <dl className="incident-facts" aria-label="Incident facts">
+      <dl className="incident-facts" aria-label={t("Incident facts", "Факты инцидента")}>
         <div>
-          <dt>Type</dt>
-          <dd>{incident.type}</dd>
+          <dt>{t("Type")}</dt>
+          <dd>{translate(incident.type)}</dd>
         </div>
         <div>
-          <dt>Zone</dt>
-          <dd>{incident.mapZone}</dd>
+          <dt>{t("Zone")}</dt>
+          <dd>{translate(incident.mapZone)}</dd>
         </div>
         <div>
-          <dt>Detected</dt>
-          <dd>{formatDateTime(incident.detectedAt)}</dd>
+          <dt>{t("Detected")}</dt>
+          <dd>{formatDateTime(incident.detectedAt, language)}</dd>
         </div>
         <div>
-          <dt>Risk</dt>
-          <dd>{incident.severity.toUpperCase()}</dd>
+          <dt>{t("Risk")}</dt>
+          <dd>{translate(incident.severity.toUpperCase())}</dd>
         </div>
       </dl>
 
@@ -106,13 +109,13 @@ export function IncidentAnalysisPanel({
           onClick={onAnalyze}
           type="button"
         >
-          {running ? "Analyzing..." : completed ? "Run ML analysis again" : "Run ML analysis"}
+          {running ? t("Analyzing...") : completed ? t("Run ML analysis again") : t("Run ML analysis")}
         </button>
         <button className="command-button" disabled={running} onClick={onOpenDetails} type="button">
-          Open details
+          {t("Open details")}
         </button>
         <button className="command-button command-button--ghost" disabled={running || closed} onClick={onSimulateFailure} type="button">
-          Simulate failed run
+          {t("Simulate failed run")}
         </button>
       </div>
 
@@ -120,8 +123,8 @@ export function IncidentAnalysisPanel({
         <div className="analysis-progress-card">
           <div className="analysis-progress-card__top">
             <div>
-              <span>ML ensemble pipeline</span>
-              <strong>{error ? "Run needs attention" : completed ? "Analysis completed" : "Models are running"}</strong>
+              <span>{t("ML ensemble pipeline")}</span>
+              <strong>{error ? t("Run needs attention") : completed ? t("Analysis completed") : t("Models are running")}</strong>
             </div>
             <b>{Math.round(progress)}%</b>
           </div>
@@ -131,20 +134,20 @@ export function IncidentAnalysisPanel({
           <ol className="analysis-step-list">
             {steps.map((step) => (
               <li className={`analysis-step analysis-step--${step.status}`} key={step.id}>
-                <span>{step.status}</span>
+                <span>{translate(step.status)}</span>
                 <div>
-                  <strong>{step.label}</strong>
-                  <p>{step.detail}</p>
+                  <strong>{translate(step.label)}</strong>
+                  <p>{translate(step.detail)}</p>
                 </div>
               </li>
             ))}
           </ol>
           {error ? (
             <div className="analysis-error" role="alert">
-              <strong>Analysis failed</strong>
-              <p>{error}</p>
+              <strong>{t("Analysis failed")}</strong>
+              <p>{translate(error)}</p>
               <button className="command-button command-button--primary" onClick={onRetry} type="button">
-                Retry analysis
+                {t("Retry analysis")}
               </button>
             </div>
           ) : null}
@@ -154,17 +157,17 @@ export function IncidentAnalysisPanel({
       {result ? (
         <div className="ensemble-result-card">
           <div className="ensemble-result-card__score">
-            <span>Risk score</span>
+            <span>{t("Risk score")}</span>
             <strong>{result.riskScore}</strong>
-            <small>{result.confidence}% confidence</small>
+            <small>{result.confidence}% {t("confidence", "уверенность")}</small>
           </div>
           <div>
-            <p className="eyebrow">Final Verdict</p>
-            <h3>{result.finalVerdict}</h3>
-            <p>{result.explanation}</p>
+            <p className="eyebrow">{t("Final Verdict")}</p>
+            <h3>{translate(result.finalVerdict)}</h3>
+            <p>{translate(result.explanation)}</p>
             <ul>
               {result.recommendations.slice(0, 3).map((recommendation) => (
-                <li key={recommendation}>{recommendation}</li>
+                <li key={recommendation}>{translate(recommendation)}</li>
               ))}
             </ul>
           </div>
@@ -172,11 +175,11 @@ export function IncidentAnalysisPanel({
       ) : null}
 
       {result ? (
-        <div className="incident-action-grid" aria-label="Post-analysis actions">
-          <button className="command-button" onClick={onViewModels} type="button">View models</button>
-          <button className="command-button" onClick={onDownloadReport} type="button">Download report</button>
+        <div className="incident-action-grid" aria-label={t("Post-analysis actions", "Действия после анализа")}>
+          <button className="command-button" onClick={onViewModels} type="button">{t("View models")}</button>
+          <button className="command-button" onClick={onDownloadReport} type="button">{t("Download report")}</button>
           <button className="command-button" onClick={onCreateTicket} type="button">
-            {ticketId ? `Ticket ${ticketId}` : "Create ticket"}
+            {ticketId ? `${t("Ticket", "Тикет")} ${ticketId}` : t("Create ticket")}
           </button>
           <button
             className="command-button"
@@ -184,7 +187,7 @@ export function IncidentAnalysisPanel({
             onClick={onAcceptRecommendation}
             type="button"
           >
-            {lifecycle === "recommendationAccepted" ? "Recommendation accepted" : "Accept recommendation"}
+            {lifecycle === "recommendationAccepted" ? t("Recommendation accepted") : t("Accept recommendation")}
           </button>
           <button
             className="command-button command-button--danger"
@@ -192,15 +195,15 @@ export function IncidentAnalysisPanel({
             onClick={onCloseIncident}
             type="button"
           >
-            {closed ? "Incident closed" : "Close incident"}
+            {closed ? t("Incident closed") : t("Close incident")}
           </button>
         </div>
       ) : null}
 
       {ticketId || lifecycle === "recommendationAccepted" || closed ? (
         <div className="incident-lifecycle-note" role="status">
-          <strong>Demo lifecycle updated</strong>
-          <span>{lifecycleSummary(lifecycle, ticketId)}</span>
+          <strong>{t("Demo lifecycle updated")}</strong>
+          <span>{lifecycleSummary(lifecycle, ticketId, translate)}</span>
         </div>
       ) : null}
     </section>
@@ -214,20 +217,27 @@ export function DeepAnalyticsMatrix({
   onGroupChange,
   onOpenFunction,
 }: DeepAnalyticsMatrixProps) {
+  const { t, translate } = useLanguage();
   const groups = functionGroups();
   const visibleFunctions = functions.filter((item) => item.group === activeGroup);
 
   return (
-    <section className="deep-analytics" aria-label="Deep analytics functions from the MVP document">
-      <div className="section-heading">
-        <p className="eyebrow">Deep Analytics For Jury</p>
-        <h2>Every MVP function is visible and clickable</h2>
-        <p>
-          These cards turn the document functions into a live demo layer: each function has a signal, proof point,
-          endpoint, and jury narrative.
-        </p>
+    <section className="deep-analytics anchor-target" id="evidence" aria-label={t("Deep analytics functions from the MVP document", "Функции глубокой аналитики из MVP-документа")}>
+      <div className="deep-analytics__header">
+        <div className="section-heading">
+          <p className="eyebrow">{t("Deep Analytics For Jury")}</p>
+          <h2>{t("Every MVP function is visible and clickable")}</h2>
+          <p>
+            {t("These cards turn the document functions into a live demo layer: each function has a signal, proof point, endpoint, and jury narrative.")}
+          </p>
+        </div>
+        <div className="deep-analytics__readout" aria-label={t("Evidence readiness", "Готовность evidence")}>
+          <span>{result ? t("verified in demo") : t("queued for analysis")}</span>
+          <strong>{visibleFunctions.length}/{functions.length}</strong>
+          <p>{translate(activeGroup)}</p>
+        </div>
       </div>
-      <div className="deep-analytics__tabs" role="tablist" aria-label="Analytics groups">
+      <div className="deep-analytics__tabs" role="tablist" aria-label={t("Analytics groups", "Группы аналитики")}>
         {groups.map((group) => (
           <button
             aria-selected={group === activeGroup}
@@ -237,18 +247,20 @@ export function DeepAnalyticsMatrix({
             role="tab"
             type="button"
           >
-            {group}
+            {translate(group)}
           </button>
         ))}
       </div>
       <div className="deep-analytics__grid">
-        {visibleFunctions.map((item) => (
+        {visibleFunctions.map((item, index) => (
           <button className="deep-function-card" key={item.id} onClick={() => onOpenFunction(item)} type="button">
-            <span>{result ? "verified in demo" : "queued for analysis"}</span>
-            <strong>{item.title}</strong>
-            <small>{item.metric}</small>
-            <p>{item.signal}</p>
+            <span className="deep-function-card__index">0{index + 1}</span>
+            <span className="deep-function-card__status">{result ? t("verified in demo") : t("queued for analysis")}</span>
+            <strong>{translate(item.title)}</strong>
+            <small>{translate(item.metric)}</small>
+            <p>{translate(item.signal)}</p>
             <em>{item.endpoint}</em>
+            <i aria-hidden="true" />
           </button>
         ))}
       </div>
@@ -267,36 +279,37 @@ export function IncidentDetailsDialog({
   lifecycle: IncidentLifecycle;
   onClose: () => void;
 }) {
+  const { translate, t } = useLanguage();
   return (
-    <DialogFrame title="Incident details" onClose={onClose}>
+    <DialogFrame title={t("Incident details")} onClose={onClose}>
       <div className="incident-dialog-grid">
         <section>
-          <p className="eyebrow">Incident</p>
-          <h3>{incident.title}</h3>
-          <p>{incident.description}</p>
+          <p className="eyebrow">{t("Incident")}</p>
+          <h3>{translate(incident.title)}</h3>
+          <p>{translate(incident.description)}</p>
           <dl className="incident-dialog-facts">
             <div><dt>ID</dt><dd>{incident.id}</dd></div>
-            <div><dt>Status</dt><dd>{statusLabel(lifecycle)}</dd></div>
-            <div><dt>Coordinates</dt><dd>{incident.coordinates.latitude.toFixed(4)}, {incident.coordinates.longitude.toFixed(4)}</dd></div>
-            <div><dt>Source</dt><dd>{incident.source}</dd></div>
+            <div><dt>{t("Status")}</dt><dd>{statusLabel(lifecycle, translate)}</dd></div>
+            <div><dt>{t("Coordinates")}</dt><dd>{incident.coordinates.latitude.toFixed(4)}, {incident.coordinates.longitude.toFixed(4)}</dd></div>
+            <div><dt>{t("Source")}</dt><dd>{translate(incident.source)}</dd></div>
           </dl>
         </section>
         <section>
-          <p className="eyebrow">Expected vs observed</p>
-          <h3>Why the marker is red</h3>
-          <p><strong>Expected:</strong> {incident.expectedBehavior}</p>
-          <p><strong>Observed:</strong> {incident.observedBehavior}</p>
+          <p className="eyebrow">{t("Expected vs observed")}</p>
+          <h3>{t("Why the marker is red")}</h3>
+          <p><strong>{t("Expected")}:</strong> {translate(incident.expectedBehavior)}</p>
+          <p><strong>{t("Observed")}:</strong> {translate(incident.observedBehavior)}</p>
           <ul>
-            {incident.riskFactors.map((factor) => <li key={factor}>{factor}</li>)}
+            {incident.riskFactors.map((factor) => <li key={factor}>{translate(factor)}</li>)}
           </ul>
         </section>
       </div>
       {result ? (
         <section className="dialog-callout">
-          <p className="eyebrow">Root cause</p>
-          <h3>{result.rootCause}</h3>
+          <p className="eyebrow">{t("Root cause")}</p>
+          <h3>{translate(result.rootCause)}</h3>
           <ul>
-            {result.evidence.map((item) => <li key={item}>{item}</li>)}
+            {result.evidence.map((item) => <li key={item}>{translate(item)}</li>)}
           </ul>
         </section>
       ) : null}
@@ -311,12 +324,13 @@ export function ModelReportDialog({
   result: EnsembleAnalysisResult;
   onClose: () => void;
 }) {
+  const { t, translate } = useLanguage();
   return (
-    <DialogFrame title="ML ensemble model report" onClose={onClose}>
+    <DialogFrame title={t("ML ensemble model report")} onClose={onClose}>
       <div className="model-report-summary">
-        <div><span>Verdict</span><strong>{result.finalVerdict}</strong></div>
-        <div><span>Confidence</span><strong>{result.confidence}%</strong></div>
-        <div><span>Risk score</span><strong>{result.riskScore}/100</strong></div>
+        <div><span>{t("Verdict")}</span><strong>{translate(result.finalVerdict)}</strong></div>
+        <div><span>{t("Confidence")}</span><strong>{result.confidence}%</strong></div>
+        <div><span>{t("Risk score")}</span><strong>{result.riskScore}/100</strong></div>
       </div>
       <div className="model-vote-grid">
         {result.modelVotes.map((model) => (
@@ -326,9 +340,9 @@ export function ModelReportDialog({
               <strong>{model.modelName}</strong>
             </div>
             <b>{model.confidence}%</b>
-            <p>{model.explanation}</p>
+            <p>{translate(model.explanation)}</p>
             <ul>
-              {model.detectedFeatures.map((feature) => <li key={feature}>{feature}</li>)}
+              {model.detectedFeatures.map((feature) => <li key={feature}>{translate(feature)}</li>)}
             </ul>
           </article>
         ))}
@@ -362,12 +376,13 @@ export function TicketDialog({
   onSubmit: () => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   return (
-    <DialogFrame title="Create treasury ticket" onClose={onClose} narrow>
+    <DialogFrame title={t("Create treasury ticket")} onClose={onClose} narrow>
       {ticketId ? (
         <div className="demo-form__success" role="status">
-          <strong>Ticket created</strong>
-          <p>{ticketId} is linked to the incident and visible in the lifecycle state.</p>
+          <strong>{t("Ticket created")}</strong>
+          <p>{ticketId} {t("is linked to the incident and visible in the lifecycle state.")}</p>
         </div>
       ) : (
         <form
@@ -378,22 +393,22 @@ export function TicketDialog({
           }}
         >
           <label>
-            <span>Ticket title</span>
+            <span>{t("Ticket title")}</span>
             <input value={title} onChange={(event) => onTitleChange(event.target.value)} />
           </label>
           <label>
-            <span>Owner</span>
+            <span>{t("Owner")}</span>
             <input value={owner} onChange={(event) => onOwnerChange(event.target.value)} />
           </label>
           <label>
-            <span>Action note</span>
+            <span>{t("Action note")}</span>
             <textarea rows={4} value={note} onChange={(event) => onNoteChange(event.target.value)} />
           </label>
           {error ? <p className="demo-form__error">{error}</p> : null}
           <div className="demo-form__actions">
-            <button className="button button--secondary" type="button" onClick={onClose}>Cancel</button>
+            <button className="button button--secondary" type="button" onClick={onClose}>{t("Cancel")}</button>
             <button className="button button--primary" disabled={submitting} type="submit">
-              {submitting ? "Creating..." : "Create ticket"}
+              {submitting ? t("Creating...", "Создаётся...") : t("Create ticket")}
             </button>
           </div>
         </form>
@@ -409,16 +424,17 @@ export function CloseIncidentDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   return (
-    <DialogFrame title="Close incident" onClose={onClose} narrow>
+    <DialogFrame title={t("Close incident")} onClose={onClose} narrow>
       <div className="dialog-callout">
-        <p className="eyebrow">Confirmation</p>
-        <h3>Close the incident after recommendation acceptance?</h3>
-        <p>This is a demo-safe state change. It does not touch real banking systems.</p>
+        <p className="eyebrow">{t("Confirmation")}</p>
+        <h3>{t("Close the incident after recommendation acceptance?")}</h3>
+        <p>{t("This is a demo-safe state change. It does not touch real banking systems.")}</p>
       </div>
       <div className="demo-form__actions">
-        <button className="button button--secondary" type="button" onClick={onClose}>Cancel</button>
-        <button className="button button--primary" type="button" onClick={onConfirm}>Close incident</button>
+        <button className="button button--secondary" type="button" onClick={onClose}>{t("Cancel")}</button>
+        <button className="button button--primary" type="button" onClick={onConfirm}>{t("Close incident")}</button>
       </div>
     </DialogFrame>
   );
@@ -433,23 +449,24 @@ export function FunctionProofDialog({
   result: EnsembleAnalysisResult | null;
   onClose: () => void;
 }) {
+  const { t, translate } = useLanguage();
   return (
-    <DialogFrame title={item.title} onClose={onClose}>
+    <DialogFrame title={translate(item.title)} onClose={onClose}>
       <div className="function-proof-dialog">
         <div>
-          <p className="eyebrow">{item.group}</p>
-          <h3>{item.simpleName}</h3>
-          <p>{item.juryNarrative}</p>
+          <p className="eyebrow">{translate(item.group)}</p>
+          <h3>{translate(item.simpleName)}</h3>
+          <p>{translate(item.juryNarrative)}</p>
         </div>
         <dl className="incident-dialog-facts">
-          <div><dt>Endpoint / artifact</dt><dd>{item.endpoint}</dd></div>
-          <div><dt>Demo metric</dt><dd>{item.metric}</dd></div>
-          <div><dt>Status</dt><dd>{result ? "Verified by current ensemble run" : "Queued until ML analysis runs"}</dd></div>
+          <div><dt>{t("Endpoint / artifact")}</dt><dd>{item.endpoint}</dd></div>
+          <div><dt>{t("Demo metric")}</dt><dd>{translate(item.metric)}</dd></div>
+          <div><dt>{t("Status")}</dt><dd>{result ? t("Verified by current ensemble run") : t("Queued until ML analysis runs")}</dd></div>
         </dl>
         <section className="dialog-callout">
-          <p className="eyebrow">How it works in the demo</p>
-          <h3>{item.signal}</h3>
-          <p>{item.demoBehavior}</p>
+          <p className="eyebrow">{t("How it works in the demo")}</p>
+          <h3>{translate(item.signal)}</h3>
+          <p>{translate(item.demoBehavior)}</p>
         </section>
       </div>
     </DialogFrame>
@@ -457,6 +474,8 @@ export function FunctionProofDialog({
 }
 
 function DialogFrame({ children, onClose, title, narrow }: DialogFrameProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="demo-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
@@ -468,7 +487,7 @@ function DialogFrame({ children, onClose, title, narrow }: DialogFrameProps) {
       >
         <div className="demo-modal__header">
           <h2>{title}</h2>
-          <button className="button button--secondary" type="button" onClick={onClose}>Close</button>
+          <button className="button button--secondary" type="button" onClick={onClose}>{t("Close", "Закрыть")}</button>
         </div>
         {children}
       </section>
@@ -476,37 +495,37 @@ function DialogFrame({ children, onClose, title, narrow }: DialogFrameProps) {
   );
 }
 
-function statusLabel(lifecycle: IncidentLifecycle) {
+function statusLabel(lifecycle: IncidentLifecycle, translate: (text: string) => string) {
   switch (lifecycle) {
     case "analysisRunning":
-      return "ML analysis running";
+      return translate("ML analysis running");
     case "analysisCompleted":
-      return "Analysis completed";
+      return translate("Analysis completed");
     case "recommendationAccepted":
-      return "Recommendation accepted";
+      return translate("Recommendation accepted");
     case "ticketCreated":
-      return "Ticket created";
+      return translate("Ticket created");
     case "incidentClosed":
-      return "Incident closed";
+      return translate("Incident closed");
     case "analysisFailed":
-      return "Analysis failed";
+      return translate("Analysis failed");
     case "incidentSelected":
-      return "Incident selected";
+      return translate("Incident selected");
     case "detected":
     default:
-      return "Anomaly detected";
+      return translate("Anomaly detected");
   }
 }
 
-function lifecycleSummary(lifecycle: IncidentLifecycle, ticketId: string) {
-  if (lifecycle === "incidentClosed") return "The incident is closed in local demo state and the map marker is muted.";
-  if (lifecycle === "recommendationAccepted") return "The recommended hold/prefund action is accepted for this session.";
-  if (ticketId) return `${ticketId} has been created and linked to the New York incident.`;
-  return "The incident state changed locally.";
+function lifecycleSummary(lifecycle: IncidentLifecycle, ticketId: string, translate: (text: string) => string) {
+  if (lifecycle === "incidentClosed") return translate("The incident is closed in local demo state and the map marker is muted.");
+  if (lifecycle === "recommendationAccepted") return translate("The recommended hold/prefund action is accepted for this session.");
+  if (ticketId) return `${ticketId} ${translate("has been created and linked to the New York incident.")}`;
+  return translate("The incident state changed locally.");
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatDateTime(value: string, language: Language) {
+  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",

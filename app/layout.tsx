@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LanguageProvider } from "@/components/liquidity/LanguageProvider";
 import { NetworkBackground } from "@/components/liquidity/NetworkBackground";
 import "./globals.css";
 
@@ -16,7 +17,7 @@ export default function RootLayout({
     <html lang="en" data-scroll-behavior="smooth">
       <body>
         <NetworkBackground />
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );

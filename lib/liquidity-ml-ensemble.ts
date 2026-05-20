@@ -1,3 +1,5 @@
+import { translateText, type Language } from "@/lib/i18n";
+
 export type IncidentSeverity = "low" | "medium" | "high" | "critical";
 export type IncidentLifecycle =
   | "detected"
@@ -549,37 +551,38 @@ export function runDeterministicLiquidityEnsemble(incident: LiquidityIncident): 
   };
 }
 
-export function buildAnalysisReport(incident: LiquidityIncident, result: EnsembleAnalysisResult): string {
+export function buildAnalysisReport(incident: LiquidityIncident, result: EnsembleAnalysisResult, language: Language = "en"): string {
+  const tr = (value: string) => translateText(language, value);
   const modelLines = result.modelVotes
     .map(
       (model) =>
-        `- ${model.modelName}: ${model.vote.toUpperCase()} / ${model.confidence}% confidence / ${model.signal}`,
+        `- ${model.modelName}: ${model.vote.toUpperCase()} / ${model.confidence}% ${tr("confidence")} / ${tr(model.signal)}`,
     )
     .join("\n");
-  const evidence = result.evidence.map((item) => `- ${item}`).join("\n");
-  const recommendations = result.recommendations.map((item) => `- ${item}`).join("\n");
+  const evidence = result.evidence.map((item) => `- ${tr(item)}`).join("\n");
+  const recommendations = result.recommendations.map((item) => `- ${tr(item)}`).join("\n");
 
   return [
-    "Liquidity Control Tower - ML Ensemble Incident Report",
-    `Incident: ${incident.id}`,
-    `Title: ${incident.title}`,
-    `Generated at: ${result.generatedAt}`,
+    tr("Liquidity Control Tower - ML Ensemble Incident Report"),
+    `${tr("Incident")}: ${incident.id}`,
+    `${tr("Title")}: ${tr(incident.title)}`,
+    `${tr("Generated at")}: ${result.generatedAt}`,
     "",
-    `Verdict: ${result.finalVerdict}`,
-    `Severity: ${result.severity}`,
-    `Confidence: ${result.confidence}%`,
-    `Risk score: ${result.riskScore}/100`,
+    `${tr("Verdict")}: ${tr(result.finalVerdict)}`,
+    `${tr("Severity")}: ${tr(result.severity)}`,
+    `${tr("Confidence")}: ${result.confidence}%`,
+    `${tr("Risk score")}: ${result.riskScore}/100`,
     "",
-    "Root cause",
-    result.rootCause,
+    tr("Root cause"),
+    tr(result.rootCause),
     "",
-    "Evidence",
+    tr("Evidence"),
     evidence,
     "",
-    "Model votes",
+    tr("Model votes"),
     modelLines,
     "",
-    "Recommendations",
+    tr("Recommendations"),
     recommendations,
   ].join("\n");
 }

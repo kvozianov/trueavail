@@ -1,5 +1,5 @@
-import { RealtimeDemoDashboard } from "@/components/liquidity/RealtimeDemoDashboard";
+import { WorldLiquidityMap } from "@/components/liquidity/WorldLiquidityMap";
 
 export default function DemoPage() {
-  return <RealtimeDemoDashboard />;
+  return <WorldLiquidityMap />;
 }

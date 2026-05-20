@@ -1,14 +1,10 @@
-import type { Metadata } from "next";
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { DemoNav } from "@/components/liquidity/DemoNav";
+import { useLanguage } from "@/components/liquidity/LanguageProvider";
 import styles from "./landing.module.css";
-
-export const metadata: Metadata = {
-  title: "TrueAvail | Book cash isn’t usable cash.",
-  description:
-    "Book cash isn’t usable cash. A product presentation for usable cash forecasting, settlement risk, treasury governance, and contingency actions.",
-};
 
 const proofPoints = [
   {
@@ -54,51 +50,51 @@ const pitchRows = [
 ];
 
 export default function LandingPage() {
+  const { t, translate } = useLanguage();
+
   return (
     <main className={styles.page} id="main-content">
       <DemoNav mode="replay" statusText="Product landing" />
       <section className={styles.hero} aria-labelledby="landing-title">
         <div className={styles.identity}>
-          <Link className={styles.wordmark} href="/" aria-label="TrueAvail home">
+          <Link className={styles.wordmark} href="/" aria-label={t("TrueAvail home")}>
             TrueAvail
           </Link>
           <div className={styles.rule} />
 
-          <p className={styles.eyebrow}>Treasury liquidity observatory</p>
-          <h1 id="landing-title">Book cash isn’t usable cash.</h1>
+          <p className={styles.eyebrow}>{t("Treasury liquidity observatory")}</p>
+          <h1 id="landing-title">{t("Book cash isn’t usable cash.")}</h1>
           <p className={styles.lede}>
-            TrueAvail shows when cash becomes usable, where downside risk appears,
-            and what treasury should do before a settlement window closes.
+            {t("TrueAvail shows when cash becomes usable, where downside risk appears, and what treasury should do before a settlement window closes.")}
           </p>
 
-          <div className={styles.actions} aria-label="Product links">
+          <div className={styles.actions} aria-label={t("Product links")}>
             <Link className={styles.primaryAction} href="/demo">
-              Open live demo
+              {t("Open live demo")}
             </Link>
             <Link className={styles.secondaryAction} href="/technical">
-              View technical proof
+              {t("View technical proof")}
             </Link>
           </div>
 
-          <dl className={styles.signalGrid} aria-label="Product signal">
+          <dl className={styles.signalGrid} aria-label={t("Product signal")}>
             <div>
-              <dt>Decision loop</dt>
+              <dt>{t("Decision loop", "Цикл решения")}</dt>
               <dd>Forecast - Stress - Optimize - Govern</dd>
             </div>
             <div>
-              <dt>Audience</dt>
-              <dd>Treasury, CFO office, risk, operations</dd>
+              <dt>{t("Audience", "Аудитория")}</dt>
+              <dd>{t("Treasury, CFO office, risk, operations", "Treasury, офис CFO, risk, operations")}</dd>
             </div>
           </dl>
         </div>
 
-        <aside className={styles.panel} aria-label="Product presentation">
-          <p className={styles.panelKicker}>Product presentation</p>
-          <h2>Know the exact moment liquidity can be used.</h2>
+        <aside className={styles.panel} aria-label={t("Product presentation")}>
+          <p className={styles.panelKicker}>{t("Product presentation")}</p>
+          <h2>{t("Know the exact moment liquidity can be used.")}</h2>
           <p className={styles.panelIntro}>
-            TrueAvail is a minimal control layer for settlement-heavy businesses where a
-            false cash view can create failed payouts, expensive emergency
-            funding, or unmanaged concentration risk.
+            {t("TrueAvail is a minimal control layer for settlement-heavy businesses where a false cash view can create failed payouts, expensive emergency funding, or unmanaged concentration risk.",
+              "TrueAvail — минимальный control layer для settlement-heavy бизнеса, где ложная картина cash может привести к failed payouts, дорогому emergency funding или неуправляемому concentration risk.")}
           </p>
 
           <figure className={styles.preview}>
@@ -117,8 +113,8 @@ export default function LandingPage() {
               <li key={point.label}>
                 <span>{point.label}</span>
                 <div>
-                  <strong>{point.title}</strong>
-                  <p>{point.body}</p>
+                  <strong>{translate(point.title)}</strong>
+                  <p>{translate(point.body)}</p>
                 </div>
               </li>
             ))}
@@ -128,16 +124,16 @@ export default function LandingPage() {
 
       <section className={styles.pitch} aria-labelledby="pitch-title">
         <div className={styles.sectionHeader}>
-          <p>Investor and buyer narrative</p>
-          <h2 id="pitch-title">A presentation page built like a briefing.</h2>
+          <p>{t("Investor and buyer narrative")}</p>
+          <h2 id="pitch-title">{t("A presentation page built like a briefing.")}</h2>
         </div>
 
         <div className={styles.pitchRows}>
           {pitchRows.map((row) => (
             <article className={styles.pitchRow} key={row.marker}>
-              <span>{row.marker}</span>
-              <h3>{row.title}</h3>
-              <p>{row.body}</p>
+              <span>{translate(row.marker)}</span>
+              <h3>{translate(row.title)}</h3>
+              <p>{translate(row.body)}</p>
             </article>
           ))}
         </div>
@@ -145,15 +141,15 @@ export default function LandingPage() {
 
       <section className={styles.demoProof} aria-labelledby="proof-title">
         <div>
-          <p className={styles.eyebrow}>Live proof packet</p>
-          <h2 id="proof-title">What the demo proves in one pass.</h2>
+          <p className={styles.eyebrow}>{t("Live proof packet")}</p>
+          <h2 id="proof-title">{t("What the demo proves in one pass.")}</h2>
         </div>
 
         <dl className={styles.factGrid}>
           {demoFacts.map(([term, detail]) => (
             <div key={term}>
-              <dt>{term}</dt>
-              <dd>{detail}</dd>
+              <dt>{translate(term)}</dt>
+              <dd>{translate(detail)}</dd>
             </div>
           ))}
         </dl>

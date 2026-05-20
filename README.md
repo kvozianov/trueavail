@@ -5,7 +5,8 @@
 ## Что показать жюри
 
 1. Запустить проект: `npm run dev`.
-2. Открыть: `http://localhost:3000/liquidity-control-tower`.
+2. Открыть demo: `http://localhost:3000/demo`.
+   Страница `http://localhost:3000/liquidity-control-tower` показывает ту же самую карту.
 3. На карте сразу виден красный инцидент `New York usable liquidity breach`.
 4. Нажать `Run ML analysis`.
 5. Дождаться pipeline: карта, координаты, телеметрия, anomaly detection, risk score, ensemble aggregation, recommendations.

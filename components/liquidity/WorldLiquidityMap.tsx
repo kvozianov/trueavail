@@ -7,6 +7,7 @@ import type { FeatureCollection, Geometry } from "geojson";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import countriesAtlas from "world-atlas/countries-110m.json";
+import { useLanguage } from "@/components/liquidity/LanguageProvider";
 import {
   CloseIncidentDialog,
   DeepAnalyticsMatrix,
@@ -24,6 +25,7 @@ import {
   defaultLiquidityIncident,
   runDeterministicLiquidityEnsemble,
 } from "@/lib/liquidity-ml-ensemble";
+import type { LocalizedMessage } from "@/lib/i18n";
 import type {
   AnalysisStepState,
   DeepAnalyticsFunction,
@@ -432,6 +434,7 @@ const scenarios: SimulationScenario[] = [
 ];
 
 export function WorldLiquidityMap() {
+  const { language, message, t, translate } = useLanguage();
   const addFormRef = useRef<HTMLDivElement>(null);
   const [accounts, setAccounts] = useState<MapAccount[]>(initialAccounts);
   const [selectedId, setSelectedId] = useState(initialAccounts[0].id);
@@ -442,8 +445,11 @@ export function WorldLiquidityMap() {
   const [draftAccountCode, setDraftAccountCode] = useState("GB-USD-9302");
   const [draftCapital, setDraftCapital] = useState("2850000");
   const [draftCondition, setDraftCondition] = useState("auto");
-  const [mapNotice, setMapNotice] = useState("Map error detected on New York. Run ML analysis to explain the anomaly.");
-  const [mapError, setMapError] = useState("");
+  const [mapNotice, setMapNotice] = useState<LocalizedMessage>({
+    en: "Map error detected on New York. Run ML analysis to explain the anomaly.",
+    ru: "На карте обнаружена ошибка в New York. Запустите ML-анализ, чтобы объяснить аномалию.",
+  });
+  const [mapError, setMapError] = useState<LocalizedMessage | null>(null);
   const [incidentLifecycle, setIncidentLifecycle] = useState<IncidentLifecycle>("detected");
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStepState[]>(() => createInitialAnalysisSteps());
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -465,6 +471,9 @@ export function WorldLiquidityMap() {
   const scenario = scenarios.find((item) => item.id === scenarioId) ?? scenarios[0];
   const scenarioAccount = accounts.find((account) => account.id === scenario.accountId);
   const incident = defaultLiquidityIncident;
+  const clearMapError = () => setMapError(null);
+  const showNotice = (en: string, ru: string) => setMapNotice({ en, ru });
+  const showError = (en: string, ru: string) => setMapError({ en, ru });
 
   const totals = useMemo(() => {
     const usd = accounts.filter((account) => account.currency === "USD").reduce((sum, account) => sum + account.capital, 0);
@@ -569,15 +578,18 @@ export function WorldLiquidityMap() {
         setAnalysisResult(result);
         setIncidentLifecycle("analysisCompleted");
         setAnalysisProgress(100);
-        setMapError("");
-        setMapNotice(`${result.finalVerdict}. Confidence ${result.confidence}%, risk score ${result.riskScore}/100.`);
+        clearMapError();
+        showNotice(
+          `${result.finalVerdict}. Confidence ${result.confidence}%, risk score ${result.riskScore}/100.`,
+          `${translate(result.finalVerdict)}. ${t("Confidence")} ${result.confidence}%, ${t("Risk score")} ${result.riskScore}/100.`,
+        );
       }, steps.length * 620 + 520),
     );
 
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
     };
-  }, [analysisRunId, incident, incidentLifecycle]);
+  }, [analysisRunId, incident, incidentLifecycle, t, translate]);
 
   const addAccount = () => {
     const formValue = (name: string, fallback: string) =>
@@ -591,11 +603,11 @@ export function WorldLiquidityMap() {
     const capital = Number.parseFloat(formCapital);
 
     if (!formBank.trim()) {
-      setMapError("Bank name is required before adding an account.");
+      showError("Bank name is required before adding an account.", "Перед добавлением счёта укажите название банка.");
       return;
     }
     if (!Number.isFinite(capital) || capital <= 0) {
-      setMapError("Starting capital must be a positive number.");
+      showError("Starting capital must be a positive number.", "Начальный капитал должен быть положительным числом.");
       return;
     }
 
@@ -614,8 +626,11 @@ export function WorldLiquidityMap() {
 
     setAccounts((current) => current.concat(account));
     setSelectedId(account.id);
-    setMapError("");
-    setMapNotice(`${account.bank} added in ${account.city}. The new node is selected on the map.`);
+    clearMapError();
+    showNotice(
+      `${account.bank} added in ${account.city}. The new node is selected on the map.`,
+      `${account.bank} добавлен в ${translate(account.city)}. Новый узел выбран на карте.`,
+    );
   };
 
   const runScenario = (nextScenarioId = scenarioId) => {
@@ -623,7 +638,7 @@ export function WorldLiquidityMap() {
     setScenarioId(nextScenario.id);
     setSelectedId(nextScenario.accountId);
     setSimulationRan(true);
-    setMapError("");
+    clearMapError();
     setAccounts((current) =>
       current.map((account) =>
         account.id === nextScenario.accountId
@@ -631,7 +646,10 @@ export function WorldLiquidityMap() {
           : account,
       ),
     );
-    setMapNotice(`${nextScenario.title} is now driving the rail paths and decision output.`);
+    showNotice(
+      `${nextScenario.title} is now driving the rail paths and decision output.`,
+      `${translate(nextScenario.title)} теперь управляет rail-маршрутами и выводом решения.`,
+    );
   };
 
   const generateCondition = () => {
@@ -648,8 +666,11 @@ export function WorldLiquidityMap() {
           : account,
       ),
     );
-    setMapError("");
-    setMapNotice(`Generated a fresh condition for ${selected.bank} / ${selected.city}.`);
+    clearMapError();
+    showNotice(
+      `Generated a fresh condition for ${selected.bank} / ${selected.city}.`,
+      `Сгенерировано новое условие для ${selected.bank} / ${translate(selected.city)}.`,
+    );
   };
 
   const updateSelectedCapital = (value: string) => {
@@ -662,8 +683,11 @@ export function WorldLiquidityMap() {
       ),
     );
     if (Number.isFinite(capital)) {
-      setMapNotice(`${selected.city} capital updated to ${formatMoney(capital, selected.currency)}.`);
-      setMapError("");
+      showNotice(
+        `${selected.city} capital updated to ${formatMoney(capital, selected.currency)}.`,
+        `Капитал ${translate(selected.city)} обновлён до ${formatMoney(capital, selected.currency)}.`,
+      );
+      clearMapError();
     }
   };
 
@@ -671,7 +695,10 @@ export function WorldLiquidityMap() {
     setAccounts((current) =>
       current.map((account) => (account.id === selected.id ? { ...account, condition: value } : account)),
     );
-    setMapNotice(`${selected.city} condition edited locally.`);
+    showNotice(
+      `${selected.city} condition edited locally.`,
+      `Условие ${translate(selected.city)} изменено локально.`,
+    );
   };
 
   const onDraftCountryChange = (nextCountry: AccountCountry) => {
@@ -687,8 +714,11 @@ export function WorldLiquidityMap() {
     setScenarioId("ny-credit");
     setSimulationRan(true);
     setIncidentPopupOpen(true);
-    setMapError("");
-    setMapNotice("Incident selected. New York shows the detected usable-liquidity anomaly.");
+    clearMapError();
+    showNotice(
+      "Incident selected. New York shows the detected usable-liquidity anomaly.",
+      "Инцидент выбран. New York показывает обнаруженную аномалию доступной ликвидности.",
+    );
     setIncidentLifecycle((current) => (current === "detected" ? "incidentSelected" : current));
   };
 
@@ -702,8 +732,11 @@ export function WorldLiquidityMap() {
     setAnalysisSteps(createInitialAnalysisSteps());
     setAnalysisProgress(0);
     setActiveModal(null);
-    setMapError("");
-    setMapNotice("ML ensemble is analyzing map, telemetry, forecast, risk, and governance evidence.");
+    clearMapError();
+    showNotice(
+      "ML ensemble is analyzing map, telemetry, forecast, risk, and governance evidence.",
+      "ML-ансамбль анализирует карту, телеметрию, прогноз, риск и governance evidence.",
+    );
     setIncidentLifecycle("analysisRunning");
     setAnalysisRunId((current) => current + 1);
   };
@@ -719,16 +752,19 @@ export function WorldLiquidityMap() {
         status: index < 2 ? "completed" : index === 2 ? "failed" : "pending",
       })),
     );
-    setMapNotice("Mock failure path shown. The retry button is ready.");
+    showNotice(
+      "Mock failure path shown. The retry button is ready.",
+      "Показан mock-сценарий ошибки. Кнопка повтора готова.",
+    );
   };
 
   const downloadReport = () => {
     if (!analysisResult) {
-      setMapError("Run ML analysis before downloading the report.");
+      showError("Run ML analysis before downloading the report.", "Перед скачиванием отчёта запустите ML-анализ.");
       return;
     }
 
-    const report = buildAnalysisReport(incident, analysisResult);
+    const report = buildAnalysisReport(incident, analysisResult, language);
     const blob = new Blob([report], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -738,8 +774,11 @@ export function WorldLiquidityMap() {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
-    setMapError("");
-    setMapNotice("Report downloaded locally as a deterministic ML ensemble incident report.");
+    clearMapError();
+    showNotice(
+      "Report downloaded locally as a deterministic ML ensemble incident report.",
+      "Отчёт скачан локально как детерминированный отчёт ML-ансамбля по инциденту.",
+    );
   };
 
   const submitTicket = () => {
@@ -759,26 +798,35 @@ export function WorldLiquidityMap() {
       setTicketId(nextTicketId);
       setTicketSubmitting(false);
       setIncidentLifecycle("ticketCreated");
-      setMapNotice(`${nextTicketId} created and linked to ${incident.id}.`);
+      showNotice(
+        `${nextTicketId} created and linked to ${incident.id}.`,
+        `${nextTicketId} создан и привязан к ${incident.id}.`,
+      );
     }, 650);
   };
 
   const acceptRecommendation = () => {
     if (!analysisResult) {
-      setMapError("Run ML analysis before accepting the recommendation.");
+      showError("Run ML analysis before accepting the recommendation.", "Перед принятием рекомендации запустите ML-анализ.");
       return;
     }
     setIncidentLifecycle("recommendationAccepted");
-    setMapError("");
-    setMapNotice("Recommendation accepted. Auto-release remains blocked until SWIFT cover is confirmed.");
+    clearMapError();
+    showNotice(
+      "Recommendation accepted. Auto-release remains blocked until SWIFT cover is confirmed.",
+      "Рекомендация принята. Auto-release остаётся заблокированным до подтверждения SWIFT-cover.",
+    );
   };
 
   const confirmCloseIncident = () => {
     setIncidentLifecycle("incidentClosed");
     setActiveModal(null);
     setIncidentPopupOpen(false);
-    setMapError("");
-    setMapNotice("Incident closed in local demo state. The marker is muted but remains auditable.");
+    clearMapError();
+    showNotice(
+      "Incident closed in local demo state. The marker is muted but remains auditable.",
+      "Инцидент закрыт в локальном состоянии демо. Маркер приглушён, но остаётся аудируемым.",
+    );
   };
 
   const openFunctionProof = (item: DeepAnalyticsFunction) => {
@@ -790,42 +838,41 @@ export function WorldLiquidityMap() {
     <main className="demo-page map-dashboard" id="main-content">
       <DemoNav mode="replay" statusText="World liquidity simulation" />
 
-      <section className="map-dashboard__hero" aria-labelledby="map-dashboard-title">
+      <section className="map-dashboard__hero anchor-target" id="demo-dashboard" aria-labelledby="map-dashboard-title">
         <div className="map-dashboard__hero-copy">
-          <p className="eyebrow">Liquidity Map Simulation</p>
-          <h1 id="map-dashboard-title">Global liquidity control map</h1>
+          <p className="eyebrow">{t("Liquidity Map Simulation")}</p>
+          <h1 id="map-dashboard-title">{t("Global liquidity control map")}</h1>
           <p>
-            Pick a treasury scenario, watch the affected account light up, and trace which SWIFT or local rail
-            the system uses before it approves, throttles, or blocks the deal.
+            {t("Pick a treasury scenario, watch the affected account light up, and trace which SWIFT or local rail the system uses before it approves, throttles, or blocks the deal.")}
           </p>
-          <div className="map-hero-signals" aria-label="Map state">
-            <span>{accounts.length} bank nodes</span>
-            <span>{scenario.transferLegs.length} active rails</span>
-            <span>{incidentLifecycle === "incidentClosed" ? "Incident closed" : simulation.state === "clear" ? "Program ready" : "Anomaly detected"}</span>
+          <div className="map-hero-signals" aria-label={t("Map state", "Состояние карты")}>
+            <span>{accounts.length} {t("bank nodes")}</span>
+            <span>{scenario.transferLegs.length} {t("active rails")}</span>
+            <span>{incidentLifecycle === "incidentClosed" ? t("Incident closed") : simulation.state === "clear" ? t("Program ready") : t("Anomaly detected")}</span>
           </div>
         </div>
-        <div className="map-totals" aria-label="Capital totals">
+        <div className="map-totals" aria-label={t("Capital totals", "Итоги капитала")}>
           <div>
-            <span>USD capital</span>
+            <span>{t("USD capital")}</span>
             <strong>{formatMoney(totals.usd, "USD")}</strong>
           </div>
           <div>
-            <span>EUR capital</span>
+            <span>{t("EUR capital")}</span>
             <strong>{formatMoney(totals.eur, "EUR")}</strong>
           </div>
         </div>
       </section>
 
       <div className="map-session-status" role="status" aria-live="polite">
-        <strong>{mapError ? "Action needed" : "Session"}</strong>
-        <span>{mapError || mapNotice}</span>
+        <strong>{mapError ? t("Action needed") : t("Session")}</strong>
+        <span>{message(mapError ?? mapNotice)}</span>
       </div>
 
-      <section className="scenario-board" aria-label="Jury simulation scenarios">
+      <section className="scenario-board" aria-label={t("Jury simulation scenarios", "Сценарии симуляции для жюри")}>
         <div className="section-heading">
-          <p className="eyebrow">Jury Control</p>
-          <h2>Choose where the deal lands</h2>
-          <p>The selected scenario paints transfer routes on the map and explains the program decision in treasury language.</p>
+          <p className="eyebrow">{t("Jury Control")}</p>
+          <h2>{t("Choose where the deal lands")}</h2>
+          <p>{t("The selected scenario paints transfer routes on the map and explains the program decision in treasury language.")}</p>
         </div>
         <div className="scenario-cards">
           {scenarios.map((item) => (
@@ -835,20 +882,20 @@ export function WorldLiquidityMap() {
               onClick={() => runScenario(item.id)}
               type="button"
             >
-              <span>{item.desk}</span>
-              <strong>{item.title}</strong>
-              <small>{formatMoney(item.debit, item.currency)} debit</small>
+              <span>{translate(item.desk)}</span>
+              <strong>{translate(item.title)}</strong>
+              <small>{formatMoney(item.debit, item.currency)} {t("debit")}</small>
             </button>
           ))}
         </div>
       </section>
 
-      <section className="map-workspace" aria-label="World liquidity workspace">
+      <section className="map-workspace" aria-label={t("World liquidity workspace", "Рабочая зона мировой ликвидности")}>
         <div className="world-map-panel">
           <div className="world-map-panel__topline">
-            <span>Global Rail Mesh</span>
-            <strong>{scenario.title}</strong>
-            <em>{scenario.transferLegs.length} live transfer path{scenario.transferLegs.length === 1 ? "" : "s"}</em>
+            <span>{t("Global Rail Mesh")}</span>
+            <strong>{translate(scenario.title)}</strong>
+            <em>{scenario.transferLegs.length} {scenario.transferLegs.length === 1 ? t("live transfer path") : t("live transfer paths")}</em>
           </div>
           <WorldMap
             accounts={accounts}
@@ -865,7 +912,10 @@ export function WorldLiquidityMap() {
               const account = accounts.find((item) => item.id === id);
               setSelectedId(id);
               if (account) {
-                setMapNotice(`${account.bank} / ${account.city} selected on the map.`);
+                showNotice(
+                  `${account.bank} / ${account.city} selected on the map.`,
+                  `${account.bank} / ${translate(account.city)} выбран на карте.`,
+                );
               }
             }}
             onToggleIncidentPopup={() => setIncidentPopupOpen((open) => !open)}
@@ -890,30 +940,30 @@ export function WorldLiquidityMap() {
               if (analysisResult) {
                 setActiveModal("models");
               } else {
-                setMapError("Run ML analysis before opening model results.");
+                showError("Run ML analysis before opening model results.", "Перед открытием результатов моделей запустите ML-анализ.");
               }
             }}
           />
         </div>
 
-        <aside className={`map-account-panel map-account-panel--${simulation.state}`} aria-label="Selected account">
+        <aside className={`map-account-panel map-account-panel--${simulation.state}`} aria-label={t("Selected account")}>
           <div className="map-account-panel__header">
-            <p className="eyebrow">Selected Account</p>
-            <h2>{selected.city}</h2>
+            <p className="eyebrow">{t("Selected Account")}</p>
+            <h2>{translate(selected.city)}</h2>
             <span>{selected.bank} / {selected.accountCode}</span>
           </div>
           <div className="account-health-strip">
             <div>
-              <span>Liquidity floor</span>
+              <span>{t("Liquidity floor")}</span>
               <strong>{formatMoney(selected.floor, selected.currency)}</strong>
             </div>
             <div>
-              <span>Primary rail</span>
+              <span>{t("Primary rail")}</span>
               <strong>{selected.primaryRail}</strong>
             </div>
           </div>
           <label className="map-field">
-            <span>Capital ({selected.currency})</span>
+            <span>{t("Capital")} ({selected.currency})</span>
             <input
               inputMode="decimal"
               name="selected-capital"
@@ -923,90 +973,90 @@ export function WorldLiquidityMap() {
             />
           </label>
           <label className="map-field">
-            <span>Condition</span>
+            <span>{t("Condition")}</span>
             <textarea
               name="selected-condition"
               onChange={(event) => updateSelectedCondition(event.target.value)}
               rows={5}
-              value={selected.condition}
+              value={translate(selected.condition)}
             />
           </label>
           <button className="command-button command-button--primary" onClick={generateCondition} type="button">
-            Generate Account Condition
+            {t("Generate Account Condition")}
           </button>
         </aside>
       </section>
 
-      <section className="simulation-output" aria-label="Simulation output">
+      <section className="simulation-output" aria-label={t("Simulation output", "Результат симуляции")}>
         <article className={`simulation-verdict simulation-verdict--${simulation.state}`}>
-          <p className="eyebrow">Program Response</p>
-          <h2>{scenario.decision}</h2>
+          <p className="eyebrow">{t("Program Response")}</p>
+          <h2>{translate(scenario.decision)}</h2>
           <dl>
             <div>
-              <dt>Scenario account</dt>
-              <dd>{scenarioAccount ? `${scenarioAccount.bank} / ${scenarioAccount.city}` : scenario.accountId}</dd>
+              <dt>{t("Scenario account")}</dt>
+              <dd>{scenarioAccount ? `${scenarioAccount.bank} / ${translate(scenarioAccount.city)}` : scenario.accountId}</dd>
             </div>
             <div>
-              <dt>After deal</dt>
+              <dt>{t("After deal")}</dt>
               <dd>{formatMoney(simulation.balanceAfterDebit, scenario.currency)}</dd>
             </div>
             <div>
-              <dt>After program action</dt>
+              <dt>{t("After program action")}</dt>
               <dd>{formatMoney(simulation.balanceAfterProgram, scenario.currency)}</dd>
             </div>
           </dl>
         </article>
 
         <article className="transfer-ledger">
-          <p className="eyebrow">Transfer Rails</p>
-          <h2>Money movement shown on the map</h2>
+          <p className="eyebrow">{t("Transfer Rails")}</p>
+          <h2>{t("Money movement shown on the map")}</h2>
           <div className="transfer-rows">
             {scenario.transferLegs.map((leg, index) => (
               <div className={`transfer-row transfer-row--${leg.state}`} key={`${leg.from}-${leg.to}-${index}`}>
                 <span>{leg.system}</span>
-                <strong>{leg.label}</strong>
-                <small>{formatMoney(leg.amount, leg.currency)} · {leg.eta}</small>
-                <em>{leg.calendarNote}</em>
+                <strong>{translate(leg.label)}</strong>
+                <small>{formatMoney(leg.amount, leg.currency)} · {translate(leg.eta)}</small>
+                <em>{translate(leg.calendarNote)}</em>
               </div>
             ))}
           </div>
         </article>
 
         <article className="program-steps">
-          <p className="eyebrow">What The Program Does</p>
+          <p className="eyebrow">{t("What The Program Does")}</p>
           <ol>
             {scenario.programResponse.map((step) => (
-              <li key={step}>{step}</li>
+              <li key={step}>{translate(step)}</li>
             ))}
           </ol>
         </article>
       </section>
 
-      <section className="calendar-seasonality" aria-label="Banking days and seasonality">
+      <section className="calendar-seasonality" aria-label={t("Banking days and seasonality")}>
         <div className="section-heading">
-          <p className="eyebrow">Calendar Engine</p>
-          <h2>Banking days and seasonality change usable cash</h2>
-          <p>{scenario.calendar.summary}</p>
+          <p className="eyebrow">{t("Calendar Engine")}</p>
+          <h2>{t("Banking days and seasonality change usable cash")}</h2>
+          <p>{translate(scenario.calendar.summary)}</p>
         </div>
         <div className="banking-day-strip">
           {scenario.calendar.days.map((day) => (
             <div className={`banking-day banking-day--${day.state}`} key={`${scenario.id}-${day.label}-${day.region}`}>
-              <span>{day.label}</span>
+              <span>{translate(day.label)}</span>
               <strong>{day.region}</strong>
-              <small>{day.note}</small>
+              <small>{translate(day.note)}</small>
             </div>
           ))}
         </div>
         <div className="seasonality-panel">
           <div>
-            <span>Calendar-adjusted effect</span>
-            <strong>{scenario.calendar.effect}</strong>
+            <span>{t("Calendar-adjusted effect")}</span>
+            <strong>{translate(scenario.calendar.effect)}</strong>
           </div>
-          <div className="seasonality-bars" aria-label="Seasonality pressure">
+          <div className="seasonality-bars" aria-label={t("Seasonality pressure")}>
             {scenario.calendar.seasonality.map((point) => (
               <div className="seasonality-bar" key={`${scenario.id}-${point.label}`}>
                 <span style={{ height: `${point.value}%` }} />
-                <small>{point.label}</small>
+                <small>{translate(point.label)}</small>
               </div>
             ))}
           </div>
@@ -1021,16 +1071,16 @@ export function WorldLiquidityMap() {
         onOpenFunction={openFunctionProof}
       />
 
-      <section className="map-control-grid" aria-label="Map controls">
+      <section className="map-control-grid" aria-label={t("Map controls", "Управление картой")}>
         <div className="map-add-account">
           <div className="section-heading">
-            <p className="eyebrow">Add Bank Or Account</p>
-            <h2>Add a new treasury node</h2>
-            <p>Choose a country, name the bank, enter account code and capital. It appears on the map immediately.</p>
+            <p className="eyebrow">{t("Add Bank Or Account")}</p>
+            <h2>{t("Add a new treasury node")}</h2>
+            <p>{t("Choose a country, name the bank, enter account code and capital. It appears on the map immediately.")}</p>
           </div>
           <div className="map-add-account__form" ref={addFormRef}>
             <label className="map-field">
-              <span>Country</span>
+              <span>{t("Country")}</span>
               <select
                 name="account-country"
                 onChange={(event) => onDraftCountryChange(event.target.value as AccountCountry)}
@@ -1038,13 +1088,13 @@ export function WorldLiquidityMap() {
               >
                 {locations.map((location) => (
                   <option key={location.country} value={location.country}>
-                    {location.country} ({location.city})
+                    {translate(location.country)} ({translate(location.city)})
                   </option>
                 ))}
               </select>
             </label>
             <label className="map-field">
-              <span>Bank</span>
+              <span>{t("Bank")}</span>
               <input
                 name="account-bank"
                 onChange={(event) => setDraftBank(event.target.value)}
@@ -1053,7 +1103,7 @@ export function WorldLiquidityMap() {
               />
             </label>
             <label className="map-field">
-              <span>Account code</span>
+              <span>{t("Account code")}</span>
               <input
                 name="account-code"
                 onChange={(event) => setDraftAccountCode(event.target.value)}
@@ -1062,7 +1112,7 @@ export function WorldLiquidityMap() {
               />
             </label>
             <label className="map-field">
-              <span>Starting capital</span>
+              <span>{t("Starting capital")}</span>
               <input
                 inputMode="decimal"
                 name="account-capital"
@@ -1072,13 +1122,13 @@ export function WorldLiquidityMap() {
               />
             </label>
             <label className="map-field map-field--wide">
-              <span>Condition</span>
+              <span>{t("Condition")}</span>
               <input
                 name="account-condition"
                 onChange={(event) => setDraftCondition(event.target.value)}
                 placeholder="auto"
                 type="text"
-                value={draftCondition}
+                value={translate(draftCondition)}
               />
             </label>
             <button
@@ -1086,18 +1136,18 @@ export function WorldLiquidityMap() {
               onClick={addAccount}
               type="button"
             >
-              Add Bank Account
+              {t("Add Bank Account")}
             </button>
           </div>
         </div>
 
-        <div className="map-account-table" role="table" aria-label="Mapped accounts">
+        <div className="map-account-table" role="table" aria-label={t("Mapped accounts")}>
           <div role="row">
-            <span role="columnheader">Bank / Account</span>
-            <span role="columnheader">Currency</span>
-            <span role="columnheader">Capital</span>
-            <span role="columnheader">Floor</span>
-            <span role="columnheader">Condition</span>
+            <span role="columnheader">{t("BANK / ACCOUNT")}</span>
+            <span role="columnheader">{t("CURRENCY")}</span>
+            <span role="columnheader">{t("CAPITAL")}</span>
+            <span role="columnheader">{t("FLOOR")}</span>
+            <span role="columnheader">{t("CONDITION")}</span>
           </div>
           {accounts.map((account) => (
             <button
@@ -1105,16 +1155,19 @@ export function WorldLiquidityMap() {
               key={account.id}
               onClick={() => {
                 setSelectedId(account.id);
-                setMapNotice(`${account.bank} / ${account.city} selected from the ledger.`);
+                showNotice(
+                  `${account.bank} / ${account.city} selected from the ledger.`,
+                  `${account.bank} / ${translate(account.city)} выбран из ledger.`,
+                );
               }}
               role="row"
               type="button"
             >
-              <span role="cell">{account.bank} / {account.city}</span>
+              <span role="cell">{account.bank} / {translate(account.city)}</span>
               <span role="cell">{account.currency}</span>
               <span role="cell">{formatMoney(account.capital, account.currency)}</span>
               <span role="cell">{formatMoney(account.floor, account.currency)}</span>
-              <span role="cell">{account.condition}</span>
+              <span role="cell">{translate(account.condition)}</span>
             </button>
           ))}
         </div>
@@ -1192,6 +1245,7 @@ function WorldMap({
   onSelect: (id: string) => void;
   onToggleIncidentPopup: () => void;
 }) {
+  const { t, translate } = useLanguage();
   const projection = useMemo(
     () =>
       geoNaturalEarth1()
@@ -1230,7 +1284,7 @@ function WorldMap({
   const spherePath = path(sphere);
 
   return (
-    <div className="world-map-frame" role="group" aria-label="Projected world liquidity map">
+    <div className="world-map-frame" role="group" aria-label={t("Projected world liquidity map", "Проекционная карта мировой ликвидности")}>
       <svg className="world-map" viewBox="0 0 1000 520" aria-hidden="true">
         <defs>
           <radialGradient id="mapOceanGlow" cx="52%" cy="44%" r="74%">
@@ -1289,7 +1343,7 @@ function WorldMap({
 
         return (
           <button
-            aria-label={`${account.city} account, ${account.currency}`}
+            aria-label={`${translate(account.city)} ${t("account", "счёт")}, ${account.currency}`}
             className={nodeClassName}
             key={account.id}
             onClick={() => onSelect(account.id)}
@@ -1298,7 +1352,7 @@ function WorldMap({
           >
             <span className="map-node__dot" />
             <span className="map-node__label">
-              {account.city}
+              {translate(account.city)}
               <small>{account.currency} {shortMoney(account.capital)}</small>
             </span>
           </button>
@@ -1307,38 +1361,38 @@ function WorldMap({
       <div className={`map-account-popover map-account-popover--${activity.status}`}>
         <div className="map-account-popover__head">
           <div>
-            <span>{selected.currency} · {selected.city.toUpperCase()}</span>
+            <span>{selected.currency} · {translate(selected.city).toUpperCase()}</span>
             <strong>{selected.bank}</strong>
           </div>
-          <em>{activity.status === "clear" ? "Healthy" : activity.status === "warning" ? "Watch" : "Blocked"}</em>
+          <em>{activity.status === "clear" ? t("Healthy") : activity.status === "warning" ? t("Watch") : t("Blocked")}</em>
         </div>
         <strong className="map-account-popover__capital">{shortMoney(selected.capital)}</strong>
         <small>min {shortMoney(selected.floor)}</small>
         <div className="map-account-popover__activity">
-          <span>Activity (session)</span>
+          <span>{t("Activity (session)")}</span>
           <div>
             <b className="map-activity-in">↙ {formatCompact(activity.inbound, selected.currency)}</b>
             <b className="map-activity-out">↗ {formatCompact(activity.outbound, selected.currency)}</b>
           </div>
         </div>
-        <p>+{activity.otherAccounts} other accounts at this location</p>
+        <p>+{activity.otherAccounts} {t("other accounts at this location")}</p>
       </div>
       {scenario ? (
         <div className="map-alert-stack" aria-hidden="true">
           <div className="map-alert map-alert--warning">
-            <span>Banking day delay</span>
-            <strong>{scenario.calendar.title}</strong>
+            <span>{t("Banking day delay")}</span>
+            <strong>{translate(scenario.calendar.title)}</strong>
           </div>
           <div className="map-alert">
-            <span>Seasonality model</span>
-            <strong>{scenario.calendar.effect}</strong>
+            <span>{t("Seasonality model")}</span>
+            <strong>{translate(scenario.calendar.effect)}</strong>
           </div>
         </div>
       ) : null}
       <div className="world-map__legend" aria-hidden="true">
-        <span><i /> Selected account</span>
-        <span><i className="world-map__legend-warning" /> Risk route</span>
-        <span><i className="world-map__legend-flow" /> Transfer rail</span>
+        <span><i /> {t("Selected account")}</span>
+        <span><i className="world-map__legend-warning" /> {t("Risk route")}</span>
+        <span><i className="world-map__legend-flow" /> {t("Transfer rail")}</span>
       </div>
     </div>
   );
@@ -1361,6 +1415,7 @@ function IncidentMapOverlay({
   point: ProjectedPoint | null;
   popupOpen: boolean;
 }) {
+  const { t, translate } = useLanguage();
   if (!point) return null;
 
   const left = `${(point.x / MAP_WIDTH) * 100}%`;
@@ -1375,7 +1430,7 @@ function IncidentMapOverlay({
         style={{ left, top }}
       />
       <button
-        aria-label={`Open incident ${incident.id}`}
+        aria-label={`${t("Open incident", "Открыть инцидент")} ${incident.id}`}
         className={`incident-marker incident-marker--${closed ? "closed" : analyzed ? "analyzed" : "detected"}`}
         onClick={() => {
           onOpen();
@@ -1385,24 +1440,24 @@ function IncidentMapOverlay({
         type="button"
       >
         <span />
-        <strong>{closed ? "Closed" : analyzed ? "Analyzed" : "Anomaly"}</strong>
+        <strong>{closed ? t("Closed") : analyzed ? t("Analyzed") : t("Anomaly")}</strong>
       </button>
       {popupOpen ? (
-        <aside className="incident-map-popup" style={{ left, top }} aria-label="Map incident popup">
+        <aside className="incident-map-popup" style={{ left, top }} aria-label={t("Map incident popup", "Popup инцидента на карте")}>
           <div>
             <span>{incident.id}</span>
-            <button aria-label="Hide incident popup" onClick={onTogglePopup} type="button">x</button>
+            <button aria-label={t("Hide incident popup", "Скрыть popup инцидента")} onClick={onTogglePopup} type="button">x</button>
           </div>
-          <strong>{analysisResult?.finalVerdict ?? incident.title}</strong>
-          <p>{analysisResult?.rootCause ?? incident.observedBehavior}</p>
+          <strong>{translate(analysisResult?.finalVerdict ?? incident.title)}</strong>
+          <p>{translate(analysisResult?.rootCause ?? incident.observedBehavior)}</p>
           <dl>
             <div>
-              <dt>Risk</dt>
+              <dt>{t("Risk")}</dt>
               <dd>{analysisResult ? `${analysisResult.riskScore}/100` : incident.severity.toUpperCase()}</dd>
             </div>
             <div>
-              <dt>Confidence</dt>
-              <dd>{analysisResult ? `${analysisResult.confidence}%` : "Awaiting analysis"}</dd>
+              <dt>{t("Confidence")}</dt>
+              <dd>{analysisResult ? `${analysisResult.confidence}%` : t("Awaiting analysis")}</dd>
             </div>
           </dl>
         </aside>
@@ -1420,6 +1475,8 @@ function TransferLayer({
   pointByAccountId: Map<string, ProjectedPoint>;
   scenario?: SimulationScenario;
 }) {
+  const { translate } = useLanguage();
+
   if (!scenario) return null;
 
   return (
@@ -1459,7 +1516,7 @@ function TransferLayer({
               </animateMotion>
             </circle>
             <text fill={leg.state === "clear" ? "#151515" : "#b42318"} x={controlX} y={controlY - 8}>{leg.system}</text>
-            <text className="transfer-eta" x={controlX} y={controlY + 15}>{leg.eta}</text>
+            <text className="transfer-eta" x={controlX} y={controlY + 15}>{translate(leg.eta)}</text>
           </g>
         );
       })}

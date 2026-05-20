@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { DemoNav } from "@/components/liquidity/DemoNav";
+import { useLanguage } from "@/components/liquidity/LanguageProvider";
 import { buildFunctionModules, functionKeys, type FunctionKey, type FunctionModule } from "@/lib/function-modules";
 import { goldenIncidentFallback as incident } from "@/lib/golden-incident";
 
@@ -37,6 +40,7 @@ const functionNarrative: Record<FunctionKey, { title: string; body: string; deci
 };
 
 export function FunctionDetailView({ functionKey }: { functionKey: FunctionKey }) {
+  const { t, translate } = useLanguage();
   const modules = buildFunctionModules(incident, "rejected");
   const functionModule = modules.find((item) => item.key === functionKey) ?? modules[0];
   const narrative = functionNarrative[functionModule.key];
@@ -46,85 +50,87 @@ export function FunctionDetailView({ functionKey }: { functionKey: FunctionKey }
 
   return (
     <main className="demo-page evidence-page function-detail-page" id="main-content">
-      <DemoNav mode="replay" statusText={`${functionModule.name} drilldown`} />
+      <DemoNav mode="replay" statusText={`${translate(functionModule.name)} drilldown`} />
 
       <section className="function-detail-hero" aria-labelledby="function-detail-title">
         <div>
-          <p className="eyebrow">Function drilldown / {functionModule.step}</p>
-          <h1 id="function-detail-title">{functionModule.name}</h1>
-          <p>{narrative.title}</p>
+          <p className="eyebrow">{t("Function drilldown", "Разбор функции")} / {functionModule.step}</p>
+          <h1 id="function-detail-title">{translate(functionModule.name)}</h1>
+          <p>{translate(narrative.title)}</p>
         </div>
         <ReceiptPanel functionModule={functionModule} />
       </section>
 
       <section className="function-detail-grid" aria-label={`${functionModule.name} evidence`}>
         <article className={`function-proof function-proof--${functionModule.tone}`}>
-          <span>{functionModule.metricLabel}</span>
+          <span>{translate(functionModule.metricLabel)}</span>
           <strong>{functionModule.metricValue}</strong>
-          <p>{narrative.body}</p>
+          <p>{translate(narrative.body)}</p>
         </article>
 
         <article className="function-contract">
-          <p className="eyebrow">Call contract</p>
-          <h2>Input, output, handoff</h2>
+          <p className="eyebrow">{t("Call contract", "Контракт вызова")}</p>
+          <h2>{t("Input, output, handoff", "Input, output, handoff")}</h2>
           <dl>
             <div>
-              <dt>Input</dt>
-              <dd>{functionModule.input}</dd>
+              <dt>{t("Input", "Вход")}</dt>
+              <dd>{translate(functionModule.input)}</dd>
             </div>
             <div>
-              <dt>Output</dt>
-              <dd>{functionModule.output}</dd>
+              <dt>{t("Output", "Выход")}</dt>
+              <dd>{translate(functionModule.output)}</dd>
             </div>
             <div>
-              <dt>Handoff</dt>
-              <dd>{functionModule.handoff}</dd>
+              <dt>{t("Handoff", "Передача")}</dt>
+              <dd>{translate(functionModule.handoff)}</dd>
             </div>
           </dl>
         </article>
 
         <article className="function-execution">
-          <p className="eyebrow">Execution trace</p>
-          <h2>Checks run by this function</h2>
+          <p className="eyebrow">{t("Execution trace", "Трасса выполнения")}</p>
+          <h2>{t("Checks run by this function", "Проверки, которые выполняет функция")}</h2>
           <ol>
             {functionModule.checks.map((check) => (
-              <li key={check}>{check}</li>
+              <li key={check}>{translate(check)}</li>
             ))}
           </ol>
         </article>
 
         <article className="function-impact">
-          <p className="eyebrow">Decision impact</p>
-          <h2>{narrative.decisionImpact}</h2>
+          <p className="eyebrow">{t("Decision impact", "Влияние на решение")}</p>
+          <h2>{translate(narrative.decisionImpact)}</h2>
           <p>
-            Current Golden Incident: {incident.accountId}, EUR 4.1M payout, governance gate
-            records {incident.governanceDecision}.
+            {t("Current Golden Incident", "Текущий Golden Incident")}: {incident.accountId}, EUR 4.1M payout, governance gate
+            records {translate(incident.governanceDecision)}.
           </p>
         </article>
       </section>
 
       <FunctionRail active={functionModule.key} modules={modules} />
 
-      <section className="judge-actions" aria-label="Function drilldown actions">
-        <Link className="command-button command-button--primary" href="/judge#functions">Back to Function Table</Link>
-        <Link className="command-button" href={`/functions/${previous}`}>Previous Function</Link>
-        <Link className="command-button" href={`/functions/${next}`}>Next Function</Link>
-        <Link className="command-button command-button--ghost" href="/technical">Technical Proof</Link>
+      <section className="judge-actions" aria-label={t("Function drilldown actions", "Действия разбора функции")}>
+        <Link className="command-button command-button--primary" href="/judge#functions">{t("Back to Function Table", "Назад к таблице функций")}</Link>
+        <Link className="command-button" href={`/functions/${previous}`}>{t("Previous Function", "Предыдущая функция")}</Link>
+        <Link className="command-button" href={`/functions/${next}`}>{t("Next Function", "Следующая функция")}</Link>
+        <Link className="command-button command-button--ghost" href="/technical">{t("Technical Proof", "Техническое доказательство")}</Link>
       </section>
     </main>
   );
 }
 
 function ReceiptPanel({ functionModule }: { functionModule: FunctionModule }) {
+  const { t, translate } = useLanguage();
+
   return (
-    <aside className={`function-detail-receipt function-detail-receipt--${functionModule.tone}`} aria-label="Function receipt">
+    <aside className={`function-detail-receipt function-detail-receipt--${functionModule.tone}`} aria-label={t("Function receipt", "Receipt функции")}>
       <span>{functionModule.endpoint}</span>
-      <strong>{functionModule.status}</strong>
+      <strong>{translate(functionModule.status)}</strong>
       <dl>
         {functionModule.receipt.map(([label, value]) => (
           <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
+            <dt>{translate(label)}</dt>
+            <dd>{translate(value)}</dd>
           </div>
         ))}
       </dl>
@@ -133,8 +139,10 @@ function ReceiptPanel({ functionModule }: { functionModule: FunctionModule }) {
 }
 
 function FunctionRail({ active, modules }: { active: FunctionKey; modules: FunctionModule[] }) {
+  const { t, translate } = useLanguage();
+
   return (
-    <nav className="function-detail-rail" aria-label="Function drilldown navigation">
+    <nav className="function-detail-rail" aria-label={t("Function drilldown navigation", "Навигация разбора функций")}>
       {modules.map((item) => (
         <Link
           aria-current={item.key === active ? "page" : undefined}
@@ -143,7 +151,7 @@ function FunctionRail({ active, modules }: { active: FunctionKey; modules: Funct
           key={item.key}
         >
           <span>{item.step}</span>
-          <strong>{item.name}</strong>
+          <strong>{translate(item.name)}</strong>
         </Link>
       ))}
     </nav>
