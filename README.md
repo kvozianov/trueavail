@@ -73,6 +73,26 @@ npm run backend:test
 
 Последняя проверка: lint OK, build OK, backend tests OK — 34 tests.
 
+## Деплой на Vercel
+
+Проект готов к Vercel как обычное Next.js приложение.
+
+```bash
+npm install
+npm run lint
+npm run build
+```
+
+На Vercel можно деплоить без Python backend: route `/api/backend/*` автоматически отдаёт deterministic demo artifacts из `backend/artifacts`. Если нужен живой FastAPI backend, добавь переменную окружения `BACKEND_URL=https://your-backend.example.com` в Vercel Project Settings.
+
+Рекомендуемые настройки:
+
+- Framework Preset: `Next.js`
+- Build Command: `npm run build`
+- Install Command: `npm install`
+- Output Directory: оставить пустым
+- Environment Variables: `BACKEND_URL` только если есть внешний backend
+
 ## Ограничение
 
 ML, тикеты и отчёты в демо работают как безопасные local mocks. Реальные платежи, банковские операции и внешние ML/LLM вызовы не выполняются.
