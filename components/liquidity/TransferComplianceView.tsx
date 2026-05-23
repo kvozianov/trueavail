@@ -44,7 +44,7 @@ export function TransferComplianceView({
 
   return (
     <main className="demo-page transfers-page compliance-page" id="main-content">
-      <DemoNav mode="replay" statusText={t("Compliance view", "Compliance view")} />
+      <DemoNav mode="replay" statusText={t("Compliance view", "Просмотр compliance")} />
 
       <section className="compliance-hero" aria-labelledby="compliance-title">
         <div>
@@ -53,7 +53,7 @@ export function TransferComplianceView({
           <p>
             {t(
               "The public transaction only exposes wallets, amount, network, and encrypted memo. A regulator view key reveals the business memo and invoice details.",
-              "Публичная транзакция показывает только wallets, amount, network и encrypted memo. View key регулятора раскрывает business memo и invoice details.",
+              "Публичная транзакция показывает только wallets, amount, network и encrypted memo. Ключ просмотра регулятора раскрывает business memo и invoice details.",
             )}
           </p>
         </div>
@@ -73,7 +73,7 @@ export function TransferComplianceView({
             <input value={txId} onChange={(event) => setTxId(event.target.value)} />
           </label>
           <label>
-            <span>{t("View key", "View key")}</span>
+            <span>{t("View key", "Ключ просмотра")}</span>
             <input placeholder={DEMO_REGULATOR_VIEW_KEY} value={viewKey} onChange={(event) => setViewKey(event.target.value)} />
           </label>
           <div className="compliance-actions">
@@ -101,11 +101,11 @@ export function TransferComplianceView({
           {response ? (
             <dl className="compliance-dl">
               <div><dt>TX</dt><dd>{response.publicPreview.txHash}</dd></div>
-              <div><dt>{t("From wallet", "From wallet")}</dt><dd>{response.publicPreview.fromWallet}</dd></div>
-              <div><dt>{t("To wallet", "To wallet")}</dt><dd>{response.publicPreview.toWallet}</dd></div>
+              <div><dt>{t("From wallet", "Кошелёк отправителя")}</dt><dd>{response.publicPreview.fromWallet}</dd></div>
+              <div><dt>{t("To wallet", "Кошелёк получателя")}</dt><dd>{response.publicPreview.toWallet}</dd></div>
               <div><dt>{t("Amount", "Сумма")}</dt><dd>{formatCurrencyAmount(response.publicPreview.amount, response.publicPreview.currency)}</dd></div>
-              <div><dt>{t("Memo hash", "Memo hash")}</dt><dd>{response.publicPreview.memoHash}</dd></div>
-              <div><dt>{t("Encrypted memo", "Encrypted memo")}</dt><dd>{response.publicPreview.encryptedMemo}</dd></div>
+              <div><dt>{t("Memo hash", "Хэш memo")}</dt><dd>{response.publicPreview.memoHash}</dd></div>
+              <div><dt>{t("Encrypted memo", "Зашифрованное memo")}</dt><dd>{response.publicPreview.encryptedMemo}</dd></div>
             </dl>
           ) : (
             <p>{t("Loading public transaction preview.", "Загружаю публичный preview транзакции.")}</p>
@@ -114,7 +114,7 @@ export function TransferComplianceView({
 
         <div className={response?.viewKeyAccepted ? "decrypted-report-panel decrypted-report-panel--open" : "decrypted-report-panel"} key={response?.viewKeyAccepted ? "report-open" : "report-locked"}>
           <div className="section-heading">
-            <p className="eyebrow">{t("Private report", "Private report")}</p>
+            <p className="eyebrow">{t("Private report", "Приватный отчёт")}</p>
             <h2>{response?.viewKeyAccepted ? t("View key accepted", "View key принят") : t("Locked until view key", "Закрыто до view key")}</h2>
           </div>
           <p>{response?.message ?? t("Enter the view key to reveal details.", "Введите view key, чтобы раскрыть детали.")}</p>
@@ -125,9 +125,9 @@ export function TransferComplianceView({
               <div><dt>{t("From entity", "От entity")}</dt><dd>{response.decryptedReport.fromLegalEntity}</dd></div>
               <div><dt>{t("To entity", "В entity")}</dt><dd>{response.decryptedReport.toLegalEntity}</dd></div>
               <div><dt>{t("Purpose", "Назначение")}</dt><dd>{response.decryptedReport.purpose}</dd></div>
-              <div><dt>{t("FX rate", "FX rate")}</dt><dd>{response.decryptedReport.fxRate}</dd></div>
-              <div><dt>{t("Policy", "Policy")}</dt><dd>{response.decryptedReport.policyVersion}</dd></div>
-              <div><dt>{t("Signer", "Signer")}</dt><dd>{response.decryptedReport.signer}</dd></div>
+              <div><dt>{t("FX rate", "FX-курс")}</dt><dd>{response.decryptedReport.fxRate}</dd></div>
+              <div><dt>{t("Policy", "Политика")}</dt><dd>{response.decryptedReport.policyVersion}</dd></div>
+              <div><dt>{t("Signer", "Подписант")}</dt><dd>{response.decryptedReport.signer}</dd></div>
             </dl>
           ) : null}
         </div>

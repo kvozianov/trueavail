@@ -95,20 +95,20 @@ export function JudgeView() {
             <i />
             <span>{t("Govern", "Governance")}</span>
             <i />
-            <span>{t("Overlay", "Overlay")}</span>
+            <span>{t("Overlay", "Оверлей")}</span>
           </div>
         </div>
         <div className="judge-summary">
-          <span>{t("Golden Incident", "Golden Incident")}</span>
+          <span>{t("Golden Incident", "Золотой инцидент")}</span>
           <strong>{incident.accountId}</strong>
-          <p>{formatCurrencyAmount(incident.payoutAmount, incident.payoutCurrency)} {t("payout", "payout")}, {translate(incident.governanceDecision)} gate, {rail.permissioned.finalitySla} overlay SLA.</p>
+          <p>{formatCurrencyAmount(incident.payoutAmount, incident.payoutCurrency)} {t("payout", "выплата")}, {translate(incident.governanceDecision)} gate, {rail.permissioned.finalitySla} overlay SLA.</p>
           <dl>
             <div>
               <dt>{t("Owner", "Владелец")}</dt>
               <dd>Treasury</dd>
             </div>
             <div>
-              <dt>{t("Evidence", "Evidence")}</dt>
+              <dt>{t("Evidence", "Доказательства")}</dt>
               <dd>10/10</dd>
             </div>
           </dl>
@@ -167,7 +167,7 @@ export function JudgeView() {
         <Link className="command-button command-button--primary" href="/demo?phase=pending">{t("Show Demo")}</Link>
         <Link className="command-button" href="/demo?phase=rejected#evidence">{t("View Evidence")}</Link>
         <Link className="command-button" href="/transfers">{t("Fund Transfers", "Переводы средств")}</Link>
-        <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("Compare Rails")}</Link>
+        <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("Compare Rails", "Сравнить rails")}</Link>
         <Link className="command-button" href="/technical">{t("View API")}</Link>
       </section>
     </main>

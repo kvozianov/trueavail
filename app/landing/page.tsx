@@ -664,11 +664,12 @@ function BlockchainSection() {
   return (
     <section className={styles.blockchain} aria-labelledby="blockchain-title">
       <div className={styles.blockchainIntro}>
-        <p className={styles.eyebrow}>{t("Permissioned blockchain rail")}</p>
-        <h2 id="blockchain-title">{t("The map hands the decision to a governed settlement layer.")}</h2>
+        <p className={styles.eyebrow}>{t("Permissioned blockchain rail", "Разрешённый blockchain rail")}</p>
+        <h2 id="blockchain-title">{t("The map hands the decision to a governed settlement layer.", "Карта передаёт решение в governed settlement layer.")}</h2>
         <p>
           {t(
             "After the account map shows where cash is constrained, TrueAvail can route approved intragroup liquidity through a permissioned blockchain rail: faster finality, policy gates, signer control, and an audit receipt that comes back to the cockpit.",
+            "После того как карта счетов показывает, где cash constrained, TrueAvail может направить одобренную внутригрупповую ликвидность через permissioned blockchain rail: быстрая финализация, policy gates, контроль подписантов и audit receipt, который возвращается в cockpit.",
           )}
         </p>
       </div>
@@ -676,17 +677,17 @@ function BlockchainSection() {
       <div className={styles.blockchainGrid}>
         <div
           className={styles.splineShell}
-          aria-label={t("Permissioned blockchain animation")}
+          aria-label={t("Permissioned blockchain animation", "Анимация permissioned blockchain")}
         >
           <div className={styles.splineTopbar}>
-            <span>{t("Blockchain execution layer")}</span>
-            <strong>{hasBlockchainSplineScene ? t("Spline live") : t("Scene waiting")}</strong>
+            <span>{t("Blockchain execution layer", "Слой blockchain-исполнения")}</span>
+            <strong>{hasBlockchainSplineScene ? t("Spline live", "Spline активен") : t("Scene waiting", "Сцена ожидает")}</strong>
           </div>
 
           {hasBlockchainSplineScene ? (
             <Spline scene={blockchainSplineScene} />
           ) : (
-            <div className={styles.splineFallback} aria-label={t("Spline scene placeholder")}>
+            <div className={styles.splineFallback} aria-label={t("Spline scene placeholder", "Запасной блок Spline-сцены")}>
               <span className={styles.chainOrbit} />
               <span className={styles.chainOrbit} />
               <span className={styles.chainOrbit} />
@@ -706,8 +707,8 @@ function BlockchainSection() {
 
         <div className={styles.blockchainBrief}>
           <div className={styles.blockchainBriefHeader}>
-            <span>{t("Why blockchain here")}</span>
-            <strong>{t("Controlled finality, not open-network risk")}</strong>
+            <span>{t("Why blockchain here", "Зачем здесь blockchain")}</span>
+            <strong>{t("Controlled finality, not open-network risk", "Контролируемая финализация без open-network risk")}</strong>
           </div>
 
           <ol className={styles.blockchainSteps}>
@@ -722,7 +723,7 @@ function BlockchainSection() {
             ))}
           </ol>
 
-          <dl className={styles.blockchainLedger} aria-label={t("Blockchain rail facts")}>
+          <dl className={styles.blockchainLedger} aria-label={t("Blockchain rail facts", "Факты blockchain rail")}>
             {blockchainLedgerRows.map(([term, value]) => (
               <div key={term}>
                 <dt>{translate(term)}</dt>

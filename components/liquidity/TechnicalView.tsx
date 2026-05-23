@@ -206,7 +206,7 @@ export function TechnicalView() {
         </div>
         <div className="technical-proof">
           <span>{t("OpenAPI")}</span>
-          <strong>{paths.length} {t("endpoints", "endpoints")}</strong>
+          <strong>{paths.length} {t("endpoints", "эндпоинтов")}</strong>
           <p>{openApi.info?.title ?? "TrueAvail Backend"} v{openApi.info?.version ?? "0.1.0"}</p>
         </div>
       </section>
@@ -262,7 +262,7 @@ export function TechnicalView() {
 
       <section className="technical-overlay-proof" aria-labelledby="technical-overlay-title">
         <div>
-          <p className="eyebrow">{t("Permissioned mobility overlay", "Permissioned mobility overlay")}</p>
+          <p className="eyebrow">{t("Permissioned mobility overlay", "Оверлей permissioned mobility")}</p>
           <h2 id="technical-overlay-title">{t("Simulated settlement ledger prototype, not a production payment rail", "Симулированный settlement ledger prototype, не production payment rail")}</h2>
           <p>
             {t(
@@ -285,7 +285,7 @@ export function TechnicalView() {
             <dd>EUR {(rail.permissioned.amount / 1_000_000).toFixed(3)}M</dd>
           </div>
           <div>
-            <dt>{t("Finality SLA", "Finality SLA")}</dt>
+            <dt>{t("Finality SLA", "SLA финализации")}</dt>
             <dd>{rail.permissioned.finalitySla}</dd>
           </div>
           <div>
@@ -293,7 +293,7 @@ export function TechnicalView() {
             <dd>{rail.certificate.policyVersion}</dd>
           </div>
           <div>
-            <dt>{t("Audit hash", "Audit hash")}</dt>
+            <dt>{t("Audit hash", "Аудит-хэш")}</dt>
             <dd>{rail.certificate.auditHash}</dd>
           </div>
         </dl>
@@ -317,7 +317,7 @@ export function TechnicalView() {
       <section className="judge-actions" aria-label={t("Technical action links", "Технические ссылки действий")}>
         <Link className="command-button command-button--primary" href="/demo?phase=pending">{t("Run Golden Incident")}</Link>
         <Link className="command-button" href="/transfers">{t("Fund Transfers", "Переводы средств")}</Link>
-        <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("View Overlay Prototype", "View Overlay Prototype")}</Link>
+        <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("View Overlay Prototype", "Открыть прототип оверлея")}</Link>
         <Link className="command-button" href="/judge">{t("Judge View")}</Link>
       </section>
     </main>

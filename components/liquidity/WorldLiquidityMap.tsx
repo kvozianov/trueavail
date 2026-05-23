@@ -1520,7 +1520,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
               : t("Pick a treasury scenario, watch the affected account light up, and trace which SWIFT or local rail the system uses before it approves, throttles, or blocks the deal.")}
           </p>
           <div className="map-hero-signals" aria-label={t("Map state", "Состояние карты")}>
-            {isMapSurface ? <span>{t("Map cockpit", "Map cockpit")}</span> : null}
+            {isMapSurface ? <span>{t("Map cockpit", "Кокпит карты")}</span> : null}
             <span>{accounts.length} {t("bank nodes")}</span>
             <span>{scenario.transferLegs.length} {t("active rails")}</span>
             <span>{incidentLifecycle === "incidentClosed" ? t("Incident closed") : simulation.state === "clear" ? t("Program ready") : t("Anomaly detected")}</span>
@@ -1562,7 +1562,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
             onClick={() => generateRandomProblem("manual")}
             type="button"
           >
-            <span>{t("Random generator", "Random generator")}</span>
+            <span>{t("Random generator", "Случайный генератор")}</span>
             <strong>{t("Generate new anomaly", "Сгенерировать новую аномалию")}</strong>
             <small>{t("new conditions + fresh ML telemetry", "новые условия + свежая ML telemetry")}</small>
           </button>
@@ -1584,7 +1584,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
       {isMapSurface ? (
         <section className="map-layer-control" aria-label={t("Map layer control", "Управление слоями карты")}>
           <div>
-            <p className="eyebrow">{t("Live Layer Stack", "Live Layer Stack")}</p>
+            <p className="eyebrow">{t("Live Layer Stack", "Стек live-слоёв")}</p>
             <h2>{t("Turn map intelligence on and off", "Включайте и выключайте интеллект карты")}</h2>
             <p>
               {t(
@@ -1757,7 +1757,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
                         <dd>{formatMoney(event.amount, event.currency)}</dd>
                       </div>
                       <div>
-                        <dt>{t("Rail", "Rail")}</dt>
+                        <dt>{t("Rail", "Платёжный rail")}</dt>
                         <dd>{event.rail}</dd>
                       </div>
                     </dl>
@@ -1767,12 +1767,12 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
                 ))}
               </div>
               <div className="account-condition-book__footer">
-                <span>{t("Ledger packet", "Ledger packet")}</span>
+                <span>{t("Ledger packet", "Ledger-пакет")}</span>
                 <Link
                   className="account-condition-book__details"
                   href={`/liquidity-control-tower/conditions/${selected.id}`}
                 >
-                  {t("View details", "View details")}
+                  {t("View details", "Открыть детали")}
                 </Link>
               </div>
             </section>

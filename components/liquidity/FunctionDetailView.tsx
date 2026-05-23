@@ -95,7 +95,7 @@ export function FunctionDetailView({ functionKey }: { functionKey: FunctionKey }
 
         <article className="function-contract">
           <p className="eyebrow">{t("Call contract", "Контракт вызова")}</p>
-          <h2>{t("Input, output, handoff", "Input, output, handoff")}</h2>
+          <h2>{t("Input, output, handoff", "Вход, выход, передача")}</h2>
           <dl>
             <div>
               <dt>{t("Input", "Вход")}</dt>

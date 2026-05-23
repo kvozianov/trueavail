@@ -47,11 +47,11 @@ export function ConditionDetailsView({ accountId }: { accountId: string }) {
   return (
     <main className="condition-detail-page" id="main-content" key={`${account.id}-${account.capital}-${account.summary.en}`}>
       <div className="condition-detail-topbar">
-        <Link className="condition-detail-back" href="/liquidity-control-tower" aria-label={t("Back to map", "Back to map")}>
+        <Link className="condition-detail-back" href="/liquidity-control-tower" aria-label={t("Back to map", "Назад к карте")}>
           <span aria-hidden="true">←</span>
-          {t("Back to map", "Back to map")}
+          {t("Back to map", "Назад к карте")}
         </Link>
-        <span>{t("Deterministic account packet", "Deterministic account packet")}</span>
+        <span>{t("Deterministic account packet", "Детерминированный пакет счёта")}</span>
       </div>
 
       <section className="condition-detail-hero" aria-labelledby="condition-detail-title">
@@ -59,7 +59,7 @@ export function ConditionDetailsView({ accountId }: { accountId: string }) {
           <p className="eyebrow">{account.bank} / {account.accountCode}</p>
           <h1 id="condition-detail-title">{message(account.headline)}</h1>
           <p>{message(account.summary)}</p>
-          <div className="condition-detail-identity" aria-label={t("Account identity", "Account identity")}>
+          <div className="condition-detail-identity" aria-label={t("Account identity", "Идентификация счёта")}>
             <span>{message(account.city)}</span>
             <span>{account.entity}</span>
             <span>{account.primaryRail}</span>
@@ -68,24 +68,24 @@ export function ConditionDetailsView({ accountId }: { accountId: string }) {
         </div>
 
         <div className="condition-detail-command">
-          <span>{t("Current governance posture", "Current governance posture")}</span>
-          <strong>{account.p05Gap > 0 ? t("Reject unsafe approval", "Reject unsafe approval") : t("Watch", "Наблюдать")}</strong>
+          <span>{t("Current governance posture", "Текущая позиция governance")}</span>
+          <strong>{account.p05Gap > 0 ? t("Reject unsafe approval", "Отклонить небезопасное approval") : t("Watch", "Наблюдать")}</strong>
           <p>{t("Book balance is not enough; this page explains what cash is actually usable before cut-off.", "Book balance недостаточен; эта страница показывает, какие деньги реально доступны до cut-off.")}</p>
         </div>
       </section>
 
-      <section className="condition-kpi-grid" aria-label={t("Account metrics", "Account metrics")}>
-        <MetricCard label={t("Book balance", "Book balance")} value={formatMoney(account.capital, account.currency)} detail={t("Visible cash on account", "Видимые деньги на счёте")} />
-        <MetricCard label={t("Usable now", "Usable now")} value={formatMoney(account.usableNow, account.currency)} detail={t("After restricted cash and timing", "После restricted cash и timing")} tone="warning" />
-        <MetricCard label={t("Survival floor", "Survival floor")} value={formatMoney(account.liquidityFloor, account.currency)} detail={message(account.cutOff)} />
-        <MetricCard label={t("p05 gap", "p05 gap")} value={formatMoney(account.p05Gap, account.currency)} detail={t("Downside liquidity breach", "Downside liquidity breach")} tone="danger" />
+      <section className="condition-kpi-grid" aria-label={t("Account metrics", "Метрики счёта")}>
+        <MetricCard label={t("Book balance", "Книжный баланс")} value={formatMoney(account.capital, account.currency)} detail={t("Visible cash on account", "Видимые деньги на счёте")} />
+        <MetricCard label={t("Usable now", "Доступно сейчас")} value={formatMoney(account.usableNow, account.currency)} detail={t("After restricted cash and timing", "После restricted cash и timing")} tone="warning" />
+        <MetricCard label={t("Survival floor", "Минимум выживания")} value={formatMoney(account.liquidityFloor, account.currency)} detail={message(account.cutOff)} />
+        <MetricCard label={t("p05 gap", "Разрыв p05")} value={formatMoney(account.p05Gap, account.currency)} detail={t("Downside liquidity breach", "Пробой downside-ликвидности")} tone="danger" />
         <MetricCard label={t("Committed outflow", "Обязательный отток")} value={formatMoney(account.committedOutflow, account.currency)} detail={`${account.hardEvents} ${t("hard events", "жёстких события")}`} tone="warning" />
       </section>
 
       <section className="condition-detail-grid" aria-label={t("Detailed account movements", "Детальная история движения денег")}>
         <article className="condition-ledger-card condition-ledger-card--wide">
           <div className="condition-section-heading">
-            <p className="eyebrow">{t("Company perimeter", "Company perimeter")}</p>
+            <p className="eyebrow">{t("Company perimeter", "Периметр компании")}</p>
             <h2>{t("Intragroup transfers to and from this account", "Внутригрупповые переводы по этому счёту")}</h2>
             <p>{t("These movements stay inside the company. They can improve timing, but still need policy, signer and cut-off checks.", "Эти движения остаются внутри компании. Они могут улучшить timing, но всё равно требуют policy, signer и cut-off checks.")}</p>
           </div>
@@ -142,7 +142,7 @@ export function ConditionDetailsView({ accountId }: { accountId: string }) {
               ))}
             </svg>
             <div className="condition-chart-caption">
-              <span>{t("Lowest point", "Lowest point")}: {worstPoint.date}</span>
+              <span>{t("Lowest point", "Нижняя точка")}: {worstPoint.date}</span>
               <strong>{formatMoney(worstPoint.usable, account.currency)}</strong>
             </div>
           </div>
@@ -150,7 +150,7 @@ export function ConditionDetailsView({ accountId }: { accountId: string }) {
 
         <article className="condition-ledger-card condition-bar-card">
           <div className="condition-section-heading">
-            <p className="eyebrow">{t("Calendar pressure", "Calendar pressure")}</p>
+            <p className="eyebrow">{t("Calendar pressure", "Календарное давление")}</p>
             <h2>{t("Required cash activity by date", "Активность требований по датам")}</h2>
             <p>{t("Bars combine banking holidays, payroll, tax, vendor and settlement events into a single pressure score.", "Столбцы объединяют bank holidays, payroll, tax, vendor и settlement events в один pressure score.")}</p>
           </div>
