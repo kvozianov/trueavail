@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DemoNav } from "@/components/liquidity/DemoNav";
 import { FunctionWorkbench } from "@/components/liquidity/FunctionWorkbench";
+import { PermissionedRailPanel } from "@/components/liquidity/PermissionedRailPanel";
 import { useDemoSnapshot } from "@/hooks/useDemoSnapshot";
 import {
   buildGoldenIncident,
@@ -10,6 +11,7 @@ import {
   type DemoMode,
   type GoldenIncident,
 } from "@/lib/golden-incident";
+import { buildPermissionedRailScenario } from "@/lib/permissioned-rail";
 import type { DecisionPhase } from "@/lib/demo-phase";
 import {
   formatCurrencyAmount,
@@ -21,6 +23,8 @@ import {
 
 export function DemoCockpit({ initialPhase = "pending" }: { initialPhase?: DecisionPhase }) {
   const phase = initialPhase;
+  const [controlsCollapsed, setControlsCollapsed] = useState(false);
+  const [evidenceCollapsed, setEvidenceCollapsed] = useState(false);
   const snapshot = useDemoSnapshot();
   const refreshSnapshot = snapshot.refresh;
 
@@ -33,10 +37,21 @@ export function DemoCockpit({ initialPhase = "pending" }: { initialPhase?: Decis
     () => buildGoldenIncident(snapshot.data ?? goldenIncidentSnapshotFallback),
     [snapshot.data],
   );
+  const railScenario = useMemo(() => buildPermissionedRailScenario(incident), [incident]);
   const evidenceRevealed = phase !== "pending";
+  const compactGridClass = [
+    "grid gap-2 lg:gap-3",
+    controlsCollapsed && evidenceCollapsed
+      ? "xl:grid-cols-[3.5rem_minmax(0,1fr)_3.5rem]"
+      : controlsCollapsed
+        ? "xl:grid-cols-[3.5rem_minmax(0,1fr)_18.5rem]"
+        : evidenceCollapsed
+          ? "xl:grid-cols-[17.25rem_minmax(0,1fr)_3.5rem]"
+          : "xl:grid-cols-[17.25rem_minmax(0,1fr)_18.5rem]",
+  ].join(" ");
 
   return (
-    <main className="demo-page" id="main-content">
+    <main className="demo-page demo-compact min-h-dvh px-2 pb-6 pt-0 text-[var(--ink)] sm:px-3" id="main-content">
       <DemoNav
         mode={mode}
         statusText={
@@ -44,78 +59,118 @@ export function DemoCockpit({ initialPhase = "pending" }: { initialPhase?: Decis
             ? "API unavailable, deterministic fallback active"
             : snapshot.refetching
               ? "Refreshing evidence"
-              : "Golden incident contract"
+          : "Golden incident contract"
         }
       />
-      <RuntimeStrip
-        mode={mode}
-        phase={phase}
-        loading={snapshot.loading || snapshot.refetching}
-        error={snapshot.error?.message}
-      />
 
-      <section className="decision-cockpit" aria-labelledby="decision-title">
-        <PayoutQueue incident={incident} phase={phase} />
+      <section className="mx-auto flex w-full max-w-[1800px] flex-col gap-2 pt-2">
+        <RuntimeStrip
+          mode={mode}
+          phase={phase}
+          loading={snapshot.loading || snapshot.refetching}
+          error={snapshot.error?.message}
+        />
 
-        <section className="selected-decision">
-          <div className="decision-kicker">
-            <StateBadge state={phase} reason={stateReason(phase, incident)} />
-            <span>{incident.accountId}</span>
-          </div>
-          <h1 id="decision-title">Approve EUR 4.1M payout?</h1>
-          <p className="decision-thesis">Book balance says green. Usable liquidity says red.</p>
-          <p className="decision-copy">
-            TrueAvail prevents treasury teams from approving unsafe payments based on
-            misleading balances.
-          </p>
-          <DecisionStateBar phase={phase} incident={incident} />
-
-          <BookVsUsableSplit incident={incident} revealed={evidenceRevealed} />
-
-          <div className="decision-actions" aria-label="Decision actions">
-            {phase === "pending" ? (
-              <>
-                <a className="command-button command-button--primary" href="?phase=breached">
-                  Approve
-                </a>
-                <a className="command-button" href="?phase=breached#evidence">
-                  Run Golden Incident
-                </a>
-                <a className="command-button command-button--ghost" href="?phase=breached">
-                  Hold
-                </a>
-              </>
+        <section className={compactGridClass} id="demo-dashboard" aria-labelledby="decision-title">
+          <aside className="demo-control-rail rounded-[18px] border border-[var(--line)] bg-[rgba(20,22,25,0.74)] p-2 shadow-[inset_0_1px_0_rgba(245,245,247,0.08)] backdrop-blur-xl">
+            <CompactRailHeader
+              collapsed={controlsCollapsed}
+              label="Controls"
+              meta="Simulation"
+              onToggle={() => setControlsCollapsed((current) => !current)}
+            />
+            {controlsCollapsed ? (
+              <CollapsedRailLabel label="queue" value={phase} />
             ) : (
-              <>
-                <a className="command-button command-button--danger" href="?phase=rejected">
-                  Reject
-                </a>
-                <a className="command-button" href="#contingency">Prefund</a>
-                <a className="command-button" href="#contingency">Throttle</a>
-                <a className="command-button command-button--ghost" href="?phase=pending">
-                  Restart Demo
-                </a>
-              </>
+              <div className="mt-2 grid gap-2">
+                <CompactScenarioControls incident={incident} phase={phase} revealed={evidenceRevealed} />
+                <PayoutQueue incident={incident} phase={phase} />
+              </div>
             )}
-          </div>
+          </aside>
+
+          <section className="demo-simulation-stage min-h-[calc(100dvh-132px)] rounded-[24px] border border-[rgba(245,245,247,0.18)] bg-[linear-gradient(180deg,rgba(245,245,247,0.07),rgba(245,245,247,0.025)),rgba(15,16,17,0.62)] p-2 shadow-[0_28px_90px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(245,245,247,0.08)] backdrop-blur-xl">
+            <section className="selected-decision selected-decision--compact">
+              <div className="decision-kicker">
+                <StateBadge state={phase} reason={stateReason(phase, incident)} />
+                <span>{incident.accountId}</span>
+              </div>
+              <h1 id="decision-title">Approve EUR 4.1M payout?</h1>
+              <p className="decision-thesis">Book balance says green. Usable liquidity says red.</p>
+              <p className="decision-copy">
+                TrueAvail prevents treasury teams from approving unsafe payments based on misleading balances.
+              </p>
+              <DecisionStateBar phase={phase} incident={incident} />
+              <RailAlternativeSnapshot
+                afterGap={railScenario.after.p05Gap}
+                finalitySla={railScenario.permissioned.finalitySla}
+                legacySla={railScenario.oldWay.finalitySla}
+                revealed={evidenceRevealed}
+              />
+
+              <div className="demo-simulation-grid">
+                <BookVsUsableSplit incident={incident} revealed={evidenceRevealed} />
+                <section className="impact-rail impact-rail--compact" aria-labelledby="impact-title">
+                  <div className="impact-rail__header">
+                    <div>
+                      <p className="eyebrow">Liquidity impact simulation</p>
+                      <h2 id="impact-title">p05 corridor crosses survival floor</h2>
+                    </div>
+                    <span className="mono-chip">{mode === "live" ? "live" : "replay"}</span>
+                  </div>
+                  <IncidentCorridor incident={incident} revealed={evidenceRevealed} />
+                </section>
+              </div>
+
+              <div className="decision-actions" aria-label="Decision actions">
+                {phase === "pending" ? (
+                  <>
+                    <a className="command-button command-button--primary" href="?phase=breached">
+                      Approve
+                    </a>
+                    <a className="command-button" href="?phase=breached#evidence">
+                      Run Golden Incident
+                    </a>
+                    <a className="command-button command-button--ghost" href="?phase=breached">
+                      Hold
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <a className="command-button command-button--danger" href="?phase=rejected">
+                      Reject
+                    </a>
+                    <a className="command-button" href="#contingency">Prefund</a>
+                    <a className="command-button" href="#contingency">Throttle</a>
+                    <a className="command-button command-button--ghost" href="?phase=pending">
+                      Restart Demo
+                    </a>
+                  </>
+                )}
+              </div>
+            </section>
+          </section>
+
+          <aside className="demo-evidence-rail rounded-[18px] border border-[var(--line)] bg-[rgba(20,22,25,0.74)] p-2 shadow-[inset_0_1px_0_rgba(245,245,247,0.08)] backdrop-blur-xl">
+            <CompactRailHeader
+              collapsed={evidenceCollapsed}
+              label="Evidence"
+              meta="Audit"
+              onToggle={() => setEvidenceCollapsed((current) => !current)}
+            />
+            {evidenceCollapsed ? (
+              <CollapsedRailLabel label="proof" value={evidenceRevealed ? "open" : "locked"} />
+            ) : (
+              <div className="mt-2 grid gap-2">
+                <EvidenceChain incident={incident} revealed={evidenceRevealed} phase={phase} />
+                <AuditStamp incident={incident} mode={mode} phase={phase} />
+              </div>
+            )}
+          </aside>
         </section>
-
-        <EvidenceChain incident={incident} revealed={evidenceRevealed} phase={phase} />
-
-        <section className="impact-rail" aria-labelledby="impact-title">
-          <div className="impact-rail__header">
-            <div>
-              <p className="eyebrow">Liquidity impact simulation</p>
-              <h2 id="impact-title">p05 corridor crosses survival floor</h2>
-            </div>
-            <span className="mono-chip">{mode === "live" ? "live" : "replay"}</span>
-          </div>
-          <IncidentCorridor incident={incident} revealed={evidenceRevealed} />
-        </section>
-
-        <AuditStamp incident={incident} mode={mode} phase={phase} />
       </section>
 
+      <PermissionedRailPanel incident={incident} />
       <FunctionWorkbench incident={incident} key={phase} mode={mode} phase={phase} />
       <ValueStrip incident={incident} />
       <PitchModePanel phase={phase} />
@@ -124,6 +179,164 @@ export function DemoCockpit({ initialPhase = "pending" }: { initialPhase?: Decis
       <GovernanceSection incident={incident} phase={phase} />
       <ContingencySection incident={incident} />
     </main>
+  );
+}
+
+function RailAlternativeSnapshot({
+  afterGap,
+  finalitySla,
+  legacySla,
+  revealed,
+}: {
+  afterGap: number;
+  finalitySla: string;
+  legacySla: string;
+  revealed: boolean;
+}) {
+  return (
+    <div className={revealed ? "rail-alternative-strip rail-alternative-strip--revealed" : "rail-alternative-strip"} aria-label="Legacy rail versus permissioned rail summary">
+      <div>
+        <span>Legacy route</span>
+        <strong>{revealed ? legacySla : "locked"}</strong>
+        <small>{revealed ? "misses cut-off, keeps p05 gap" : "reveal evidence first"}</small>
+      </div>
+      <div>
+        <span>Permissioned overlay</span>
+        <strong>{revealed ? finalitySla : "available"}</strong>
+        <small>{revealed ? "approved intragroup liquidity before cut-off" : "policy rail staged"}</small>
+      </div>
+      <div>
+        <span>After overlay</span>
+        <strong>{revealed ? formatEur(afterGap, 3) : "pending"}</strong>
+        <small>{revealed ? "ledger move + residual throttle" : "not committed"}</small>
+      </div>
+    </div>
+  );
+}
+
+function CompactRailHeader({
+  collapsed,
+  label,
+  meta,
+  onToggle,
+}: {
+  collapsed: boolean;
+  label: string;
+  meta: string;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className={
+        collapsed
+          ? "compact-rail-header flex min-h-[12rem] flex-col items-center justify-between gap-2"
+          : "compact-rail-header flex items-center justify-between gap-2"
+      }
+    >
+      <div className={collapsed ? "flex flex-col items-center gap-2 text-center" : "min-w-0"}>
+        <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(245,245,240,0.5)]">
+          {meta}
+        </span>
+        <strong
+          className={
+            collapsed
+              ? "[writing-mode:vertical-rl] text-[11px] font-black uppercase tracking-[0.16em] text-[var(--ink)]"
+              : "block truncate text-[12px] font-black uppercase tracking-[0.13em] text-[var(--ink)]"
+          }
+        >
+          {label}
+        </strong>
+      </div>
+      <button
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? `Open ${label} rail` : `Collapse ${label} rail`}
+        className="grid h-8 min-w-8 place-items-center rounded-[10px] border border-[rgba(245,245,247,0.16)] bg-[rgba(245,245,247,0.07)] text-[12px] font-black text-[var(--ink)] shadow-[inset_0_1px_0_rgba(245,245,247,0.08)] transition-[border-color,background,transform] duration-150 hover:border-[rgba(240,106,27,0.52)] hover:bg-[rgba(240,106,27,0.12)] focus-visible:ring-2 focus-visible:ring-[rgba(240,106,27,0.55)]"
+        onClick={onToggle}
+        type="button"
+      >
+        {collapsed ? "+" : "-"}
+      </button>
+    </div>
+  );
+}
+
+function CollapsedRailLabel({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="compact-collapsed-rail mt-3 flex min-h-[20rem] flex-col items-center justify-between rounded-[14px] border border-[rgba(245,245,247,0.11)] bg-[rgba(245,245,247,0.035)] px-2 py-3 text-center">
+      <span className="[writing-mode:vertical-rl] text-[10px] font-black uppercase tracking-[0.16em] text-[rgba(245,245,240,0.66)]">
+        {label}
+      </span>
+      <strong className="[writing-mode:vertical-rl] text-[10px] font-black uppercase tracking-[0.16em] text-[var(--brand-orange)]">
+        {value}
+      </strong>
+    </div>
+  );
+}
+
+function CompactScenarioControls({
+  incident,
+  phase,
+  revealed,
+}: {
+  incident: GoldenIncident;
+  phase: DecisionPhase;
+  revealed: boolean;
+}) {
+  const metrics = [
+    ["Payout", formatEur(incident.payoutAmount, 1)],
+    ["p05 gap", revealed ? formatEur(incident.p05Gap, 3) : "locked"],
+    ["Stress loss", revealed ? formatEur(incident.target2StressLoss, 3) : "locked"],
+    ["HHI", revealed ? `${incident.hhiAfterStress.toFixed(3)}` : "locked"],
+  ];
+  const phases: Array<[DecisionPhase, string]> = [
+    ["pending", "Pending"],
+    ["breached", "Breach"],
+    ["rejected", "Reject"],
+  ];
+
+  return (
+    <section className="rounded-[14px] border border-[rgba(245,245,247,0.12)] bg-[rgba(245,245,247,0.045)] p-2 shadow-[inset_0_1px_0_rgba(245,245,247,0.06)]">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[rgba(245,245,240,0.48)]">
+            Scenario controls
+          </p>
+          <strong className="block truncate text-[12px] text-[var(--ink)]">{incident.accountId}</strong>
+        </div>
+        <span className="rounded-full border border-[rgba(240,106,27,0.34)] bg-[rgba(240,106,27,0.12)] px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[var(--brand-orange)]">
+          {phase}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {metrics.map(([label, value]) => (
+          <div
+            className="min-w-0 rounded-[10px] border border-[rgba(245,245,247,0.09)] bg-[rgba(10,12,14,0.4)] px-2 py-1.5"
+            key={label}
+          >
+            <span className="block truncate text-[9px] font-black uppercase tracking-[0.12em] text-[rgba(245,245,240,0.44)]">
+              {label}
+            </span>
+            <strong className="block truncate text-[12px] text-[var(--ink)]">{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-1.5" aria-label="Replay state controls">
+        {phases.map(([target, label]) => (
+          <a
+            className={[
+              "rounded-[10px] border px-2 py-1.5 text-center text-[10px] font-black uppercase tracking-[0.1em] transition-[border-color,background,color,transform] duration-150 focus-visible:ring-2 focus-visible:ring-[rgba(240,106,27,0.55)]",
+              phase === target
+                ? "border-[rgba(240,106,27,0.56)] bg-[rgba(240,106,27,0.15)] text-[var(--brand-orange)]"
+                : "border-[rgba(245,245,247,0.1)] bg-[rgba(245,245,247,0.045)] text-[rgba(245,245,240,0.68)] hover:border-[rgba(245,245,247,0.24)] hover:bg-[rgba(245,245,247,0.08)]",
+            ].join(" ")}
+            href={`?phase=${target}`}
+            key={target}
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -230,21 +443,22 @@ function DecisionStateBar({ phase, incident }: { phase: DecisionPhase; incident:
 
 function PitchModePanel({ phase }: { phase: DecisionPhase }) {
   const steps = [
-    ["01", "Landing", "Problem and value", "/?phase=pending"],
-    ["02", "Golden Incident", "Approve payout?", "/?phase=pending"],
-    ["03", "Forecast", "Hidden p05 gap", "/?phase=breached#evidence"],
-    ["04", "Stress + HHI", "Risk gets worse", "/?phase=breached#evidence"],
-    ["05", "Optimizer", "No safe transfer", "/?phase=breached#governance"],
-    ["06", "Governance", "Reject", "/?phase=rejected#governance"],
-    ["07", "Contingency", "Prefund or throttle", "/?phase=rejected#contingency"],
-    ["08", "ROI", "Business value", "/?phase=rejected#contingency"],
-    ["09", "Judge View", "Working functions", "/judge"],
-    ["10", "Technical View", "Implementation proof", "/technical"],
+    ["01", "Landing", "Problem and value", "/demo?phase=pending"],
+    ["02", "Golden Incident", "Approve payout?", "/demo?phase=pending"],
+    ["03", "Forecast", "Hidden p05 gap", "/demo?phase=breached#evidence"],
+    ["04", "Stress + HHI", "Risk gets worse", "/demo?phase=breached#evidence"],
+    ["05", "Optimizer", "No safe transfer", "/demo?phase=breached#governance"],
+    ["06", "Governance", "Reject", "/demo?phase=rejected#governance"],
+    ["07", "Permissioned Rail", "Policy-based overlay", "/demo?phase=rejected#permissioned-rail"],
+    ["08", "Contingency", "Ledger move + throttle", "/demo?phase=rejected#contingency"],
+    ["09", "ROI", "Business value", "/demo?phase=rejected#contingency"],
+    ["10", "Judge View", "Working functions", "/judge"],
+    ["11", "Technical View", "Implementation proof", "/technical"],
   ];
   const activeRange =
     phase === "pending" ? new Set(["01", "02"]) :
     phase === "breached" ? new Set(["03", "04", "05"]) :
-    new Set(["06", "07", "08"]);
+    new Set(["06", "07", "08", "09"]);
 
   return (
     <section className={`pitch-mode pitch-mode--${phase}`} aria-labelledby="pitch-mode-title">

@@ -7,6 +7,7 @@ import { DemoNav } from "@/components/liquidity/DemoNav";
 import { useLanguage } from "@/components/liquidity/LanguageProvider";
 import type { LocalizedMessage } from "@/lib/i18n";
 import { goldenIncidentFallback as incident } from "@/lib/golden-incident";
+import { buildPermissionedRailScenario } from "@/lib/permissioned-rail";
 
 const openApi = openApiArtifact as {
   info?: { title?: string; version?: string };
@@ -21,6 +22,7 @@ const architectureStages = [
   "HHI / CCRI risk layer",
   "PuLP MIP optimizer",
   "Governance gate",
+  "Permissioned mobility overlay",
   "Contingency plan",
   "Audit / AI Council / ROI",
 ];
@@ -34,6 +36,7 @@ const modelStack = [
   "Survival floor constraints",
   "Expected Shortfall 99%",
   "OpenAPI contract export",
+  "Permissioned settlement ledger prototype",
 ];
 
 type MathCoreItem = {
@@ -186,6 +189,7 @@ const mathCoreItems: MathCoreItem[] = [
 export function TechnicalView() {
   const { t, translate } = useLanguage();
   const paths = Object.entries(openApi.paths ?? {});
+  const rail = buildPermissionedRailScenario(incident);
 
   return (
     <main className="demo-page evidence-page" id="main-content">
@@ -254,6 +258,45 @@ export function TechnicalView() {
         </article>
       </section>
 
+      <section className="technical-overlay-proof" aria-labelledby="technical-overlay-title">
+        <div>
+          <p className="eyebrow">{t("Permissioned mobility overlay", "Permissioned mobility overlay")}</p>
+          <h2 id="technical-overlay-title">{t("Simulated settlement ledger prototype, not a production payment rail", "Симулированный settlement ledger prototype, не production payment rail")}</h2>
+          <p>
+            {t(
+              "The demo models a corporate permissioned ledger rail beside legacy SWIFT and correspondent routes. It only accelerates access to already-approved intragroup liquidity, and every movement remains gated by policy, signer approval, residual risk, and audit evidence.",
+              "Демо моделирует корпоративный permissioned ledger rail рядом с legacy SWIFT и correspondent routes. Он только ускоряет доступ к уже разрешённой intragroup liquidity, а каждое движение остаётся под policy, signer approval, residual risk и audit evidence.",
+            )}
+          </p>
+        </div>
+        <dl>
+          <div>
+            <dt>{t("Source", "Источник")}</dt>
+            <dd>{rail.permissioned.sourceAccount}</dd>
+          </div>
+          <div>
+            <dt>{t("Destination", "Назначение")}</dt>
+            <dd>{rail.permissioned.destinationAccount}</dd>
+          </div>
+          <div>
+            <dt>{t("Amount", "Сумма")}</dt>
+            <dd>EUR {(rail.permissioned.amount / 1_000_000).toFixed(3)}M</dd>
+          </div>
+          <div>
+            <dt>{t("Finality SLA", "Finality SLA")}</dt>
+            <dd>{rail.permissioned.finalitySla}</dd>
+          </div>
+          <div>
+            <dt>{t("Policy version", "Версия policy")}</dt>
+            <dd>{rail.certificate.policyVersion}</dd>
+          </div>
+          <div>
+            <dt>{t("Audit hash", "Audit hash")}</dt>
+            <dd>{rail.certificate.auditHash}</dd>
+          </div>
+        </dl>
+      </section>
+
       <section className="api-contracts" aria-labelledby="api-contracts-title">
         <div className="section-heading">
           <p className="eyebrow">{t("API contracts")}</p>
@@ -270,7 +313,8 @@ export function TechnicalView() {
       </section>
 
       <section className="judge-actions" aria-label={t("Technical action links", "Технические ссылки действий")}>
-        <Link className="command-button command-button--primary" href="/demo">{t("Run Golden Incident")}</Link>
+        <Link className="command-button command-button--primary" href="/demo?phase=pending">{t("Run Golden Incident")}</Link>
+        <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("View Overlay Prototype", "View Overlay Prototype")}</Link>
         <Link className="command-button" href="/judge">{t("Judge View")}</Link>
       </section>
     </main>

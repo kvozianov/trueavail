@@ -37,6 +37,26 @@ const functionNarrative: Record<FunctionKey, { title: string; body: string; deci
     body: "After rejection, the system gives the operator owned actions: prefund, throttle, or reroute before cut-off. The demo ends with work to do, not with a red screen.",
     decisionImpact: "Treasury moves from alert to action while protecting the survival floor.",
   },
+  aiCouncil: {
+    title: "AI Council explains the decision without replacing governance.",
+    body: "The council reads the deterministic evidence packet and produces a human-readable review. It is mocked during verification so the demo stays reproducible.",
+    decisionImpact: "CFO and risk teams get explanation over facts, while the policy gate remains authoritative.",
+  },
+  roi: {
+    title: "ROI translates avoided failure into capital efficiency.",
+    body: "The ROI module connects early warning, reserve release, overdraft avoidance, and manual work reduction to the same rejected payout.",
+    decisionImpact: "The pitch moves from model accuracy to a CFO case for why the product matters.",
+  },
+  contracts: {
+    title: "OpenAPI and backend contracts prove implementation depth.",
+    body: "The contract page exposes exported FastAPI paths, deterministic snapshot artifacts, and verification commands used by the frontend.",
+    decisionImpact: "Judges can see this is not only a dashboard mockup; it has API contracts and replayable backend evidence.",
+  },
+  permissionedRail: {
+    title: "The overlay compares legacy settlement with governed liquidity mobility.",
+    body: "The permissioned rail prototype shows source, destination, amount, policy checks, signer approval, finality SLA, audit hash, and failure paths.",
+    decisionImpact: "Treasury sees how already-approved intragroup liquidity can become usable before cut-off while residual risk stays governed.",
+  },
 };
 
 export function FunctionDetailView({ functionKey }: { functionKey: FunctionKey }) {
@@ -101,8 +121,10 @@ export function FunctionDetailView({ functionKey }: { functionKey: FunctionKey }
           <p className="eyebrow">{t("Decision impact", "Влияние на решение")}</p>
           <h2>{translate(narrative.decisionImpact)}</h2>
           <p>
-            {t("Current Golden Incident", "Текущий Golden Incident")}: {incident.accountId}, EUR 4.1M payout, governance gate
-            records {translate(incident.governanceDecision)}.
+            {t(
+              "Current Golden Incident: atlas-eur-operating, EUR 4.1M payout, governance gate records reject.",
+              `Текущий Golden Incident: ${incident.accountId}, payout EUR 4.1M, governance gate записывает ${translate(incident.governanceDecision)}.`,
+            )}
           </p>
         </article>
       </section>

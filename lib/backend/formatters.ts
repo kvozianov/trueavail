@@ -18,22 +18,22 @@ const percentFormatter = new Intl.NumberFormat("en-US", {
   style: "percent",
 });
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "2-digit",
-  year: "numeric",
-  timeZone: "UTC",
-});
+const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "UTC",
-  timeZoneName: "short",
-});
+function formatUtcDateParts(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const month = shortMonths[parsed.getUTCMonth()] ?? "Jan";
+  const day = String(parsed.getUTCDate()).padStart(2, "0");
+  const year = parsed.getUTCFullYear();
+  const hour = String(parsed.getUTCHours()).padStart(2, "0");
+  const minute = String(parsed.getUTCMinutes()).padStart(2, "0");
+
+  return { day, hour, minute, month, year };
+}
 
 export function normalizeStatus(value: unknown) {
   if (typeof value !== "string") {
@@ -119,12 +119,12 @@ export function formatDate(value: unknown) {
     return "N/A";
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
+  const parts = formatUtcDateParts(value);
+  if (!parts) {
     return value;
   }
 
-  return dateFormatter.format(parsed);
+  return `${parts.month} ${parts.day}, ${parts.year}`;
 }
 
 export function formatDateTime(value: unknown) {
@@ -132,12 +132,12 @@ export function formatDateTime(value: unknown) {
     return "N/A";
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
+  const parts = formatUtcDateParts(value);
+  if (!parts) {
     return value;
   }
 
-  return dateTimeFormatter.format(parsed);
+  return `${parts.month} ${parts.day}, ${parts.year}, ${parts.hour}:${parts.minute} UTC`;
 }
 
 export function formatRiskStatus(value: unknown) {

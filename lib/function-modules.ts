@@ -1,8 +1,19 @@
 import type { DecisionPhase } from "@/lib/demo-phase";
 import type { GoldenIncident } from "@/lib/golden-incident";
 import { formatCurrencyAmount, formatDateTime, formatNumber } from "@/lib/backend/formatters";
+import { buildPermissionedRailScenario } from "@/lib/permissioned-rail";
 
-export type FunctionKey = "forecast" | "stress" | "hhi" | "optimizer" | "governance" | "contingency";
+export type FunctionKey =
+  | "forecast"
+  | "stress"
+  | "hhi"
+  | "optimizer"
+  | "governance"
+  | "contingency"
+  | "aiCouncil"
+  | "roi"
+  | "contracts"
+  | "permissionedRail";
 export type FunctionTone = "neutral" | "danger" | "blocked";
 
 export type FunctionModule = {
@@ -21,7 +32,18 @@ export type FunctionModule = {
   receipt: Array<[string, string]>;
 };
 
-export const functionKeys: FunctionKey[] = ["forecast", "stress", "hhi", "optimizer", "governance", "contingency"];
+export const functionKeys: FunctionKey[] = [
+  "forecast",
+  "stress",
+  "hhi",
+  "optimizer",
+  "governance",
+  "contingency",
+  "aiCouncil",
+  "roi",
+  "contracts",
+  "permissionedRail",
+];
 
 export function isFunctionKey(value: string): value is FunctionKey {
   return functionKeys.includes(value as FunctionKey);
@@ -36,6 +58,7 @@ export function buildFunctionModules(incident: GoldenIncident, phase: DecisionPh
   const lastForecast = incident.forecastRows.at(-1);
   const breachDate = incident.forecastRows.find((row) => row.breach)?.date ?? incident.date;
   const primaryAction = incident.contingencyActions[0];
+  const rail = buildPermissionedRailScenario(incident);
 
   return [
     {
@@ -174,6 +197,98 @@ export function buildFunctionModules(incident: GoldenIncident, phase: DecisionPh
         ["Actions", revealed ? formatNumber(incident.contingencyActions.length) : "locked"],
         ["Owner", revealed ? (primaryAction?.owner ?? "Treasury Lead") : "pending"],
         ["Deadline", revealed ? formatDateTime(primaryAction?.deadline ?? incident.date) : "locked"],
+      ],
+    },
+    {
+      key: "aiCouncil",
+      step: "07",
+      name: "AI Council",
+      endpoint: "/api/council/review",
+      status: revealed ? "mock review ready" : "waiting on gate",
+      tone: revealed ? "neutral" : "neutral",
+      metricLabel: "review basis",
+      metricValue: revealed ? "facts only" : "locked",
+      input: "Forecast, stress, optimizer, governance receipt.",
+      output: revealed ? "Explains why rejection is defensible without overriding policy." : locked,
+      handoff: "Adds narrative review for treasury, CFO, and risk without changing the deterministic gate.",
+      checks: [
+        "Reads only the evidence packet.",
+        "Separates model explanation from policy decision.",
+        "Returns a mock provider response during demo verify.",
+      ],
+      receipt: [
+        ["Provider", "mock"],
+        ["Mode", revealed ? "deterministic" : "queued"],
+        ["Decision", revealed ? incident.governanceDecision : "pending"],
+      ],
+    },
+    {
+      key: "roi",
+      step: "08",
+      name: "ROI",
+      endpoint: "/api/roi/summary",
+      status: revealed ? "business case computed" : "waiting on decision",
+      tone: "neutral",
+      metricLabel: "released capital",
+      metricValue: revealed ? incident.roi.releasedCapital : "locked",
+      input: "Rejected false-safe payout, reserve before/after, overdraft avoidance.",
+      output: revealed ? incident.roi.summary : locked,
+      handoff: "Connects risk prevention to CFO-visible capital efficiency.",
+      checks: [
+        "Shows reserve before and after.",
+        "Quantifies overdraft reduction.",
+        "Translates early warning into manual work reduction.",
+      ],
+      receipt: [
+        ["Reserve before", incident.roi.reserveBefore],
+        ["Reserve after", incident.roi.reserveAfter],
+        ["Early warning", incident.roi.earlyWarning],
+      ],
+    },
+    {
+      key: "contracts",
+      step: "09",
+      name: "OpenAPI / Contracts",
+      endpoint: "/api/backend/openapi.json",
+      status: "contract exported",
+      tone: "neutral",
+      metricLabel: "backend proof",
+      metricValue: "OpenAPI",
+      input: "FastAPI contract artifact and Next backend proxy.",
+      output: "Frontend can show deterministic contracts even when the live API is unavailable.",
+      handoff: "Lets judges inspect implementation depth instead of only UI claims.",
+      checks: [
+        "Uses exported OpenAPI artifact.",
+        "Keeps replay fallback explicit.",
+        "Verifies backend contracts with npm run backend:contracts.",
+      ],
+      receipt: [
+        ["Proxy", "/api/backend/[...path]"],
+        ["Artifact", "backend/artifacts/openapi.json"],
+        ["Mode", "replay-safe"],
+      ],
+    },
+    {
+      key: "permissionedRail",
+      step: "10",
+      name: "Permissioned Liquidity Mobility Overlay",
+      endpoint: "/ui/permissioned-rail-simulation",
+      status: revealed ? "rail comparison ready" : "available after breach",
+      tone: phase === "pending" ? "neutral" : phase === "rejected" ? "blocked" : "danger",
+      metricLabel: "p05 gap after overlay",
+      metricValue: revealed ? formatEur(rail.after.p05Gap, 3) : "locked",
+      input: `${rail.permissioned.sourceAccount} to ${rail.permissioned.destinationAccount}, ${formatEur(rail.permissioned.amount, 3)}`,
+      output: revealed ? `${rail.permissioned.finalitySla} finality SLA, ${rail.after.contingency}` : locked,
+      handoff: "Shows an alternative corporate liquidity rail beside legacy settlement, with policy checks and audit receipt.",
+      checks: [
+        "Compares legacy correspondent availability against permissioned ledger availability.",
+        "Requires entity, limit, risk, signer, and governance checks.",
+        "Shows failure paths where governance still rejects.",
+      ],
+      receipt: [
+        ["Source", rail.permissioned.sourceAccount],
+        ["Destination", rail.permissioned.destinationAccount],
+        ["Audit", rail.certificate.auditHash],
       ],
     },
   ];

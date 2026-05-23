@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { geoGraticule, geoNaturalEarth1, geoPath } from "d3-geo";
 import type { GeoPermissibleObjects, GeoProjection } from "d3-geo";
 import type { FeatureCollection, Geometry } from "geojson";
@@ -86,6 +87,7 @@ const mapLayerCopy: Array<{
 type BankingDayState = "open" | "cutoff" | "closed" | "usable";
 type LabelSide = "left" | "right" | "above" | "below";
 type IncidentModal = "details" | "models" | "ticket" | "close" | "function" | null;
+type AccountConditionStatus = "due" | "watch" | "ready" | "blocked";
 
 type AccountLocation = {
   country: AccountCountry;
@@ -109,6 +111,18 @@ type MapAccount = AccountLocation & {
   bank: string;
   capital: number;
   condition: string;
+};
+
+type AccountConditionEvent = {
+  id: string;
+  label: LocalizedMessage;
+  due: LocalizedMessage;
+  amount: number;
+  currency: Currency;
+  rail: TransferSystem | "Tax portal" | "Internal ledger";
+  status: AccountConditionStatus;
+  impact: LocalizedMessage;
+  proof: LocalizedMessage;
 };
 
 type TransferLeg = {
@@ -308,6 +322,272 @@ const initialAccounts: MapAccount[] = locations.map((location, index) => ({
   capital: location.defaultCapital,
   condition: location.generatedCondition,
 }));
+
+const conditionStatusCopy: Record<AccountConditionStatus, LocalizedMessage> = {
+  blocked: { en: "Breached", ru: "Нарушено" },
+  due: { en: "Due", ru: "К оплате" },
+  ready: { en: "Ready", ru: "Готово" },
+  watch: { en: "Watch", ru: "Наблюдать" },
+};
+
+const accountConditionBooks: Record<string, AccountConditionEvent[]> = {
+  Dubai: [
+    {
+      id: "dubai-correspondent-fee",
+      label: { en: "Correspondent fee settlement", ru: "Комиссия correspondent bank" },
+      due: { en: "Today 15:00 GST", ru: "Сегодня 15:00 GST" },
+      amount: 410_000,
+      currency: "USD",
+      rail: "SWIFT",
+      status: "watch",
+      impact: { en: "Reserve must remain above USD floor until cover leg clears.", ru: "Резерв должен оставаться выше USD-floor до клиринга cover leg." },
+      proof: { en: "Linked to delayed correspondent-bank route.", ru: "Связано с задержанным correspondent-bank route." },
+    },
+    {
+      id: "dubai-vendor-payout",
+      label: { en: "Regional vendor payout", ru: "Региональная оплата поставщикам" },
+      due: { en: "Tomorrow 11:30 GST", ru: "Завтра 11:30 GST" },
+      amount: 790_000,
+      currency: "USD",
+      rail: "SWIFT",
+      status: "due",
+      impact: { en: "Creates same-currency outflow pressure before next inbound sweep.", ru: "Создаёт давление USD-оттока до следующего входящего sweep." },
+      proof: { en: "Matched against merchant payout calendar.", ru: "Сверено с календарём merchant payouts." },
+    },
+    {
+      id: "dubai-tax-accrual",
+      label: { en: "VAT accrual hold", ru: "Резерв под VAT accrual" },
+      due: { en: "T+2 10:00 GST", ru: "T+2 10:00 GST" },
+      amount: 260_000,
+      currency: "USD",
+      rail: "Tax portal",
+      status: "ready",
+      impact: { en: "Small but locked reserve; do not count as usable liquidity.", ru: "Небольшой, но заблокированный резерв; не считать доступной ликвидностью." },
+      proof: { en: "Policy tags it as restricted cash.", ru: "Policy помечает это как restricted cash." },
+    },
+  ],
+  Frankfurt: [
+    {
+      id: "frankfurt-supplier-settlement",
+      label: { en: "EUR supplier settlement", ru: "EUR-расчёт с поставщиком" },
+      due: { en: "Today 17:00 CET", ru: "Сегодня 17:00 CET" },
+      amount: 3_600_000,
+      currency: "EUR",
+      rail: "TARGET2",
+      status: "watch",
+      impact: { en: "TARGET2 close can make the buffer unusable for New York support.", ru: "TARGET2 close может сделать буфер недоступным для поддержки New York." },
+      proof: { en: "Scenario 02 route constraint.", ru: "Route constraint из сценария 02." },
+    },
+    {
+      id: "frankfurt-tax-prepayment",
+      label: { en: "Corporate tax prepayment", ru: "Авансовый корпоративный налог" },
+      due: { en: "Tomorrow 09:00 CET", ru: "Завтра 09:00 CET" },
+      amount: 860_000,
+      currency: "EUR",
+      rail: "Tax portal",
+      status: "due",
+      impact: { en: "Reduces EUR liquidity floor headroom.", ru: "Снижает запас над EUR liquidity floor." },
+      proof: { en: "Known-events calendar lock.", ru: "Блокировка из календаря known events." },
+    },
+    {
+      id: "frankfurt-cash-pool",
+      label: { en: "Intragroup cash-pool sweep", ru: "Intragroup cash-pool sweep" },
+      due: { en: "T+1 12:00 CET", ru: "T+1 12:00 CET" },
+      amount: 1_100_000,
+      currency: "EUR",
+      rail: "Internal ledger",
+      status: "ready",
+      impact: { en: "Eligible internal liquidity, but still requires policy approval.", ru: "Разрешённая внутренняя ликвидность, но всё ещё требует policy approval." },
+      proof: { en: "Entity and signer checks pass.", ru: "Entity и signer checks проходят." },
+    },
+  ],
+  London: [
+    {
+      id: "london-fx-margin",
+      label: { en: "FX margin call", ru: "FX margin call" },
+      due: { en: "Today 14:30 GMT", ru: "Сегодня 14:30 GMT" },
+      amount: 540_000,
+      currency: "USD",
+      rail: "SWIFT",
+      status: "watch",
+      impact: { en: "Consumes fallback USD while FX window is still open.", ru: "Съедает fallback USD, пока FX-window ещё открыт." },
+      proof: { en: "Treasury desk request is active.", ru: "Запрос treasury desk активен." },
+    },
+    {
+      id: "london-payroll",
+      label: { en: "UK payroll reserve", ru: "Резерв под UK payroll" },
+      due: { en: "Friday 09:00 GMT", ru: "Пятница 09:00 GMT" },
+      amount: 470_000,
+      currency: "USD",
+      rail: "Internal ledger",
+      status: "due",
+      impact: { en: "Payroll cash is ring-fenced from rescue routing.", ru: "Payroll cash исключён из rescue routing." },
+      proof: { en: "Payroll-season buffer rule.", ru: "Правило payroll-season buffer." },
+    },
+    {
+      id: "london-card-settlement",
+      label: { en: "Card scheme settlement", ru: "Расчёт card scheme" },
+      due: { en: "T+1 16:00 GMT", ru: "T+1 16:00 GMT" },
+      amount: 330_000,
+      currency: "USD",
+      rail: "SWIFT",
+      status: "ready",
+      impact: { en: "Low urgency, but adds batch outflow tail risk.", ru: "Низкая срочность, но добавляет batch outflow tail risk." },
+      proof: { en: "Batch file already staged.", ru: "Batch file уже staged." },
+    },
+  ],
+  "New York": [
+    {
+      id: "ny-credit-repayment",
+      label: { en: "Corporate loan repayment", ru: "Погашение корпоративного кредита" },
+      due: { en: "Today 16:00 ET", ru: "Сегодня 16:00 ET" },
+      amount: 2_300_000,
+      currency: "USD",
+      rail: "Fedwire",
+      status: "blocked",
+      impact: { en: "Would breach the USD survival floor before cover is usable.", ru: "Пробивает USD survival floor до того, как cover станет доступным." },
+      proof: { en: "Golden Incident driver.", ru: "Драйвер Golden Incident." },
+    },
+    {
+      id: "ny-federal-tax",
+      label: { en: "Federal tax escrow", ru: "Федеральный налоговый escrow" },
+      due: { en: "Tomorrow 10:00 ET", ru: "Завтра 10:00 ET" },
+      amount: 620_000,
+      currency: "USD",
+      rail: "Tax portal",
+      status: "due",
+      impact: { en: "Restricted reserve cannot fund the payout queue.", ru: "Restricted reserve не может финансировать очередь выплат." },
+      proof: { en: "Tax calendar known event.", ru: "Known event из налогового календаря." },
+    },
+    {
+      id: "ny-payroll-sweep",
+      label: { en: "Payroll sweep", ru: "Payroll sweep" },
+      due: { en: "Friday 09:30 ET", ru: "Пятница 09:30 ET" },
+      amount: 1_100_000,
+      currency: "USD",
+      rail: "Fedwire",
+      status: "watch",
+      impact: { en: "Raises payroll-season buffer and worsens p05 gap.", ru: "Поднимает payroll-season buffer и ухудшает p05 gap." },
+      proof: { en: "Seasonality model adds +1 banking day buffer.", ru: "Seasonality model добавляет +1 banking-day buffer." },
+    },
+    {
+      id: "ny-card-reserve",
+      label: { en: "Card settlement reserve", ru: "Резерв card settlement" },
+      due: { en: "T+1 18:00 ET", ru: "T+1 18:00 ET" },
+      amount: 480_000,
+      currency: "USD",
+      rail: "Internal ledger",
+      status: "ready",
+      impact: { en: "Can be throttled after governance approval.", ru: "Можно throttling после governance approval." },
+      proof: { en: "Contingency plan: ledger move + residual throttle.", ru: "Contingency plan: ledger move + residual throttle." },
+    },
+  ],
+  Riyadh: [
+    {
+      id: "riyadh-dollar-reserve",
+      label: { en: "USD reserve hold", ru: "Резерв USD" },
+      due: { en: "Today 18:00 AST", ru: "Сегодня 18:00 AST" },
+      amount: 650_000,
+      currency: "USD",
+      rail: "SARIE",
+      status: "ready",
+      impact: { en: "Can support New York only inside the overlapping window.", ru: "Может поддержать New York только в пересекающееся окно." },
+      proof: { en: "Standby sweep in NY credit scenario.", ru: "Standby sweep в NY credit scenario." },
+    },
+    {
+      id: "riyadh-vendor-tax",
+      label: { en: "Withholding tax reserve", ru: "Резерв withholding tax" },
+      due: { en: "T+1 10:00 AST", ru: "T+1 10:00 AST" },
+      amount: 280_000,
+      currency: "USD",
+      rail: "Tax portal",
+      status: "due",
+      impact: { en: "Keeps local reserve locked after oil revenue delay.", ru: "Держит локальный резерв заблокированным после задержки oil revenue." },
+      proof: { en: "Known event from regional tax file.", ru: "Known event из regional tax file." },
+    },
+    {
+      id: "riyadh-oil-sweep",
+      label: { en: "Oil revenue sweep", ru: "Oil revenue sweep" },
+      due: { en: "T+2 13:00 AST", ru: "T+2 13:00 AST" },
+      amount: 900_000,
+      currency: "USD",
+      rail: "SWIFT",
+      status: "watch",
+      impact: { en: "Inbound timing is uncertain; do not use as hard collateral.", ru: "Время inbound неопределённо; не использовать как hard collateral." },
+      proof: { en: "Telemetry marks delayed status.", ru: "Telemetry помечает delayed status." },
+    },
+  ],
+  Singapore: [
+    {
+      id: "singapore-merchant-payout",
+      label: { en: "Merchant payout batch", ru: "Merchant payout batch" },
+      due: { en: "Today 17:30 SGT", ru: "Сегодня 17:30 SGT" },
+      amount: 1_950_000,
+      currency: "USD",
+      rail: "MEPS+",
+      status: "watch",
+      impact: { en: "Payout lands before inbound cash and creates APAC pressure.", ru: "Payout проходит до входящего cash и создаёт APAC pressure." },
+      proof: { en: "Scenario 03 condition.", ru: "Условие сценария 03." },
+    },
+    {
+      id: "singapore-gst",
+      label: { en: "GST tax payment", ru: "GST tax payment" },
+      due: { en: "Tomorrow 12:00 SGT", ru: "Завтра 12:00 SGT" },
+      amount: 310_000,
+      currency: "USD",
+      rail: "Tax portal",
+      status: "due",
+      impact: { en: "Tax reserve is not movable through treasury rails.", ru: "Налоговый резерв нельзя перемещать через treasury rails." },
+      proof: { en: "Policy lock: statutory payment.", ru: "Policy lock: statutory payment." },
+    },
+    {
+      id: "singapore-cover-to-ny",
+      label: { en: "New York cover leg", ru: "Cover leg в New York" },
+      due: { en: "T+1 bank day", ru: "T+1 банковский день" },
+      amount: 1_250_000,
+      currency: "USD",
+      rail: "SWIFT",
+      status: "blocked",
+      impact: { en: "Book balance exists, but usable cash misses NY cut-off.", ru: "Book balance есть, но usable cash не успевает к NY cut-off." },
+      proof: { en: "Golden Incident p05 gap remains.", ru: "P05 gap Golden Incident сохраняется." },
+    },
+  ],
+  Tokyo: [
+    {
+      id: "tokyo-custody-fee",
+      label: { en: "Custody fee settlement", ru: "Расчёт custody fee" },
+      due: { en: "Today 18:00 JST", ru: "Сегодня 18:00 JST" },
+      amount: 520_000,
+      currency: "USD",
+      rail: "SWIFT",
+      status: "watch",
+      impact: { en: "Overnight hold reduces support available to US corridor.", ru: "Overnight hold снижает поддержку US corridor." },
+      proof: { en: "Custody event collides with liquidity hold.", ru: "Custody event конфликтует с liquidity hold." },
+    },
+    {
+      id: "tokyo-tax-withhold",
+      label: { en: "Local tax withholding", ru: "Локальный tax withholding" },
+      due: { en: "T+1 10:00 JST", ru: "T+1 10:00 JST" },
+      amount: 240_000,
+      currency: "USD",
+      rail: "Tax portal",
+      status: "due",
+      impact: { en: "Small statutory lock, excluded from optimizer pool.", ru: "Небольшой statutory lock, исключён из optimizer pool." },
+      proof: { en: "Governance policy: statutory cash.", ru: "Governance policy: statutory cash." },
+    },
+    {
+      id: "tokyo-usd-sweep",
+      label: { en: "USD liquidity sweep", ru: "USD liquidity sweep" },
+      due: { en: "T+2 09:00 JST", ru: "T+2 09:00 JST" },
+      amount: 870_000,
+      currency: "USD",
+      rail: "Internal ledger",
+      status: "ready",
+      impact: { en: "Eligible after local sign-off; not useful for same-day rescue.", ru: "Доступно после local sign-off; не помогает same-day rescue." },
+      proof: { en: "Signer approval pending local office hours.", ru: "Signer approval ждёт local office hours." },
+    },
+  ],
+};
 
 const scenarios: SimulationScenario[] = [
   {
@@ -522,6 +802,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
   const [ticketError, setTicketError] = useState("");
   const [ticketSubmitting, setTicketSubmitting] = useState(false);
   const [ticketId, setTicketId] = useState("");
+  const [conditionBookAccountId, setConditionBookAccountId] = useState<string | null>(null);
   const [mapLayers, setMapLayers] = useState<MapLayers>({
     risk: true,
     rails: true,
@@ -532,6 +813,8 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
   const selected = accounts.find((account) => account.id === selectedId) ?? accounts[0];
   const scenario = scenarios.find((item) => item.id === scenarioId) ?? scenarios[0];
   const scenarioAccount = accounts.find((account) => account.id === scenario.accountId);
+  const selectedConditionEvents = useMemo(() => getAccountConditionBook(selected), [selected]);
+  const conditionBookVisible = conditionBookAccountId === selected.id;
   const incident = defaultLiquidityIncident;
   const clearMapError = () => setMapError(null);
   const showNotice = (en: string, ru: string) => setMapNotice({ en, ru });
@@ -739,6 +1022,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
 
   const generateCondition = () => {
     const linkedScenario = scenarios.find((item) => item.accountId === selected.id);
+    const conditionEvents = getAccountConditionBook(selected);
     setAccounts((current) =>
       current.map((account) =>
         account.id === selected.id
@@ -751,10 +1035,11 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
           : account,
       ),
     );
+    setConditionBookAccountId(selected.id);
     clearMapError();
     showNotice(
-      `Generated a fresh condition for ${selected.bank} / ${selected.city}.`,
-      `Сгенерировано новое условие для ${selected.bank} / ${translate(selected.city)}.`,
+      `Generated ${conditionEvents.length} account conditions for ${selected.bank} / ${selected.city}.`,
+      `Сгенерировано ${conditionEvents.length} условий по счёту ${selected.bank} / ${translate(selected.city)}.`,
     );
   };
 
@@ -1117,8 +1402,73 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
             />
           </label>
           <button className="command-button command-button--primary" onClick={generateCondition} type="button">
-            {t("Generate Account Condition")}
+            {conditionBookVisible ? t("Refresh Account Conditions", "Обновить условия счёта") : t("Generate Account Conditions", "Сгенерировать условия счёта")}
           </button>
+          {conditionBookVisible ? (
+            <section className="account-condition-book" id="account-condition-book" aria-label={t("Generated account conditions", "Сгенерированные условия счёта")}>
+              <div className="account-condition-book__header">
+                <div className="account-condition-book__title">
+                  <span className="account-condition-book__mark" aria-hidden="true">CB</span>
+                  <div>
+                    <span>{t("Condition book", "Книга условий")}</span>
+                    <strong>{selectedConditionEvents.length} {t("cash obligations", "денежных обязательства")}</strong>
+                  </div>
+                </div>
+                <em>{selected.primaryRail}</em>
+              </div>
+              <div className="account-condition-book__summary">
+                <div>
+                  <span>{t("Committed outflow", "Обязательный отток")}</span>
+                  <strong>
+                    {formatMoney(
+                      selectedConditionEvents
+                        .filter((event) => event.status !== "ready")
+                        .reduce((sum, event) => sum + event.amount, 0),
+                      selected.currency,
+                    )}
+                  </strong>
+                </div>
+                <div>
+                  <span>{t("Hard events", "Жёсткие события")}</span>
+                  <strong>{selectedConditionEvents.filter((event) => event.status === "blocked" || event.status === "due").length}</strong>
+                </div>
+              </div>
+              <div className="account-condition-book__list">
+                {selectedConditionEvents.map((event) => (
+                  <article className={`account-condition-event account-condition-event--${event.status}`} key={event.id}>
+                    <div className="account-condition-event__top">
+                      <div>
+                        <span>{message(event.due)}</span>
+                        <strong>{message(event.label)}</strong>
+                      </div>
+                      <em>{message(conditionStatusCopy[event.status])}</em>
+                    </div>
+                    <dl>
+                      <div>
+                        <dt>{t("Amount", "Сумма")}</dt>
+                        <dd>{formatMoney(event.amount, event.currency)}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("Rail", "Rail")}</dt>
+                        <dd>{event.rail}</dd>
+                      </div>
+                    </dl>
+                    <p>{message(event.impact)}</p>
+                    <small>{message(event.proof)}</small>
+                  </article>
+                ))}
+              </div>
+              <div className="account-condition-book__footer">
+                <span>{t("Ledger packet", "Ledger packet")}</span>
+                <Link
+                  className="account-condition-book__details"
+                  href={`/liquidity-control-tower/conditions/${selected.id}`}
+                >
+                  {t("View details", "View details")}
+                </Link>
+              </div>
+            </section>
+          ) : null}
         </aside>
       </section>
 
@@ -1430,17 +1780,17 @@ function WorldMap({
       <svg className="world-map" viewBox="0 0 1000 520" aria-hidden="true">
         <defs>
           <radialGradient id="mapOceanGlow" cx="52%" cy="44%" r="74%">
-            <stop offset="0%" stopColor="#fbfaf5" />
-            <stop offset="58%" stopColor="#ede8d9" />
-            <stop offset="100%" stopColor="#d9d0b8" />
+            <stop offset="0%" stopColor="#1a2228" />
+            <stop offset="58%" stopColor="#11181d" />
+            <stop offset="100%" stopColor="#080b0f" />
           </radialGradient>
           <filter id="mapLandShadow" x="-8%" y="-8%" width="116%" height="116%">
-            <feDropShadow dx="0" dy="12" floodColor="#111111" floodOpacity="0.1" stdDeviation="10" />
+            <feDropShadow dx="0" dy="12" floodColor="#000000" floodOpacity="0.34" stdDeviation="10" />
           </filter>
           <linearGradient id="mapRouteFade" x1="0%" x2="100%" y1="0%" y2="0%">
-            <stop offset="0%" stopColor="#111111" stopOpacity="0.12" />
-            <stop offset="52%" stopColor="#111111" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#111111" stopOpacity="0.12" />
+            <stop offset="0%" stopColor="#f06a1b" stopOpacity="0.18" />
+            <stop offset="52%" stopColor="#ff735e" stopOpacity="0.72" />
+            <stop offset="100%" stopColor="#f06a1b" stopOpacity="0.18" />
           </linearGradient>
         </defs>
         <rect className="world-map__sea" width="1000" height="520" rx="18" />
@@ -1621,8 +1971,6 @@ function TransferLayer({
   pointByAccountId: Map<string, ProjectedPoint>;
   scenario?: SimulationScenario;
 }) {
-  const { translate } = useLanguage();
-
   if (!scenario) return null;
 
   return (
@@ -1654,20 +2002,64 @@ function TransferLayer({
               d={routePath}
               fill="none"
               id={`transfer-path-${scenario.id}-${index}`}
-              stroke={leg.state === "clear" ? "#151515" : "#b42318"}
+              stroke={leg.state === "clear" ? "rgba(245, 245, 240, 0.82)" : "#ff735e"}
             />
             <circle className="transfer-money-pulse" r="6">
               <animateMotion dur={leg.state === "blocked" ? "4s" : "2.7s"} repeatCount="indefinite">
                 <mpath href={`#transfer-path-${scenario.id}-${index}`} />
               </animateMotion>
             </circle>
-            <text fill={leg.state === "clear" ? "#151515" : "#b42318"} x={controlX} y={controlY - 8}>{leg.system}</text>
-            <text className="transfer-eta" x={controlX} y={controlY + 15}>{translate(leg.eta)}</text>
           </g>
         );
       })}
     </svg>
   );
+}
+
+function getAccountConditionBook(account: MapAccount): AccountConditionEvent[] {
+  return accountConditionBooks[account.city] ?? buildFallbackConditionBook(account);
+}
+
+function buildFallbackConditionBook(account: MapAccount): AccountConditionEvent[] {
+  const reserveAmount = Math.max(Math.round(account.floor * 0.18), 120_000);
+  const operatingAmount = Math.max(Math.round(account.capital * 0.12), 180_000);
+  const statutoryAmount = Math.max(Math.round(account.floor * 0.11), 90_000);
+
+  return [
+    {
+      id: `${account.id}-rail-cutoff`,
+      label: { en: "Rail cut-off reserve", ru: "Резерв под rail cut-off" },
+      due: { en: `Today via ${account.primaryRail}`, ru: `Сегодня через ${account.primaryRail}` },
+      amount: reserveAmount,
+      currency: account.currency,
+      rail: account.primaryRail,
+      status: "watch",
+      impact: { en: "Keep this amount out of optimizer moves until local cut-off clears.", ru: "Не отдавать эту сумму в optimizer moves до прохождения локального cut-off." },
+      proof: { en: "Generated from account rail, floor, and operating condition.", ru: "Сгенерировано из rail, floor и operating condition счёта." },
+    },
+    {
+      id: `${account.id}-tax-hold`,
+      label: { en: "Tax and statutory hold", ru: "Налоговый и statutory hold" },
+      due: { en: "Next banking day 10:00", ru: "Следующий банковский день 10:00" },
+      amount: statutoryAmount,
+      currency: account.currency,
+      rail: "Tax portal",
+      status: "due",
+      impact: { en: "Treat as restricted cash; it cannot be used as rescue liquidity.", ru: "Считать restricted cash; нельзя использовать как rescue liquidity." },
+      proof: { en: "Default statutory reserve policy.", ru: "Default statutory reserve policy." },
+    },
+    {
+      id: `${account.id}-operating-payment`,
+      label: { en: "Operating payment queue", ru: "Очередь операционных платежей" },
+      due: { en: "T+1 before market close", ru: "T+1 до закрытия рынка" },
+      amount: operatingAmount,
+      currency: account.currency,
+      rail: "Internal ledger",
+      status: "ready",
+      impact: { en: "Can be throttled if governance rejects the higher-risk route.", ru: "Можно throttling, если governance отклонит более рискованный route." },
+      proof: { en: "Fallback condition pack for newly added accounts.", ru: "Fallback condition pack для новых счетов." },
+    },
+  ];
 }
 
 function projectAccount(account: MapAccount, projection: GeoProjection): ProjectedPoint {

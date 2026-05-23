@@ -39,11 +39,14 @@
 - Re-ran frontend lint, production build, and backend unit tests.
 - Rechecked the full app after the latest changes: stale-copy scan, project memory presence, frontend lint, production build, backend verify, production route probes, and browser screenshots.
 - Removed the previous visual system entirely: global styling, motion components, old QA screenshots, and design-memory direction.
+- Restored `/demo` and `/` to the Golden Incident decision cockpit with URL-driven phases.
+- Added a typed deterministic Permissioned Liquidity Mobility Overlay prototype with legacy-vs-permissioned comparison, timeline replay, policy checks, finality certificate, audit hash, before/after gap, and failure paths.
+- Extended `/judge`, `/technical`, and function drilldowns to include Permissioned Liquidity Mobility Overlay, AI Council, ROI, and OpenAPI/backend contract proof.
 
 ## Active
 
-- World liquidity map dashboard is ready for dry-run as the main entry point.
-- `/demo` now behaves as the main realtime simulation room; jury can watch balances change over a time machine, see NYC warning state, and execute the rescue plan.
+- Golden Incident cockpit is ready for dry-run as the main entry point.
+- `/demo` now behaves as the main Golden Incident decision room; jury can reveal the false-safe payout, compare legacy settlement against the permissioned liquidity overlay, and inspect governed failure paths.
 - The map page still supports choosing simulated deal scenarios and adding treasury accounts.
 - Golden Incident proof and function-by-function inspection remain available through `/judge`, `/technical`, and `/functions/[functionKey]`.
 
@@ -56,8 +59,8 @@
 - Connect the map add-account and synthetic condition model to backend persistence when account storage exists.
 - Add richer country/currency support after the demo validates the first four treasury nodes.
 - Add scenario authoring if jurors need to create custom transactions live instead of choosing from curated scenarios.
-- Separate the top navbar from the product surface and add a right-side `Demo` CTA that routes directly into the realtime dashboard with functions and simulation.
-- Run a dedicated `/demo` design pass so the realtime dashboard matches the quality of the upgraded map: stronger hierarchy, better panels, cleaner account cards, map overlays, alerts, and simulation controls.
+- Keep the top navbar pointed at the Golden Incident demo; use `/liquidity-control-tower` for map/account scenario editing.
+- Dry-run `/demo?phase=rejected#permissioned-rail` in presenter mode and tune pacing if the overlay takes too long to explain live.
 - Split `MissionControl` into smaller components if another mission behavior change is needed.
 - Add richer inline error and retry affordances if backend failures become more common in testing.
 
@@ -71,4 +74,4 @@
 
 ## Next Highest-Impact Task
 
-Run a human dry-run from `/demo` first: start playback, show NYC dropping below minimum, open AI insight, execute plan, then use `/liquidity-control-tower` for custom scenario/account editing.
+Run a human dry-run from `/demo?phase=pending`: click through breach and reject, open the Permissioned Liquidity Mobility Overlay, show clear path versus failure paths, then use `/judge` and `/technical` as proof packets.

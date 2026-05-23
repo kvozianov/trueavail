@@ -5,6 +5,7 @@ import { DemoNav } from "@/components/liquidity/DemoNav";
 import { useLanguage } from "@/components/liquidity/LanguageProvider";
 import { formatCurrencyAmount } from "@/lib/backend/formatters";
 import { goldenIncidentFallback as incident } from "@/lib/golden-incident";
+import { buildPermissionedRailScenario } from "@/lib/permissioned-rail";
 
 const functions = [
   ["Forecast Corridor", "Works", "Show forecast", "p05/p50/p95 response", "EUR 2.136M gap", "ML ensemble", "early warning"],
@@ -16,6 +17,15 @@ const functions = [
   ["ROI", "Works", "Show value", "ROI summary", "$6-7M released", "financial model", "CFO case"],
   ["AI Council", "Works / Mock", "Show verdict", "advisor output", "decision review", "LLM over facts", "explainability"],
   ["OpenAPI", "Works", "View contract", "openapi.json", "11 endpoints", "FastAPI contracts", "integration readiness"],
+  [
+    "Permissioned Liquidity Mobility Overlay",
+    "Prototype",
+    "Compare rails",
+    "policy checks + audit hash",
+    "12m finality SLA",
+    "typed UI simulation",
+    "makes approved intragroup liquidity usable before cut-off",
+  ],
 ];
 
 const judgeMetrics = [
@@ -43,10 +53,17 @@ const judgeMetrics = [
     body: "Unsafe approval blocked by policy.",
     tone: "blocked",
   },
+  {
+    label: "Overlay SLA",
+    value: "12m",
+    body: "Approved intragroup EUR liquidity becomes usable before cut-off.",
+    tone: "neutral",
+  },
 ];
 
 export function JudgeView() {
   const { t, translate } = useLanguage();
+  const rail = buildPermissionedRailScenario(incident);
 
   return (
     <main className="demo-page evidence-page" id="main-content">
@@ -68,12 +85,14 @@ export function JudgeView() {
             <span>{t("Optimize", "Оптимизация")}</span>
             <i />
             <span>{t("Govern", "Governance")}</span>
+            <i />
+            <span>{t("Overlay", "Overlay")}</span>
           </div>
         </div>
         <div className="judge-summary">
           <span>{t("Golden Incident", "Golden Incident")}</span>
           <strong>{incident.accountId}</strong>
-          <p>{formatCurrencyAmount(incident.payoutAmount, incident.payoutCurrency)} {t("payout", "payout")}, {translate(incident.governanceDecision)} gate.</p>
+          <p>{formatCurrencyAmount(incident.payoutAmount, incident.payoutCurrency)} {t("payout", "payout")}, {translate(incident.governanceDecision)} gate, {rail.permissioned.finalitySla} overlay SLA.</p>
           <dl>
             <div>
               <dt>{t("Owner", "Владелец")}</dt>
@@ -81,7 +100,7 @@ export function JudgeView() {
             </div>
             <div>
               <dt>{t("Evidence", "Evidence")}</dt>
-              <dd>9/9</dd>
+              <dd>10/10</dd>
             </div>
           </dl>
         </div>
@@ -136,8 +155,9 @@ export function JudgeView() {
       </section>
 
       <section className="judge-actions" aria-label={t("Judge action links", "Ссылки действий для жюри")}>
-        <Link className="command-button command-button--primary" href="/demo">{t("Show Demo")}</Link>
-        <Link className="command-button" href="/demo#evidence">{t("View Evidence")}</Link>
+        <Link className="command-button command-button--primary" href="/demo?phase=pending">{t("Show Demo")}</Link>
+        <Link className="command-button" href="/demo?phase=rejected#evidence">{t("View Evidence")}</Link>
+        <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("Compare Rails")}</Link>
         <Link className="command-button" href="/technical">{t("View API")}</Link>
       </section>
     </main>

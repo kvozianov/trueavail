@@ -9,12 +9,14 @@
 - Live backend calls are centralized in `lib/api.ts`.
 - Demo snapshot calls are proxied through `lib/backend/client.ts` and fall back to deterministic replay artifacts.
 - Golden Incident UI lives in `components/liquidity/DemoCockpit.tsx`.
-- Realtime demo UI lives in `components/liquidity/RealtimeDemoDashboard.tsx` and is mounted at `/demo`.
-- World liquidity map dashboard lives in `components/liquidity/WorldLiquidityMap.tsx` and is mounted on `/` plus `/liquidity-control-tower`.
+- Golden Incident demo UI is mounted at `/demo` and `/`, using URL query state for `?phase=pending`, `?phase=breached`, and `?phase=rejected`.
+- Realtime demo UI lives in `components/liquidity/RealtimeDemoDashboard.tsx`; it remains available as a component but is no longer the primary `/demo` route.
+- World liquidity map dashboard lives in `components/liquidity/WorldLiquidityMap.tsx` and is mounted on `/liquidity-control-tower`.
 - `RealtimeDemoDashboard` is client-side only: it advances demo time with an interval, computes projected account balances, renders rescue flows, and applies the execute-plan adjustment locally.
 - `WorldLiquidityMap` is currently client-side state only: account selection, capital editing, synthetic condition generation, add-account flow, scenario selection, transfer route drawing, and program response computation are local demo interactions.
 - Transfer route visualization is rendered inside the map component as SVG paths over the static world geometry, with account nodes remaining HTML buttons for accessibility.
 - Phase 8 pitch/runtime UI also lives in `DemoCockpit`: `RuntimeStrip`, `DecisionStateBar`, and `PitchModePanel`.
+- Permissioned Liquidity Mobility Overlay UI lives in `components/liquidity/PermissionedRailPanel.tsx`, backed by deterministic typed data from `lib/permissioned-rail.ts`.
 - Function-by-function inspection lives in `components/liquidity/FunctionWorkbench.tsx` and uses native expandable modules for resilience without fragile client state.
 - Function drilldown pages live in `components/liquidity/FunctionDetailView.tsx`, backed by shared registry data from `lib/function-modules.ts`.
 - Judge proof UI lives in `components/liquidity/JudgeView.tsx`.

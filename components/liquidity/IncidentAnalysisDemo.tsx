@@ -542,12 +542,15 @@ function lifecycleSummary(lifecycle: IncidentLifecycle, ticketId: string, transl
 }
 
 function formatDateTime(value: string, language: Language) {
-  return new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  }).format(new Date(value));
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const enMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const ruMonths = ["янв.", "фев.", "мар.", "апр.", "мая", "июн.", "июл.", "авг.", "сен.", "окт.", "ноя.", "дек."];
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hour = String(date.getUTCHours()).padStart(2, "0");
+  const minute = String(date.getUTCMinutes()).padStart(2, "0");
+  const month = language === "ru" ? ruMonths[date.getUTCMonth()] : enMonths[date.getUTCMonth()];
+
+  return language === "ru" ? `${day} ${month}, ${hour}:${minute} UTC` : `${month} ${day}, ${hour}:${minute} UTC`;
 }
