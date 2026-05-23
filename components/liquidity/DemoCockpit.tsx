@@ -449,16 +449,17 @@ function PitchModePanel({ phase }: { phase: DecisionPhase }) {
     ["04", "Stress + HHI", "Risk gets worse", "/demo?phase=breached#evidence"],
     ["05", "Optimizer", "No safe transfer", "/demo?phase=breached#governance"],
     ["06", "Governance", "Reject", "/demo?phase=rejected#governance"],
-    ["07", "Permissioned Rail", "Policy-based overlay", "/demo?phase=rejected#permissioned-rail"],
-    ["08", "Contingency", "Ledger move + throttle", "/demo?phase=rejected#contingency"],
-    ["09", "ROI", "Business value", "/demo?phase=rejected#contingency"],
-    ["10", "Judge View", "Working functions", "/judge"],
-    ["11", "Technical View", "Implementation proof", "/technical"],
+    ["07", "Fund Transfers", "Blockchain router", "/transfers"],
+    ["08", "Permissioned Rail", "Policy-based overlay", "/demo?phase=rejected#permissioned-rail"],
+    ["09", "Contingency", "Ledger move + throttle", "/demo?phase=rejected#contingency"],
+    ["10", "ROI", "Business value", "/demo?phase=rejected#contingency"],
+    ["11", "Judge View", "Working functions", "/judge"],
+    ["12", "Technical View", "Implementation proof", "/technical"],
   ];
   const activeRange =
     phase === "pending" ? new Set(["01", "02"]) :
     phase === "breached" ? new Set(["03", "04", "05"]) :
-    new Set(["06", "07", "08", "09"]);
+    new Set(["06", "07", "08", "09", "10"]);
 
   return (
     <section className={`pitch-mode pitch-mode--${phase}`} aria-labelledby="pitch-mode-title">

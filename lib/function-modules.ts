@@ -1,6 +1,7 @@
 import type { DecisionPhase } from "@/lib/demo-phase";
 import type { GoldenIncident } from "@/lib/golden-incident";
 import { formatCurrencyAmount, formatDateTime, formatNumber } from "@/lib/backend/formatters";
+import { buildBlockchainTransferScenario, scoreTransferRails } from "@/lib/blockchain-transfer-model";
 import { buildPermissionedRailScenario } from "@/lib/permissioned-rail";
 
 export type FunctionKey =
@@ -13,6 +14,7 @@ export type FunctionKey =
   | "aiCouncil"
   | "roi"
   | "contracts"
+  | "blockchainTransfers"
   | "permissionedRail";
 export type FunctionTone = "neutral" | "danger" | "blocked";
 
@@ -42,6 +44,7 @@ export const functionKeys: FunctionKey[] = [
   "aiCouncil",
   "roi",
   "contracts",
+  "blockchainTransfers",
   "permissionedRail",
 ];
 
@@ -59,6 +62,9 @@ export function buildFunctionModules(incident: GoldenIncident, phase: DecisionPh
   const breachDate = incident.forecastRows.find((row) => row.breach)?.date ?? incident.date;
   const primaryAction = incident.contingencyActions[0];
   const rail = buildPermissionedRailScenario(incident);
+  const blockchain = buildBlockchainTransferScenario(incident);
+  const blockchainIntent = blockchain.intents[0];
+  const blockchainBest = scoreTransferRails(blockchainIntent, blockchain.rails)[0];
 
   return [
     {
@@ -269,8 +275,31 @@ export function buildFunctionModules(incident: GoldenIncident, phase: DecisionPh
       ],
     },
     {
-      key: "permissionedRail",
+      key: "blockchainTransfers",
       step: "10",
+      name: "Blockchain Transfer Router",
+      endpoint: "/transfers",
+      status: revealed ? "multi-rail router ready" : "available as prototype",
+      tone: phase === "pending" ? "neutral" : phase === "rejected" ? "blocked" : "danger",
+      metricLabel: "recommended rail",
+      metricValue: blockchainBest.rail.shortName,
+      input: `${blockchainIntent.sourceAccount} to ${blockchainIntent.destinationAccount}, ${formatCurrencyAmount(blockchainIntent.amount, blockchainIntent.currency)}`,
+      output: revealed ? `${blockchainBest.score}/100 score, ${blockchainBest.verdict}` : "prototype visible",
+      handoff: "Turns Solana, Polygon, Base, Stellar, ZKsync Prividium, Ethereum, and legacy rails into a treasury routing decision.",
+      checks: [
+        "Scores rails by asset match, cut-off, fee, privacy, compliance, adoption, security, and market signal.",
+        "Keeps the transfer gated by KYB/KYC, sanctions, survival floor, signer, finality, and audit receipt.",
+        "Frames blockchain as regulated settlement intelligence, not speculative crypto exposure.",
+      ],
+      receipt: [
+        ["Page", "/transfers"],
+        ["Scenario", blockchainIntent.label],
+        ["Rail", blockchainBest.rail.name],
+      ],
+    },
+    {
+      key: "permissionedRail",
+      step: "11",
       name: "Permissioned Liquidity Mobility Overlay",
       endpoint: "/ui/permissioned-rail-simulation",
       status: revealed ? "rail comparison ready" : "available after breach",

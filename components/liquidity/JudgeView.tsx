@@ -18,6 +18,15 @@ const functions = [
   ["AI Council", "Works / Mock", "Show verdict", "advisor output", "decision review", "LLM over facts", "explainability"],
   ["OpenAPI", "Works", "View contract", "openapi.json", "11 endpoints", "FastAPI contracts", "integration readiness"],
   [
+    "Blockchain Transfer Router",
+    "Prototype",
+    "Open transfers",
+    "rail score + receipt",
+    "Solana / Polygon / Base / Stellar / ZK",
+    "multi-rail scoring model",
+    "turns blockchain trend into treasury action",
+  ],
+  [
     "Permissioned Liquidity Mobility Overlay",
     "Prototype",
     "Compare rails",
@@ -157,6 +166,7 @@ export function JudgeView() {
       <section className="judge-actions" aria-label={t("Judge action links", "Ссылки действий для жюри")}>
         <Link className="command-button command-button--primary" href="/demo?phase=pending">{t("Show Demo")}</Link>
         <Link className="command-button" href="/demo?phase=rejected#evidence">{t("View Evidence")}</Link>
+        <Link className="command-button" href="/transfers">{t("Fund Transfers", "Переводы средств")}</Link>
         <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("Compare Rails")}</Link>
         <Link className="command-button" href="/technical">{t("View API")}</Link>
       </section>

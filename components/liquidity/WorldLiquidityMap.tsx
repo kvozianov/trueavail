@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { geoGraticule, geoNaturalEarth1, geoPath } from "d3-geo";
 import type { GeoPermissibleObjects, GeoProjection } from "d3-geo";
@@ -27,18 +27,29 @@ import {
   runDeterministicLiquidityEnsemble,
 } from "@/lib/liquidity-ml-ensemble";
 import type { LocalizedMessage } from "@/lib/i18n";
+import {
+  buildTreasuryConditionEvents,
+  listTreasuryAccounts,
+  TREASURY_ACCOUNT_SEED,
+  type TreasuryAccount,
+  type TreasuryConditionEvent,
+  type TreasuryCountry,
+  type TreasuryCurrency,
+  type TreasuryRail,
+} from "@/lib/treasury-ledger";
 import type {
   AnalysisStepState,
   DeepAnalyticsFunction,
   DeepAnalyticsGroup,
   EnsembleAnalysisResult,
   IncidentLifecycle,
+  IncidentSeverity,
   LiquidityIncident,
 } from "@/lib/liquidity-ml-ensemble";
 
-type AccountCountry = "United States" | "Singapore" | "Saudi Arabia" | "Germany" | "United Kingdom" | "Japan" | "UAE";
-type Currency = "USD" | "EUR";
-type TransferSystem = "SWIFT" | "Fedwire" | "TARGET2" | "SEPA" | "MEPS+" | "SARIE";
+type AccountCountry = TreasuryCountry;
+type Currency = TreasuryCurrency;
+type TransferSystem = TreasuryRail;
 type ScenarioState = "clear" | "warning" | "blocked";
 type MapLayerKey = "risk" | "rails" | "calendar" | "nodes";
 type MapLayers = Record<MapLayerKey, boolean>;
@@ -111,19 +122,11 @@ type MapAccount = AccountLocation & {
   bank: string;
   capital: number;
   condition: string;
+  ledgerUpdatedAt: string;
+  usableBalance: number;
 };
 
-type AccountConditionEvent = {
-  id: string;
-  label: LocalizedMessage;
-  due: LocalizedMessage;
-  amount: number;
-  currency: Currency;
-  rail: TransferSystem | "Tax portal" | "Internal ledger";
-  status: AccountConditionStatus;
-  impact: LocalizedMessage;
-  proof: LocalizedMessage;
-};
+type AccountConditionEvent = TreasuryConditionEvent;
 
 type TransferLeg = {
   from: string;
@@ -189,6 +192,7 @@ const sphere = { type: "Sphere" } as GeoPermissibleObjects;
 const countryNameByAccountCountry: Record<AccountCountry, string> = {
   Germany: "Germany",
   Japan: "Japan",
+  Kazakhstan: "Kazakhstan",
   "Saudi Arabia": "Saudi Arabia",
   Singapore: "Singapore",
   UAE: "United Arab Emirates",
@@ -196,132 +200,33 @@ const countryNameByAccountCountry: Record<AccountCountry, string> = {
   "United States": "United States of America",
 };
 
-const locations: AccountLocation[] = [
-  {
-    country: "United States",
-    city: "New York",
-    x: 28.6,
-    y: 39.8,
-    latitude: 40.7128,
-    longitude: -74.006,
-    labelSide: "right",
-    currency: "USD",
-    defaultBank: "JPMorgan Chase",
-    defaultCapital: 4_800_000,
-    floor: 3_000_000,
-    primaryRail: "Fedwire",
-    generatedCondition: "Credit repayment due from the New York account before 16:00 ET.",
-  },
-  {
-    country: "Singapore",
-    city: "Singapore",
-    x: 75.4,
-    y: 63.5,
-    latitude: 1.3521,
-    longitude: 103.8198,
-    labelSide: "right",
-    currency: "USD",
-    defaultBank: "DBS Bank",
-    defaultCapital: 3_150_000,
-    floor: 1_500_000,
-    primaryRail: "MEPS+",
-    generatedCondition: "Merchant settlement batch requires prefunding before APAC cut-off.",
-  },
-  {
-    country: "Saudi Arabia",
-    city: "Riyadh",
-    x: 57.9,
-    y: 53.8,
-    latitude: 24.7136,
-    longitude: 46.6753,
-    labelSide: "left",
-    currency: "USD",
-    defaultBank: "Saudi National Bank",
-    defaultCapital: 2_400_000,
-    floor: 1_350_000,
-    primaryRail: "SARIE",
-    generatedCondition: "Oil revenue sweep is delayed; keep reserve for dollar liquidity.",
-  },
-  {
-    country: "Germany",
-    city: "Frankfurt",
-    x: 50.5,
-    y: 39.2,
-    latitude: 50.1109,
-    longitude: 8.6821,
-    labelSide: "right",
-    currency: "EUR",
-    defaultBank: "Deutsche Bank",
-    defaultCapital: 5_200_000,
-    floor: 2_200_000,
-    primaryRail: "TARGET2",
-    generatedCondition: "TARGET2 clearing pressure: preserve EUR buffer through market close.",
-  },
-  {
-    country: "United Kingdom",
-    city: "London",
-    x: 47.8,
-    y: 38.1,
-    latitude: 51.5072,
-    longitude: -0.1276,
-    labelSide: "left",
-    currency: "USD",
-    defaultBank: "HSBC UK",
-    defaultCapital: 2_850_000,
-    floor: 1_100_000,
-    primaryRail: "SWIFT",
-    generatedCondition: "Sterling desk requests USD fallback rail while FX window is open.",
-  },
-  {
-    country: "Japan",
-    city: "Tokyo",
-    x: 82.9,
-    y: 43.7,
-    latitude: 35.6895,
-    longitude: 139.6917,
-    labelSide: "left",
-    currency: "USD",
-    defaultBank: "MUFG Bank",
-    defaultCapital: 3_700_000,
-    floor: 1_700_000,
-    primaryRail: "SWIFT",
-    generatedCondition: "Custody fee settlement collides with overnight liquidity hold.",
-  },
-  {
-    country: "UAE",
-    city: "Dubai",
-    x: 59.6,
-    y: 52.4,
-    latitude: 25.2048,
-    longitude: 55.2708,
-    labelSide: "right",
-    currency: "USD",
-    defaultBank: "Emirates NBD",
-    defaultCapital: 3_300_000,
-    floor: 1_250_000,
-    primaryRail: "SWIFT",
-    generatedCondition: "Regional payout rail needs reserve after correspondent bank delay.",
-  },
-];
+function toMapAccount(account: TreasuryAccount): MapAccount {
+  return {
+    accountCode: account.accountCode,
+    bank: account.bank,
+    capital: account.balance,
+    condition: account.condition.en,
+    country: account.country,
+    currency: account.currency,
+    defaultBank: account.bank,
+    defaultCapital: account.balance,
+    floor: account.survivalFloor,
+    generatedCondition: account.condition.en,
+    id: account.id,
+    labelSide: account.labelSide,
+    latitude: account.latitude,
+    ledgerUpdatedAt: account.updatedAt,
+    longitude: account.longitude,
+    primaryRail: account.primaryRail,
+    city: account.city,
+    usableBalance: account.usableBalance,
+    x: account.x,
+    y: account.y,
+  };
+}
 
-const initialAccountCodes = [
-  "US-USD-1042",
-  "SG-USD-7781",
-  "SA-USD-4408",
-  "DE-EUR-2217",
-  "GB-USD-9302",
-  "JP-USD-5516",
-  "AE-USD-6209",
-];
-
-const initialAccounts: MapAccount[] = locations.map((location, index) => ({
-  ...location,
-  id: location.city.toLowerCase().replaceAll(" ", "-"),
-  accountCode: initialAccountCodes[index],
-  bank: location.defaultBank,
-  capital: location.defaultCapital,
-  condition: location.generatedCondition,
-}));
+const locations: AccountLocation[] = TREASURY_ACCOUNT_SEED.map((account) => toMapAccount(account));
+const initialAccounts: MapAccount[] = TREASURY_ACCOUNT_SEED.map(toMapAccount);
 
 const conditionStatusCopy: Record<AccountConditionStatus, LocalizedMessage> = {
   blocked: { en: "Breached", ru: "Нарушено" },
@@ -757,6 +662,262 @@ const scenarios: SimulationScenario[] = [
   },
 ];
 
+type RandomProblem = {
+  conditionBooks: Record<string, AccountConditionEvent[]>;
+  incident: LiquidityIncident;
+  scenario: SimulationScenario;
+};
+
+const anomalyTemplates = [
+  {
+    type: "ML-detected payroll liquidity anomaly",
+    event: "Payroll reserve spike",
+    debitLabel: "payroll sweep",
+    risk: "Payroll-season buffer rises before inbound cover is usable",
+    impact: "Payroll reserve pressure can breach the survival floor before local cut-off.",
+  },
+  {
+    type: "ML-detected tax reserve anomaly",
+    event: "Statutory tax hold",
+    debitLabel: "tax reserve",
+    risk: "Statutory cash becomes restricted and leaves less usable liquidity",
+    impact: "Restricted cash is visible in book balance but excluded from rescue liquidity.",
+  },
+  {
+    type: "ML-detected merchant settlement anomaly",
+    event: "Merchant settlement batch",
+    debitLabel: "merchant payout batch",
+    risk: "Merchant payout seasonality collides with delayed incoming settlement",
+    impact: "Batch outflow lands before the cover rail becomes available.",
+  },
+  {
+    type: "ML-detected correspondent rail anomaly",
+    event: "Correspondent bank delay",
+    debitLabel: "correspondent cover delay",
+    risk: "Correspondent bank timing pushes liquidity into the next banking day",
+    impact: "The route remains legal, but not usable before the selected account cut-off.",
+  },
+  {
+    type: "ML-detected debt service anomaly",
+    event: "Credit repayment collision",
+    debitLabel: "debt service payment",
+    risk: "Debt service debit overlaps with a weak p05 liquidity corridor",
+    impact: "The payment can drain usable cash below the survival floor unless cover arrives first.",
+  },
+] as const;
+
+function buildRandomProblem(accounts: MapAccount[], runIndex: number): RandomProblem {
+  const activeAccounts = accounts.length ? accounts : initialAccounts;
+  const target = randomItem(activeAccounts);
+  const template = randomItem(anomalyTemplates);
+  const sourceCandidates = activeAccounts.filter((account) => account.id !== target.id && account.currency === target.currency);
+  const primarySource = randomItem(sourceCandidates.length ? sourceCandidates : activeAccounts.filter((account) => account.id !== target.id)) ?? target;
+  const secondaryCandidates = sourceCandidates.filter((account) => account.id !== primarySource.id);
+  const secondarySource = secondaryCandidates.length ? randomItem(secondaryCandidates) : null;
+  const requiredBuffer = target.floor;
+  const baseUsable = Math.max(target.usableBalance || target.capital - target.floor * 0.35, target.floor * 0.35);
+  const scheduledDebit = roundMoney(randomBetween(target.floor * 0.42, Math.max(target.floor * 1.35, target.capital * 0.42)));
+  const plannedInbound = roundMoney(randomBetween(target.floor * 0.18, target.floor * 0.62));
+  const settlementDelayHours = Math.round(randomBetween(4, 48));
+  const forceBreach = Math.random() > 0.22;
+  const p05Balance = forceBreach
+    ? roundMoney(randomBetween(Math.max(target.floor * 0.22, 80_000), target.floor * 0.92))
+    : roundMoney(randomBetween(target.floor * 1.02, target.floor * 1.32));
+  const p50Balance = roundMoney(Math.max(p05Balance + randomBetween(target.floor * 0.18, target.floor * 0.78), baseUsable * 0.72));
+  const anomalyZScore = Number(randomBetween(3.2, 7.8).toFixed(1));
+  const hhiAfterStress = Number(randomBetween(0.22, 0.43).toFixed(3));
+  const es99Loss = roundMoney(Math.max(requiredBuffer - p05Balance, 0) + randomBetween(target.floor * 0.16, target.floor * 0.86));
+  const ccriDowngradeDelta = Math.round(randomBetween(8, 34));
+  const incidentId = `INC-${target.city.toUpperCase().replaceAll(" ", "-")}-${Date.now().toString().slice(-5)}-${String(runIndex).padStart(2, "0")}`;
+  const severity: IncidentSeverity =
+    p05Balance < target.floor * 0.45 ? "critical" : p05Balance < target.floor ? "high" : anomalyZScore > 5.3 ? "medium" : "low";
+  const routeState: ScenarioState = p05Balance < target.floor * 0.55 ? "blocked" : p05Balance < target.floor ? "warning" : "clear";
+  const transferLegs: TransferLeg[] = [
+    {
+      from: primarySource.id,
+      to: target.id,
+      amount: plannedInbound,
+      currency: target.currency,
+      system: primarySource.primaryRail,
+      state: settlementDelayHours > 24 ? "warning" : "clear",
+      label: `${primarySource.bank} cover`,
+      eta: settlementDelayHours >= 24 ? "T+1 bank day" : `${settlementDelayHours}h cover`,
+      window: settlementDelayHours >= 18 ? "after local cut-off" : "same-day window",
+      calendarNote: `${primarySource.city} can fund ${target.city}, but delay is ${settlementDelayHours}h.`,
+    },
+  ];
+
+  if (secondarySource) {
+    transferLegs.push({
+      from: secondarySource.id,
+      to: target.id,
+      amount: roundMoney(plannedInbound * randomBetween(0.28, 0.58)),
+      currency: target.currency,
+      system: secondarySource.primaryRail,
+      state: Math.random() > 0.5 ? "warning" : "clear",
+      label: `${secondarySource.bank} fallback`,
+      eta: Math.random() > 0.5 ? "same-day fallback" : "T+1 fallback",
+      window: "reserve fallback",
+      calendarNote: `${secondarySource.city} is kept as fallback because optimizer protects its own floor.`,
+    });
+  }
+
+  const incident: LiquidityIncident = {
+    id: incidentId,
+    accountId: target.id,
+    affectedObjects: [target.accountCode, `${primarySource.bank} cover`, target.primaryRail, template.event],
+    bank: target.bank,
+    city: target.city,
+    coordinates: {
+      latitude: target.latitude,
+      longitude: target.longitude,
+    },
+    description: `${template.event} appears on ${target.bank} / ${target.accountCode}; the model tests whether book cash is actually usable before ${target.primaryRail} cut-off.`,
+    detectedAt: new Date().toISOString(),
+    expectedBehavior: `${target.city} should stay above ${formatMoney(requiredBuffer, target.currency)} after scheduled debits and confirmed inbound liquidity.`,
+    mapZone: `${target.city} ${target.primaryRail} liquidity zone`,
+    observedBehavior: `Generated p05 usable liquidity is ${formatMoney(p05Balance, target.currency)} against a ${formatMoney(requiredBuffer, target.currency)} survival floor.`,
+    riskFactors: [
+      template.risk,
+      `${settlementDelayHours}h settlement delay on cover rail`,
+      `MAD z-score ${anomalyZScore.toFixed(1)} for the account window`,
+      `HHI after stress ${hhiAfterStress.toFixed(3)}`,
+    ],
+    severity,
+    source: "Randomized map generator / live ledger / settlement calendar",
+    status: "Awaiting ML ensemble analysis",
+    telemetry: {
+      anomalyZScore,
+      ccriDowngradeDelta,
+      es99Loss,
+      hhiAfterStress,
+      p05Balance,
+      p50Balance,
+      requiredBuffer,
+      scheduledDebit,
+      settlementDelayHours,
+    },
+    title: `${target.city} ${template.event}`,
+    type: template.type,
+  };
+
+  const scenario: SimulationScenario = {
+    id: `generated-${target.id}-${incidentId.toLowerCase()}`,
+    accountId: target.id,
+    calendar: buildGeneratedCalendar(target, template.event, settlementDelayHours),
+    condition: incident.description,
+    currency: target.currency,
+    debit: scheduledDebit,
+    decision:
+      routeState === "blocked"
+        ? `Block auto-release for ${target.city}; create treasury review before ${target.primaryRail} cut-off.`
+        : routeState === "warning"
+          ? `Hold ${target.city} transfer until cover rail confirms usable liquidity.`
+          : `Allow watch-listed routing for ${target.city} with refreshed p05 after cover.`,
+    desk: `Generated ML scenario ${String(runIndex).padStart(2, "0")}`,
+    programResponse: [
+      `Generated anomaly on ${target.bank} / ${target.accountCode}.`,
+      `Evaluated p05 ${formatMoney(p05Balance, target.currency)} vs floor ${formatMoney(requiredBuffer, target.currency)}.`,
+      `Tested ${transferLegs.length} cover route${transferLegs.length === 1 ? "" : "s"} and settlement delay ${settlementDelayHours}h.`,
+      `Created fresh model report from telemetry instead of replaying the New York incident.`,
+    ],
+    title: `${target.city} generated anomaly`,
+    transferLegs,
+  };
+
+  return {
+    conditionBooks: Object.fromEntries(
+      activeAccounts.map((account) => [
+        account.id,
+        buildRandomConditionEvents(account, account.id === target.id ? template.event : randomItem(anomalyTemplates).event, account.id === target.id),
+      ]),
+    ),
+    incident,
+    scenario,
+  };
+}
+
+function buildGeneratedCalendar(account: MapAccount, event: string, delayHours: number): CalendarInsight {
+  const states: BankingDayState[] = ["open", "cutoff", "usable", "closed"];
+  return {
+    title: `${account.city} ${event} timing pressure`,
+    summary: `${event} changes when ${account.currency} liquidity becomes usable for ${account.bank}.`,
+    effect: `${delayHours}h settlement delay, ${account.primaryRail} cut-off pressure`,
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri"].map((label, index) => ({
+      label,
+      region: account.city,
+      state: index === 1 ? "cutoff" : states[Math.floor(Math.random() * states.length)],
+      note: index === 1 ? event : `${account.primaryRail} ${index < 2 ? "watch" : "usable"} window`,
+    })),
+    seasonality: ["Payroll", "Tax", "Merchant", "FX", "Holiday"].map((label) => ({
+      label,
+      value: Math.round(randomBetween(22, 96)),
+    })),
+  };
+}
+
+function buildRandomConditionEvents(account: MapAccount, eventName: string, isTarget: boolean): AccountConditionEvent[] {
+  const statuses: AccountConditionStatus[] = isTarget ? ["blocked", "due", "watch", "ready"] : ["due", "watch", "ready"];
+  const rails: Array<AccountConditionEvent["rail"]> = [account.primaryRail, "Tax portal", "Internal ledger", "SWIFT"];
+  const labels = [
+    eventName,
+    "FX control reserve",
+    "Tax and statutory hold",
+    "Vendor payout queue",
+    "Payroll liquidity buffer",
+  ];
+
+  return labels.slice(0, Math.floor(randomBetween(3, 6))).map((label, index) => {
+    const status = isTarget && index === 0 ? "blocked" : randomItem(statuses);
+    const amount = roundMoney(randomBetween(account.floor * 0.08, Math.max(account.floor * 0.55, account.capital * 0.18)));
+    const rail = randomItem(rails);
+    return {
+      id: `${account.id}-generated-${Date.now().toString().slice(-5)}-${index}`,
+      amount,
+      currency: account.currency,
+      due: {
+        en: index === 0 ? `Today via ${account.primaryRail}` : `T+${index} banking window`,
+        ru: index === 0 ? `Сегодня через ${account.primaryRail}` : `T+${index} banking window`,
+      },
+      impact: {
+        en: `${label} changes usable liquidity on ${account.bank}; generated for this ML run.`,
+        ru: `${label} меняет usable liquidity на ${account.bank}; сгенерировано для этого ML-run.`,
+      },
+      label: { en: label, ru: label },
+      proof: {
+        en: "Generated from randomized treasury ledger conditions, not a static fixture.",
+        ru: "Сгенерировано из randomized treasury ledger conditions, не из статичной fixture.",
+      },
+      rail,
+      status,
+    };
+  });
+}
+
+function summarizeConditionEvents(account: MapAccount, events: AccountConditionEvent[], scenarioCondition?: string) {
+  if (scenarioCondition) return scenarioCondition;
+
+  const committedOutflow = events
+    .filter((event) => event.status !== "ready")
+    .reduce((sum, event) => sum + event.amount, 0);
+  const hardEvents = events.filter((event) => event.status === "blocked" || event.status === "due").length;
+  const leadingEvent = events[0]?.label.en ?? "randomized treasury condition";
+
+  return `${account.primaryRail} generated condition for ${account.bank}: ${leadingEvent}; ${hardEvents} hard event${hardEvents === 1 ? "" : "s"} and ${formatMoney(committedOutflow, account.currency)} committed outflow can change usable liquidity.`;
+}
+
+function randomItem<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)] ?? items[0];
+}
+
+function randomBetween(min: number, max: number) {
+  return min + Math.random() * Math.max(max - min, 1);
+}
+
+function roundMoney(value: number) {
+  return Math.max(10_000, Math.round(value / 10_000) * 10_000);
+}
+
 type WorldLiquidityMapProps = {
   surface?: "demo" | "map";
 };
@@ -765,10 +926,15 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
   const { language, message, t, translate } = useLanguage();
   const isMapSurface = surface === "map";
   const addFormRef = useRef<HTMLDivElement>(null);
+  const initialRandomProblemRef = useRef(false);
   const [accounts, setAccounts] = useState<MapAccount[]>(initialAccounts);
   const [selectedId, setSelectedId] = useState(initialAccounts[0].id);
+  const [scenarioCatalog, setScenarioCatalog] = useState<SimulationScenario[]>(scenarios);
   const [scenarioId, setScenarioId] = useState(scenarios[0].id);
   const [simulationRan, setSimulationRan] = useState(true);
+  const [incident, setIncident] = useState<LiquidityIncident>(defaultLiquidityIncident);
+  const [randomProblemRun, setRandomProblemRun] = useState(0);
+  const [conditionOverrides, setConditionOverrides] = useState<Record<string, AccountConditionEvent[]>>({});
   const [draftCountry, setDraftCountry] = useState<AccountCountry>("United Kingdom");
   const [draftBank, setDraftBank] = useState("HSBC UK");
   const [draftAccountCode, setDraftAccountCode] = useState("GB-USD-9302");
@@ -809,16 +975,120 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
     calendar: true,
     nodes: true,
   });
+  const clearMapError = useCallback(() => setMapError(null), []);
+  const showNotice = useCallback((en: string, ru: string) => setMapNotice({ en, ru }), []);
+  const showError = useCallback((en: string, ru: string) => setMapError({ en, ru }), []);
+
+  const refreshLedgerAccounts = useCallback(async () => {
+    try {
+      const response = await fetch("/api/treasury/accounts", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { accounts?: TreasuryAccount[] };
+      if (Array.isArray(payload.accounts)) {
+        const nextAccounts = payload.accounts.map(toMapAccount);
+        setAccounts(nextAccounts);
+        setSelectedId((current) => (nextAccounts.some((account) => account.id === current) ? current : nextAccounts[0]?.id ?? current));
+      }
+    } catch {
+      setAccounts(listTreasuryAccounts().map(toMapAccount));
+    }
+  }, []);
+
+  const persistAccountPatch = useCallback(async (accountId: string, patch: { balance?: number; conditionText?: string }) => {
+    try {
+      const response = await fetch(`/api/treasury/accounts/${encodeURIComponent(accountId)}`, {
+        body: JSON.stringify(patch),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { account?: TreasuryAccount };
+      if (payload.account) {
+        const nextAccount = toMapAccount(payload.account);
+        setAccounts((current) => current.map((account) => (account.id === nextAccount.id ? nextAccount : account)));
+      }
+    } catch {
+      // Keep local editing responsive even when the demo API is not available.
+    }
+  }, []);
+
+  const generateRandomProblem = useCallback((origin: "auto" | "manual" = "manual") => {
+    const nextRun = randomProblemRun + 1;
+    const problem = buildRandomProblem(accounts, nextRun);
+    const conditionSummaries = Object.fromEntries(
+      accounts.map((account) => [
+        account.id,
+        summarizeConditionEvents(
+          account,
+          problem.conditionBooks[account.id] ?? getAccountConditionBook(account),
+          account.id === problem.scenario.accountId ? problem.scenario.condition : undefined,
+        ),
+      ]),
+    );
+    setRandomProblemRun(nextRun);
+    setScenarioCatalog((current) => [
+      problem.scenario,
+      ...current.filter((item) => item.id !== problem.scenario.id).slice(0, 5),
+    ]);
+    setScenarioId(problem.scenario.id);
+    setIncident(problem.incident);
+    setSelectedId(problem.scenario.accountId);
+    setConditionOverrides(problem.conditionBooks);
+    setConditionBookAccountId(problem.scenario.accountId);
+    setSimulationRan(true);
+    setAnalysisResult(null);
+    setAnalysisError("");
+    setAnalysisProgress(0);
+    setAnalysisSteps(createInitialAnalysisSteps());
+    setIncidentLifecycle("detected");
+    setIncidentPopupOpen(true);
+    setTicketId("");
+    setTicketTitle(`Review ${problem.incident.city} generated liquidity anomaly`);
+    setTicketNote(problem.incident.observedBehavior);
+    setAccounts((current) =>
+      current.map((account) => ({
+        ...account,
+        condition: conditionSummaries[account.id] ?? account.condition,
+      })),
+    );
+    void Promise.all(
+      accounts.map((account) =>
+        persistAccountPatch(account.id, {
+          conditionText: conditionSummaries[account.id] ?? account.condition,
+        }),
+      ),
+    );
+    clearMapError();
+    showNotice(
+      `${origin === "auto" ? "Auto-generated" : "Generated"} ${problem.incident.title}: p05 ${formatMoney(problem.incident.telemetry.p05Balance, problem.scenario.currency)} vs floor ${formatMoney(problem.incident.telemetry.requiredBuffer, problem.scenario.currency)}.`,
+      `${origin === "auto" ? "Автоматически создана" : "Создана"} аномалия ${problem.incident.title}: p05 ${formatMoney(problem.incident.telemetry.p05Balance, problem.scenario.currency)} vs floor ${formatMoney(problem.incident.telemetry.requiredBuffer, problem.scenario.currency)}.`,
+    );
+  }, [accounts, clearMapError, persistAccountPatch, randomProblemRun, showNotice]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refreshLedgerAccounts();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refreshLedgerAccounts]);
+
+  useEffect(() => {
+    if (initialRandomProblemRef.current) return undefined;
+    const timer = window.setTimeout(() => {
+      initialRandomProblemRef.current = true;
+      generateRandomProblem("auto");
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [generateRandomProblem]);
 
   const selected = accounts.find((account) => account.id === selectedId) ?? accounts[0];
-  const scenario = scenarios.find((item) => item.id === scenarioId) ?? scenarios[0];
+  const scenario = scenarioCatalog.find((item) => item.id === scenarioId) ?? scenarioCatalog[0] ?? scenarios[0];
   const scenarioAccount = accounts.find((account) => account.id === scenario.accountId);
-  const selectedConditionEvents = useMemo(() => getAccountConditionBook(selected), [selected]);
+  const selectedConditionEvents = useMemo(
+    () => conditionOverrides[selected.id] ?? getAccountConditionBook(selected),
+    [conditionOverrides, selected],
+  );
   const conditionBookVisible = conditionBookAccountId === selected.id;
-  const incident = defaultLiquidityIncident;
-  const clearMapError = () => setMapError(null);
-  const showNotice = (en: string, ru: string) => setMapNotice({ en, ru });
-  const showError = (en: string, ru: string) => setMapError({ en, ru });
 
   const totals = useMemo(() => {
     const usd = accounts.filter((account) => account.currency === "USD").reduce((sum, account) => sum + account.capital, 0);
@@ -835,6 +1105,10 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
   );
 
   const activeLayerCount = Object.values(mapLayers).filter(Boolean).length;
+  const ledgerSignature = useMemo(
+    () => accounts.map((account) => `${account.id}:${account.capital}:${account.condition}`).join("|"),
+    [accounts],
+  );
 
   const toggleMapLayer = (key: MapLayerKey) => {
     const layer = mapLayerCopy.find((item) => item.key === key);
@@ -946,10 +1220,11 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
         setAnalysisResult(result);
         setIncidentLifecycle("analysisCompleted");
         setAnalysisProgress(100);
+        setAnalysisSteps(createInitialAnalysisSteps().map((step) => ({ ...step, status: "completed" })));
         clearMapError();
         showNotice(
           `${result.finalVerdict}. Confidence ${result.confidence}%, risk score ${result.riskScore}/100.`,
-          `${translate(result.finalVerdict)}. ${t("Confidence")} ${result.confidence}%, ${t("Risk score")} ${result.riskScore}/100.`,
+          `ML-отчет готов: ${result.finalVerdict}. Confidence ${result.confidence}%, risk score ${result.riskScore}/100.`,
         );
       }, steps.length * 620 + 520),
     );
@@ -957,9 +1232,9 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
     };
-  }, [analysisRunId, incident, incidentLifecycle, t, translate]);
+  }, [analysisRunId, clearMapError, incident, incidentLifecycle, showNotice]);
 
-  const addAccount = () => {
+  const addAccount = async () => {
     const formValue = (name: string, fallback: string) =>
       addFormRef.current?.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)?.value ?? fallback;
     const formCountry = formValue("account-country", draftCountry) as AccountCountry;
@@ -983,26 +1258,39 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
       formCondition === "auto"
         ? location.generatedCondition
         : formCondition.trim() || location.generatedCondition;
-    const account: MapAccount = {
-      ...location,
-      id: `${location.city.toLowerCase().replaceAll(" ", "-")}-${Date.now()}`,
-      accountCode: formAccountCode.trim() || `${location.country.slice(0, 2).toUpperCase()}-${location.currency}-${Date.now().toString().slice(-4)}`,
-      bank: formBank.trim() || location.defaultBank,
-      capital,
-      condition,
-    };
-
-    setAccounts((current) => current.concat(account));
-    setSelectedId(account.id);
-    clearMapError();
-    showNotice(
-      `${account.bank} added in ${account.city}. The new node is selected on the map.`,
-      `${account.bank} добавлен в ${translate(account.city)}. Новый узел выбран на карте.`,
-    );
+    try {
+      const response = await fetch("/api/treasury/accounts", {
+        body: JSON.stringify({
+          accountCode: formAccountCode.trim(),
+          balance: capital,
+          bank: formBank.trim(),
+          city: location.city,
+          conditionText: condition,
+          country: location.country,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) throw new Error("Could not add account");
+      const payload = (await response.json()) as { account?: TreasuryAccount; accounts?: TreasuryAccount[] };
+      const nextAccounts = Array.isArray(payload.accounts) ? payload.accounts.map(toMapAccount) : accounts;
+      const account = payload.account ? toMapAccount(payload.account) : nextAccounts[nextAccounts.length - 1];
+      setAccounts(nextAccounts);
+      if (account) {
+        setSelectedId(account.id);
+        clearMapError();
+        showNotice(
+          `${account.bank} added in ${account.city}. The new node is selected on the map.`,
+          `${account.bank} добавлен в ${translate(account.city)}. Новый узел выбран на карте.`,
+        );
+      }
+    } catch {
+      showError("Could not add the account to the shared ledger.", "Не удалось добавить счет в общий ledger.");
+    }
   };
 
   const runScenario = (nextScenarioId = scenarioId) => {
-    const nextScenario = scenarios.find((item) => item.id === nextScenarioId) ?? scenario;
+    const nextScenario = scenarioCatalog.find((item) => item.id === nextScenarioId) ?? scenario;
     setScenarioId(nextScenario.id);
     setSelectedId(nextScenario.accountId);
     setSimulationRan(true);
@@ -1021,20 +1309,27 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
   };
 
   const generateCondition = () => {
-    const linkedScenario = scenarios.find((item) => item.accountId === selected.id);
-    const conditionEvents = getAccountConditionBook(selected);
+    const linkedScenario = scenarioCatalog.find((item) => item.accountId === selected.id);
+    const conditionEvents = buildRandomConditionEvents(
+      selected,
+      linkedScenario?.title ?? randomItem(anomalyTemplates).event,
+      linkedScenario?.accountId === selected.id,
+    );
+    const conditionText = summarizeConditionEvents(selected, conditionEvents, linkedScenario?.condition);
+    setConditionOverrides((current) => ({ ...current, [selected.id]: conditionEvents }));
     setAccounts((current) =>
       current.map((account) =>
         account.id === selected.id
           ? {
               ...account,
-              condition: linkedScenario
-                ? linkedScenario.condition
-                : `${account.primaryRail} event generated for ${account.bank}: settlement delay can push the account below its liquidity floor.`,
+              condition: conditionText,
             }
           : account,
       ),
     );
+    void persistAccountPatch(selected.id, {
+      conditionText,
+    });
     setConditionBookAccountId(selected.id);
     clearMapError();
     showNotice(
@@ -1053,6 +1348,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
       ),
     );
     if (Number.isFinite(capital)) {
+      void persistAccountPatch(selected.id, { balance: capital });
       showNotice(
         `${selected.city} capital updated to ${formatMoney(capital, selected.currency)}.`,
         `Капитал ${translate(selected.city)} обновлён до ${formatMoney(capital, selected.currency)}.`,
@@ -1065,6 +1361,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
     setAccounts((current) =>
       current.map((account) => (account.id === selected.id ? { ...account, condition: value } : account)),
     );
+    void persistAccountPatch(selected.id, { conditionText: value });
     showNotice(
       `${selected.city} condition edited locally.`,
       `Условие ${translate(selected.city)} изменено локально.`,
@@ -1081,20 +1378,20 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
 
   const selectIncident = () => {
     setSelectedId(incident.accountId);
-    setScenarioId("ny-credit");
+    setScenarioId(scenario.id);
     setSimulationRan(true);
     setIncidentPopupOpen(true);
     clearMapError();
     showNotice(
-      "Incident selected. New York shows the detected usable-liquidity anomaly.",
-      "Инцидент выбран. New York показывает обнаруженную аномалию доступной ликвидности.",
+      `Incident selected. ${incident.city} shows the detected usable-liquidity anomaly.`,
+      `Инцидент выбран. ${translate(incident.city)} показывает обнаруженную аномалию доступной ликвидности.`,
     );
     setIncidentLifecycle((current) => (current === "detected" ? "incidentSelected" : current));
   };
 
   const startAnalysis = () => {
     setSelectedId(incident.accountId);
-    setScenarioId("ny-credit");
+    setScenarioId(scenario.id);
     setSimulationRan(true);
     setIncidentPopupOpen(true);
     setAnalysisError("");
@@ -1229,7 +1526,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
             <span>{incidentLifecycle === "incidentClosed" ? t("Incident closed") : simulation.state === "clear" ? t("Program ready") : t("Anomaly detected")}</span>
           </div>
         </div>
-        <div className="map-totals" aria-label={t("Capital totals", "Итоги капитала")}>
+        <div className="map-totals" aria-label={t("Capital totals", "Итоги капитала")} key={`totals-${ledgerSignature}`}>
           <div>
             <span>{t("USD capital")}</span>
             <strong>{formatMoney(totals.usd, "USD")}</strong>
@@ -1253,14 +1550,23 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
           <p>
             {isMapSurface
               ? t(
-                  "The selected scenario updates the map layer, rail paths, account panel, and calendar pressure without leaving the cockpit.",
-                  "Выбранный сценарий обновляет карту, rail-маршруты, панель счёта и календарное давление без выхода из cockpit.",
+                  "Generate a new anomaly or replay a saved scenario. Each generated run creates new account conditions, rail paths, telemetry, and ML report output.",
+                  "Сгенерируйте новую аномалию или replay сохранённый сценарий. Каждый запуск создаёт новые условия счетов, rail-маршруты, telemetry и ML-отчёт.",
                 )
               : t("The selected scenario paints transfer routes on the map and explains the program decision in treasury language.")}
           </p>
         </div>
         <div className="scenario-cards">
-          {scenarios.map((item) => (
+          <button
+            className="scenario-card scenario-card--generator"
+            onClick={() => generateRandomProblem("manual")}
+            type="button"
+          >
+            <span>{t("Random generator", "Random generator")}</span>
+            <strong>{t("Generate new anomaly", "Сгенерировать новую аномалию")}</strong>
+            <small>{t("new conditions + fresh ML telemetry", "новые условия + свежая ML telemetry")}</small>
+          </button>
+          {scenarioCatalog.map((item) => (
             <button
               className={item.id === scenario.id ? "scenario-card scenario-card--active" : "scenario-card"}
               key={item.id}
@@ -1339,8 +1645,10 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
               }
             }}
             onToggleIncidentPopup={() => setIncidentPopupOpen((open) => !open)}
+            key={`world-map-${ledgerSignature}`}
           />
           <IncidentAnalysisPanel
+            key={`incident-panel-${incident.id}`}
             incident={incident}
             lifecycle={incidentLifecycle}
             steps={analysisSteps}
@@ -1366,7 +1674,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
           />
         </div>
 
-        <aside className={`map-account-panel map-account-panel--${simulation.state}`} aria-label={t("Selected account")}>
+        <aside className={`map-account-panel map-account-panel--${simulation.state}`} aria-label={t("Selected account")} key={`account-panel-${selected.id}-${selected.capital}-${selected.condition}`}>
           <div className="map-account-panel__header">
             <p className="eyebrow">{t("Selected Account")}</p>
             <h2>{translate(selected.city)}</h2>
@@ -1631,7 +1939,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
           </div>
         </div>
 
-        <div className="map-account-table" role="table" aria-label={t("Mapped accounts")}>
+        <div className="map-account-table" role="table" aria-label={t("Mapped accounts")} key={`account-table-${ledgerSignature}`}>
           <div role="row">
             <span role="columnheader">{t("BANK / ACCOUNT")}</span>
             <span role="columnheader">{t("CURRENCY")}</span>
@@ -1642,7 +1950,7 @@ export function WorldLiquidityMap({ surface = "demo" }: WorldLiquidityMapProps) 
           {accounts.map((account) => (
             <button
               className={account.id === selected.id ? "map-account-row map-account-row--selected" : "map-account-row"}
-              key={account.id}
+              key={`${account.id}-${account.capital}-${account.condition}`}
               onClick={() => {
                 setSelectedId(account.id);
                 showNotice(
@@ -2017,7 +2325,29 @@ function TransferLayer({
 }
 
 function getAccountConditionBook(account: MapAccount): AccountConditionEvent[] {
-  return accountConditionBooks[account.city] ?? buildFallbackConditionBook(account);
+  const seed = TREASURY_ACCOUNT_SEED.find((item) => item.id === account.id);
+  const legacyConditionBook = accountConditionBooks[account.city] ?? buildFallbackConditionBook(account);
+  if (!seed) return legacyConditionBook;
+
+  return buildTreasuryConditionEvents({
+    ...seed,
+    accountCode: account.accountCode,
+    balance: account.capital,
+    bank: account.bank,
+    city: account.city,
+    condition: { en: account.condition, ru: account.condition },
+    country: account.country,
+    currency: account.currency,
+    labelSide: account.labelSide,
+    latitude: account.latitude,
+    longitude: account.longitude,
+    primaryRail: account.primaryRail,
+    survivalFloor: account.floor,
+    updatedAt: account.ledgerUpdatedAt,
+    usableBalance: account.usableBalance,
+    x: account.x,
+    y: account.y,
+  });
 }
 
 function buildFallbackConditionBook(account: MapAccount): AccountConditionEvent[] {

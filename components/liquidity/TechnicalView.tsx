@@ -23,6 +23,7 @@ const architectureStages = [
   "PuLP MIP optimizer",
   "Governance gate",
   "Permissioned mobility overlay",
+  "Blockchain transfer router",
   "Contingency plan",
   "Audit / AI Council / ROI",
 ];
@@ -37,6 +38,7 @@ const modelStack = [
   "Expected Shortfall 99%",
   "OpenAPI contract export",
   "Permissioned settlement ledger prototype",
+  "Solana / Polygon / Base / Stellar / ZK rail scoring",
 ];
 
 type MathCoreItem = {
@@ -314,6 +316,7 @@ export function TechnicalView() {
 
       <section className="judge-actions" aria-label={t("Technical action links", "Технические ссылки действий")}>
         <Link className="command-button command-button--primary" href="/demo?phase=pending">{t("Run Golden Incident")}</Link>
+        <Link className="command-button" href="/transfers">{t("Fund Transfers", "Переводы средств")}</Link>
         <Link className="command-button" href="/demo?phase=rejected#permissioned-rail">{t("View Overlay Prototype", "View Overlay Prototype")}</Link>
         <Link className="command-button" href="/judge">{t("Judge View")}</Link>
       </section>

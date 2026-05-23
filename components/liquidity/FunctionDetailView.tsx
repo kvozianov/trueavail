@@ -52,6 +52,11 @@ const functionNarrative: Record<FunctionKey, { title: string; body: string; deci
     body: "The contract page exposes exported FastAPI paths, deterministic snapshot artifacts, and verification commands used by the frontend.",
     decisionImpact: "Judges can see this is not only a dashboard mockup; it has API contracts and replayable backend evidence.",
   },
+  blockchainTransfers: {
+    title: "The blockchain router turns market infrastructure into treasury decisions.",
+    body: "The transfers page scores Solana, Polygon, Base, Stellar, ZKsync Prividium, Ethereum, and legacy banking rails against the same payout context.",
+    decisionImpact: "Judges see a credible next step after rejection: regulated routing, not speculative token movement.",
+  },
   permissionedRail: {
     title: "The overlay compares legacy settlement with governed liquidity mobility.",
     body: "The permissioned rail prototype shows source, destination, amount, policy checks, signer approval, finality SLA, audit hash, and failure paths.",

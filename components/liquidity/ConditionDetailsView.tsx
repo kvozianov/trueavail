@@ -1,15 +1,18 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/components/liquidity/LanguageProvider";
 import {
-  getAccountConditionDetail,
+  buildAccountConditionDetail,
   type ActivityBar,
+  type AccountConditionDetail,
   type ConditionCurrency,
   type ConditionTone,
   type LiquidityPoint,
 } from "@/lib/account-condition-details";
+import { TREASURY_ACCOUNT_SEED, type TreasuryAccount } from "@/lib/treasury-ledger";
 
 const toneCopy: Record<ConditionTone, { en: string; ru: string }> = {
   blocked: { en: "Breached", ru: "Нарушено" },
@@ -20,12 +23,29 @@ const toneCopy: Record<ConditionTone, { en: string; ru: string }> = {
 
 export function ConditionDetailsView({ accountId }: { accountId: string }) {
   const { message, t } = useLanguage();
-  const account = getAccountConditionDetail(accountId);
+  const [account, setAccount] = useState<AccountConditionDetail>(() =>
+    buildAccountConditionDetail(TREASURY_ACCOUNT_SEED.find((item) => item.id === accountId) ?? TREASURY_ACCOUNT_SEED[0]),
+  );
   const chart = buildLiquidityChart(account.liquiditySeries);
   const worstPoint = account.liquiditySeries.reduce((lowest, point) => (point.usable < lowest.usable ? point : lowest), account.liquiditySeries[0]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/treasury/accounts/${encodeURIComponent(accountId)}`, { cache: "no-store" })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload: { account?: TreasuryAccount } | null) => {
+          if (payload?.account) {
+            setAccount(buildAccountConditionDetail(payload.account));
+          }
+        })
+        .catch(() => undefined);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [accountId]);
+
   return (
-    <main className="condition-detail-page" id="main-content">
+    <main className="condition-detail-page" id="main-content" key={`${account.id}-${account.capital}-${account.summary.en}`}>
       <div className="condition-detail-topbar">
         <Link className="condition-detail-back" href="/liquidity-control-tower" aria-label={t("Back to map", "Back to map")}>
           <span aria-hidden="true">←</span>

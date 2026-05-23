@@ -35,6 +35,7 @@ export function DemoNav({ mode = "replay", statusText }: DemoNavProps) {
     { href: "/", label: t("Home"), active: pathname === "/" || pathname === "/landing" },
     { href: "/liquidity-control-tower", label: t("Map"), active: pathname === "/liquidity-control-tower" },
     { href: "/demo#demo-dashboard", label: t("Demo"), active: pathname === "/demo" },
+    { href: "/transfers", label: t("Fund Transfers", "Переводы средств"), active: pathname === "/transfers" },
     { href: "/judge", label: t("Judge"), active: pathname === "/judge" },
     { href: "/technical", label: t("Technical"), active: pathname === "/technical" },
   ];

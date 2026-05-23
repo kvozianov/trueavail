@@ -68,14 +68,27 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       const value = node.nodeValue ?? "";
       if (!value.trim()) return;
 
-      const original = textOriginals.current.get(node) ?? value;
+      if (language === "en") {
+        const storedOriginal = textOriginals.current.get(node);
+        if (storedOriginal && value !== storedOriginal && hasCyrillic(value)) {
+          node.nodeValue = storedOriginal;
+          return;
+        }
+        textOriginals.current.set(node, value);
+        return;
+      }
+
+      let original = textOriginals.current.get(node);
+      if (!original || (value !== original && !hasCyrillic(value))) {
+        original = value;
+      }
       textOriginals.current.set(node, original);
-      if (language === "ru" && value !== original && hasCyrillic(value)) return;
+      if (value !== original && hasCyrillic(value)) return;
 
       const [, leading = "", body = "", trailing = ""] = original.match(/^(\s*)([\s\S]*?)(\s*)$/) ?? [];
       if (!body.trim()) return;
 
-      const next = language === "ru" ? `${leading}${translateText("ru", body)}${trailing}` : original;
+      const next = `${leading}${translateText("ru", body)}${trailing}`;
       if (node.nodeValue !== next) {
         node.nodeValue = next;
       }

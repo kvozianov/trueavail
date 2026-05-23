@@ -1,0 +1,10 @@
+.data/
+.env*
+!.env.example
+.omx/
+.stitch/
+.obsidian/
+.next/
+node_modules/
+project_memory/
+tsconfig.tsbuildinfo

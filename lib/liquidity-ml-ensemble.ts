@@ -155,7 +155,7 @@ export const analysisPipeline: AnalysisStep[] = [
   {
     id: "geo-validation",
     label: "Validate coordinates and affected zone",
-    detail: "Confirm the incident belongs to the New York Fedwire liquidity zone and active scenario account.",
+    detail: "Confirm the incident belongs to the selected treasury zone and active scenario account.",
   },
   {
     id: "telemetry",
@@ -445,101 +445,127 @@ export function createInitialAnalysisSteps(): AnalysisStepState[] {
 }
 
 export function runDeterministicLiquidityEnsemble(incident: LiquidityIncident): EnsembleAnalysisResult {
-  const gap = incident.telemetry.requiredBuffer - incident.telemetry.p05Balance;
+  const gap = Math.max(incident.telemetry.requiredBuffer - incident.telemetry.p05Balance, 0);
   const gapRatio = clamp(gap / incident.telemetry.requiredBuffer, 0, 1);
   const delayRatio = clamp(incident.telemetry.settlementDelayHours / 36, 0, 1);
   const anomalyRatio = clamp(incident.telemetry.anomalyZScore / 7, 0, 1);
   const hhiRatio = clamp((incident.telemetry.hhiAfterStress - 0.25) / 0.18, 0, 1);
   const esRatio = clamp(incident.telemetry.es99Loss / 2_600_000, 0, 1);
   const weightedRisk = gapRatio * 30 + delayRatio * 20 + anomalyRatio * 18 + hhiRatio * 17 + esRatio * 15;
-  const boundedRiskScore = Math.round(Math.min(96, Math.max(72, weightedRisk + 34)));
+  const boundedRiskScore = Math.round(Math.min(98, Math.max(18, weightedRisk + 28)));
+  const severity = severityForRisk(boundedRiskScore);
+  const confidence = Math.round(
+    clamp(58 + anomalyRatio * 16 + gapRatio * 12 + delayRatio * 8 + hhiRatio * 6, 58, 96),
+  );
+  const breach = gap > 0;
+  const headroom = Math.max(incident.telemetry.p05Balance - incident.telemetry.requiredBuffer, 0);
+  const autoApprovalUnsafe = breach || boundedRiskScore >= 64 || incident.telemetry.anomalyZScore >= 4.5;
+  const zoneSignal = `${incident.city} / ${incident.bank} / ${incident.mapZone}`;
+  const finalVerdict = autoApprovalUnsafe
+    ? `${severityLabel(severity)} probability usable-liquidity breach detected`
+    : "Liquidity anomaly detected, auto-approval remains watch-listed";
+  const rootCause = breach
+    ? `${incident.city} book balance looks usable, but ${formatUsd(incident.telemetry.scheduledDebit)} of scheduled pressure plus ${incident.telemetry.settlementDelayHours}h settlement delay pushes p05 liquidity below the ${formatUsd(incident.telemetry.requiredBuffer)} survival floor.`
+    : `${incident.city} anomaly is explainable by timing and concentration signals; p05 remains above the floor, but governance should keep the route on watch.`;
 
   const modelVotes: EnsembleModelResult[] = [
     {
       modelName: "GeoValidationModel",
-      status: "warning",
-      confidence: 87,
-      vote: "hold",
-      signal: "Incident is inside the New York Fedwire zone, but route usability depends on a foreign SWIFT cover leg.",
-      explanation: "The coordinates are valid; the risk is not a wrong point, it is a settlement-zone timing mismatch.",
+      status: incident.coordinates.latitude && incident.coordinates.longitude ? "passed" : "warning",
+      confidence: Math.max(78, confidence - 6),
+      vote: boundedRiskScore >= 70 ? "hold" : "approve",
+      signal: `Incident is inside ${zoneSignal}; route usability depends on ${incident.telemetry.settlementDelayHours}h settlement timing.`,
+      explanation: "The coordinates are valid; the risk is a treasury timing mismatch, not a map-rendering artifact.",
       contribution: 0.12,
-      detectedFeatures: ["valid coordinates", "Fedwire zone", "cross-zone cover leg"],
+      detectedFeatures: ["valid coordinates", incident.mapZone, `${incident.telemetry.settlementDelayHours}h delay`],
     },
     {
       modelName: "AnomalyDetectionModel",
-      status: "blocked",
-      confidence: 93,
-      vote: "reject",
+      status: incident.telemetry.anomalyZScore >= 5 ? "blocked" : incident.telemetry.anomalyZScore >= 3.6 ? "warning" : "passed",
+      confidence: Math.min(96, Math.round(confidence + anomalyRatio * 4)),
+      vote: incident.telemetry.anomalyZScore >= 5 ? "reject" : "hold",
       signal: `MAD z-score ${incident.telemetry.anomalyZScore.toFixed(1)} marks the movement as abnormal for this account window.`,
-      explanation: "The movement is unusual enough to trigger review, but known-event features explain the source.",
+      explanation: "The movement is unusual enough to trigger review, while known-event features explain why it appeared now.",
       contribution: 0.22,
-      detectedFeatures: ["MAD z-score breach", "known credit repayment", "payroll-season buffer"],
+      detectedFeatures: ["MAD z-score signal", ...incident.riskFactors.slice(0, 2)],
     },
     {
       modelName: "RiskScoringModel",
-      status: "blocked",
-      confidence: 91,
-      vote: "reject",
+      status: boundedRiskScore >= 70 ? "blocked" : boundedRiskScore >= 48 ? "warning" : "passed",
+      confidence,
+      vote: boundedRiskScore >= 70 ? "reject" : boundedRiskScore >= 48 ? "hold" : "approve",
       signal: `Risk score ${Math.round(boundedRiskScore)}/100 with HHI ${incident.telemetry.hhiAfterStress.toFixed(3)}.`,
-      explanation: "Downside gap, concentration, and expected shortfall combine into a high-risk operating state.",
+      explanation: "Downside gap, concentration, settlement delay, and expected shortfall are converted into one risk score.",
       contribution: 0.24,
-      detectedFeatures: ["p05 below floor", "HHI above policy", "ES99 tail loss"],
+      detectedFeatures: [breach ? "p05 below floor" : "p05 above floor", "HHI concentration", "ES99 tail loss"],
     },
     {
       modelName: "PatternRecognitionModel",
-      status: "warning",
-      confidence: 89,
+      status: incident.riskFactors.length >= 3 ? "warning" : "passed",
+      confidence: Math.max(72, confidence - 3),
       vote: "hold",
-      signal: "Pattern matches merchant/payroll seasonality plus delayed correspondent cover.",
-      explanation: "The event is not random noise; it follows a known recurring liquidity pattern.",
+      signal: `Pattern matches ${incident.type.toLowerCase()} with ${incident.riskFactors.length} active risk factors.`,
+      explanation: "The event is not random noise; it follows a recognizable treasury condition pattern.",
       contribution: 0.15,
-      detectedFeatures: ["seasonality spike", "T+1 cash availability", "settlement cut-off"],
+      detectedFeatures: incident.riskFactors.slice(0, 3),
     },
     {
       modelName: "ForecastModel",
-      status: "blocked",
-      confidence: 92,
-      vote: "reject",
-      signal: `p05 usable liquidity is USD ${formatShortNumber(gap)} under the survival floor.`,
-      explanation: "The forecast corridor shows that book cash is not usable soon enough to approve the debit safely.",
+      status: breach ? "blocked" : "warning",
+      confidence: Math.min(96, confidence + (breach ? 3 : -4)),
+      vote: breach ? "reject" : "hold",
+      signal: breach
+        ? `p05 usable liquidity is ${formatUsd(gap)} under the survival floor.`
+        : `p05 usable liquidity stays ${formatUsd(headroom)} above the survival floor, but variance is elevated.`,
+      explanation: "The forecast corridor compares usable cash, not just book cash, against the survival floor before approval.",
       contribution: 0.19,
-      detectedFeatures: ["p05 breach", "p50 watch zone", "delayed inbound cover"],
+      detectedFeatures: [breach ? "p05 breach" : "p05 watch", "p50 corridor", "settlement calendar"],
     },
     {
       modelName: "DecisionAggregator",
-      status: "blocked",
-      confidence: 94,
-      vote: "escalate",
-      signal: "3 reject votes, 2 hold votes, 1 escalate vote; no model supports automatic approval.",
-      explanation: "The ensemble blocks auto-release and routes the case to contingency and human approval.",
+      status: autoApprovalUnsafe ? "blocked" : "warning",
+      confidence: Math.min(97, confidence + 2),
+      vote: autoApprovalUnsafe ? "escalate" : "hold",
+      signal: autoApprovalUnsafe
+        ? "Ensemble blocks automatic release and asks treasury to review contingency options."
+        : "Ensemble allows watch-listed routing but asks treasury to monitor the next settlement window.",
+      explanation: "The aggregator turns model votes into an operator-safe action, not just a numeric score.",
       contribution: 0.08,
-      detectedFeatures: ["governance blocker", "contingency needed", "manual approval required"],
+      detectedFeatures: autoApprovalUnsafe
+        ? ["governance blocker", "contingency needed", "manual approval required"]
+        : ["watch-list", "monitor settlement", "keep audit trail"],
     },
   ];
 
   return {
     incidentId: incident.id,
-    finalVerdict: "High probability usable-liquidity breach detected",
-    severity: "high",
-    confidence: 91,
+    finalVerdict,
+    severity,
+    confidence,
     riskScore: Math.round(boundedRiskScore),
-    rootCause:
-      "The New York book balance looks sufficient, but scheduled debit timing plus T+1 cover availability drops p05 usable liquidity below the survival floor.",
-    explanation:
-      "The ensemble agrees that this is a real liquidity incident rather than a map rendering issue. Coordinates are valid, telemetry is abnormal, known events explain timing, and governance should block automatic approval.",
+    rootCause,
+    explanation: `The ensemble evaluated ${incident.city} using live telemetry: p05, p50, survival floor, scheduled debit, settlement delay, anomaly z-score, HHI, ES99, and CCRI delta. The report changes when the generated anomaly changes.`,
     evidence: [
-      `p05 balance ${formatUsd(incident.telemetry.p05Balance)} is below required buffer ${formatUsd(incident.telemetry.requiredBuffer)}.`,
+      breach
+        ? `p05 balance ${formatUsd(incident.telemetry.p05Balance)} is ${formatUsd(gap)} below required buffer ${formatUsd(incident.telemetry.requiredBuffer)}.`
+        : `p05 balance ${formatUsd(incident.telemetry.p05Balance)} remains ${formatUsd(headroom)} above required buffer ${formatUsd(incident.telemetry.requiredBuffer)}.`,
       `Scheduled debit ${formatUsd(incident.telemetry.scheduledDebit)} lands before inbound cover becomes usable.`,
       `MAD z-score ${incident.telemetry.anomalyZScore.toFixed(1)} exceeds the anomaly threshold.`,
       `HHI ${incident.telemetry.hhiAfterStress.toFixed(3)} is above the 0.25 concentration threshold.`,
       `ES99 tail loss estimate is ${formatUsd(incident.telemetry.es99Loss)}.`,
     ],
-    recommendations: [
-      "Hold automatic release until SWIFT cover is confirmed in the New York usability window.",
-      "Prefund the New York account or throttle the last 20% of the payout batch.",
-      "Create an incident ticket for treasury owner review before Fedwire cut-off.",
-      "Keep the governance gate blocked until survival floor and HHI constraints pass.",
-    ],
+    recommendations: autoApprovalUnsafe
+      ? [
+          `Hold automatic release until ${incident.city} cover is confirmed in the local usability window.`,
+          `Prefund ${incident.city} or throttle the last 20% of the scheduled debit.`,
+          `Create an incident ticket for ${incident.bank} treasury owner review before cut-off.`,
+          "Keep the governance gate blocked until survival floor and HHI constraints pass.",
+        ]
+      : [
+          `Keep ${incident.city} on watch until the next settlement window clears.`,
+          "Allow only policy-approved internal liquidity movement.",
+          "Refresh the forecast after new account conditions are generated.",
+        ],
     nextActions: [
       "Open incident details",
       "Create treasury ticket",
@@ -547,7 +573,7 @@ export function runDeterministicLiquidityEnsemble(incident: LiquidityIncident): 
       "Close incident after confirmation",
     ],
     modelVotes,
-    generatedAt: "2026-05-18T09:06:00Z",
+    generatedAt: new Date().toISOString(),
   };
 }
 
@@ -603,8 +629,16 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
-function formatShortNumber(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
-  }).format(value);
+function severityForRisk(riskScore: number): IncidentSeverity {
+  if (riskScore >= 86) return "critical";
+  if (riskScore >= 68) return "high";
+  if (riskScore >= 44) return "medium";
+  return "low";
+}
+
+function severityLabel(severity: IncidentSeverity) {
+  if (severity === "critical") return "Critical";
+  if (severity === "high") return "High";
+  if (severity === "medium") return "Medium";
+  return "Low";
 }

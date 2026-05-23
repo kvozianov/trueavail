@@ -135,10 +135,12 @@ Demo deterministic: без реальных банковских операци�
    - `Accept recommendation` — принятие safe recommendation.
    - `Close incident` — confirmation и закрытие инцидента.
    - `Deep Analytics For Jury` — proof cards по функциям.
-8. Открыть `/liquidity-control-tower` — отдельный operational map cockpit.
-9. Открыть `/judge` — one-page proof для жюри.
-10. Открыть `/technical` — математический аппарат, архитектура и OpenAPI.
-11. Открыть `/functions/forecast`, `/functions/stress`, `/functions/hhi`, `/functions/optimizer`, `/functions/governance`, `/functions/contingency` — drilldown по функциям.
+8. Открыть `/transfers` — отдельная вкладка `Переводы средств`: пользователь выбирает SWIFT treasury-command или TrueAvail blockchain rail, задаёт from/to/through/requirements и получает либо manual treasury receipt, либо encrypted-memo finality receipt. Счета, балансы, wallets, KYB и условия берутся из единого file-backed `treasury-ledger`.
+9. Открыть `/transfers/compliance` — кабинет аудитора/регулятора: публично виден encrypted memo, а с demo view key раскрывается compliance report на тех же ledger-данных.
+10. Открыть `/liquidity-control-tower` — отдельный operational map cockpit.
+11. Открыть `/judge` — one-page proof для жюри.
+12. Открыть `/technical` — математический аппарат, архитектура и OpenAPI.
+13. Открыть `/functions/forecast`, `/functions/stress`, `/functions/hhi`, `/functions/optimizer`, `/functions/governance`, `/functions/contingency` — drilldown по функциям.
 
 ## Главный сценарий
 
@@ -465,10 +467,10 @@ npm run backend:verify
 
 ## Деплой на Vercel
 
-Проект готов к Vercel как обычное Next.js приложение.
+Проект готов к Vercel как обычное Next.js приложение. Важно: приложение лежит во вложенной папке `liquidity-control-tower`, поэтому при импорте GitHub repo в Vercel нужно выбрать именно эту папку как Root Directory. Если деплоишь через CLI, запускай `vercel` из этой папки.
 
 ```bash
-npm install
+npm ci
 npm run build
 ```
 
@@ -476,20 +478,26 @@ npm run build
 
 | Setting | Value |
 |---|---|
+| Root Directory | `liquidity-control-tower` |
 | Framework Preset | Next.js |
-| Install Command | `npm install` |
+| Install Command | `npm ci` |
 | Build Command | `npm run build` |
 | Output Directory | оставить пустым |
+| Node.js | `>=20.9.0` |
 
 Environment variables:
 
 | Variable | Нужно ли |
 |---|---|
 | `BACKEND_URL` | опционально, только если есть внешний FastAPI backend |
+| `NEXT_PUBLIC_BLOCKCHAIN_SPLINE_SCENE` | опционально, по умолчанию используется встроенная Spline-сцена |
+| `TREASURY_LEDGER_DATA_DIR` | опционально, локальный override для demo ledger; на Vercel пустым |
 | `OPENAI_API_KEY` | опционально, только для live AI Council |
 | `ANTHROPIC_API_KEY` | опционально, только для live AI Council |
 
 Без `BACKEND_URL` Vercel использует safe static mock через `backend/artifacts`.
+
+Transfer demo хранит временное состояние ledger в JSON. Локально это `.data/treasury-ledger.json`, а на Vercel автоматически используется writable scratch space функции. Это подходит для demo-сессии, но не является persistent storage; для production нужно заменить store на Vercel Postgres/KV или внешний ledger API.
 
 ## Ограничение безопасности
 

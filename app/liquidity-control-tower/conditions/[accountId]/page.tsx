@@ -1,6 +1,8 @@
 import { ConditionDetailsView } from "@/components/liquidity/ConditionDetailsView";
 import { conditionAccountIds } from "@/lib/account-condition-details";
 
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
   return conditionAccountIds.map((accountId) => ({ accountId }));
 }
