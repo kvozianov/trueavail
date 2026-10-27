@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+build
+coverage
+docs
+npm-debug.log*
+.env*
+!.env.example
+.DS_Store
+*.tsbuildinfo
+Dockerfile
+.dockerignore
