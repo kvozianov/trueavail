@@ -99,6 +99,9 @@ Pages:
 - `/backtest`: run backtest, table per horizon, chart of pinball P50 vs baseline by horizon, coverage line vs 0.9 target, plain-language summary.
 - `/what-if`: list of scheduled flows with editable date shift / amount / remove, "Run scenario" → before/after alerts and overlaid fan charts.
 - `/data`: generate synthetic (accounts, days, seed) or upload CSV; shows validation warnings and row-level 422 errors; links to the sample files served by `GET /api/data/samples/{name}`.
+- `/how-it-works`: plain-language explainer (problem, pipeline diagram, model, backtest numbers, limitations).
+
+Static demo (`NEXT_PUBLIC_DEMO=1`, `npm run build:demo`, deployed to Vercel via `vercel.json`): a static export that reads responses the real backend precomputed into `frontend/public/demo/` (`backend/scripts/export_demo.py`, `make demo-data`). It is precomputed output, not a fallback: live-mode pages never fetch it (only `/how-it-works` embeds its numbers at build time). Generate/upload/re-run are hidden; what-if offers the precomputed scenarios, each built only from supported adjustments.
 
 Rules: `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`). If the backend is unreachable show a clear error banner; no fake data fallback. Every screen states "Synthetic data — demo". English UI only. Light/dark via `prefers-color-scheme`. recharts for charts.
 

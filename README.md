@@ -2,6 +2,10 @@
 
 TrueAvail forecasts the next 14 days of account balances for a company with several bank accounts and currencies, and flags **cash gaps**: days on which the pessimistic balance falls below the account's required buffer. Instead of a single number it produces a quantile corridor (P5 / P50 / P95), so the downside is visible before it happens.
 
+## Live demo
+
+**https://trueavail.vercel.app** serves results precomputed by the backend on the default synthetic dataset (regenerate them with `make demo-data`); `docker compose up` runs the full interactive pipeline with your own CSV, any what-if and new backtests. The [How it works](https://trueavail.vercel.app/how-it-works/) page (`/how-it-works`) explains the problem, the pipeline, the model and the backtest for a non-specialist reader.
+
 ![Dashboard](frontend/docs/screenshots/dashboard.png)
 
 > **Scope.** Data is synthetic (5 accounts × 120 days = 600 daily observations, reproducible seed) or a CSV you upload in the same format. The model is not calibrated on real bank data, there are no bank connections, and nothing moves money. The project started as a team entry at the NIS SynergyX Hackathon (May 2026, 1st place, FinTech & Business Solutions track); that version is preserved in tag [`hackathon-may-2026`](../../tree/hackathon-may-2026). This branch is the engineering rebuild.
@@ -18,7 +22,8 @@ TrueAvail forecasts the next 14 days of account balances for a company with seve
 | Synthetic data generator and CSV upload with row-level validation | `data.py` |
 | Datasets, scheduled flows and forecast runs stored in PostgreSQL (SQLite for tests) | `db.py` |
 | Stress scenarios and a PuLP/HiGHS rebalancing optimizer (secondary, kept from the hackathon version) | `stress.py`, `optimizer.py` |
-| Next.js dashboard: fan chart, alerts, backtest, what-if and data pages | `frontend/` |
+| Next.js dashboard: fan chart, alerts, backtest, what-if, data and how-it-works pages | `frontend/` |
+| Static demo: the backend's responses exported to JSON, served by a static build of the dashboard (`NEXT_PUBLIC_DEMO=1`) | `backend/scripts/export_demo.py`, `frontend/public/demo/`, `vercel.json` |
 
 ## Run it
 
@@ -40,7 +45,10 @@ make venv          # backend virtualenv
 make test          # backend test suite
 make backtest      # backtest on the default dataset
 make dev           # backend :8000 + frontend :3000 (SQLite)
+make demo-data     # re-export the static demo JSON into frontend/public/demo/
 ```
+
+Static demo build (what Vercel runs, see `vercel.json`): `cd frontend && npm ci && npm run build:demo` writes a static site to `frontend/out/` that reads `frontend/public/demo/*.json` instead of calling the API.
 
 ## Backtest results (default synthetic dataset)
 
@@ -113,10 +121,11 @@ Samples: [`backend/data/samples/`](backend/data/samples/).
 
 ```
 backend/    FastAPI app, ML pipeline, tests (pytest), Dockerfile
-frontend/   Next.js + TypeScript + Tailwind + recharts, Dockerfile
+frontend/   Next.js + TypeScript + Tailwind + recharts, Dockerfile; public/demo/ = precomputed demo JSON
 docs/       SPEC.md
 docker-compose.yml   PostgreSQL 16 + backend + frontend
-.github/workflows/   CI: backend tests, frontend lint/type-check/build, docker build
+vercel.json          static demo build for Vercel (frontend/out)
+.github/workflows/   CI: backend tests, frontend lint/type-check/build + static demo build, docker build
 ```
 
 ## Stack
