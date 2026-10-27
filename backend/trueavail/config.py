@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 VERSION = "0.2.0"
@@ -26,4 +27,7 @@ DATA_DIR = BACKEND_DIR / "data"
 REFERENCE_DIR = DATA_DIR / "reference"
 SAMPLES_DIR = DATA_DIR / "samples"
 
-CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+# Comma-separated extra origins (e.g. the deployed frontend) come from the environment.
+CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"] + [
+    origin.strip() for origin in os.environ.get("CORS_ORIGINS", "").split(",") if origin.strip()
+]

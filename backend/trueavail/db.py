@@ -104,8 +104,18 @@ SCHEDULED_FIELDS = [
 _engine: Engine | None = None
 
 
+# The public demo shares one database; keep it bounded.
+KEEP_DATASETS = int(os.environ.get("KEEP_DATASETS", "10"))
+KEEP_RUNS = int(os.environ.get("KEEP_RUNS", "200"))
+
+
 def database_url() -> str:
-    return os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    url = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    # Hosted Postgres providers hand out postgres:// or postgresql:// URLs; use the psycopg 3 driver.
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
 
 
 def get_engine() -> Engine:
@@ -171,7 +181,16 @@ def save_dataset(
         conn.execute(insert(history_rows), [{**row, "dataset_id": dataset_id} for row in history_records])
         if scheduled_records:
             conn.execute(insert(scheduled_flows), [{**row, "dataset_id": dataset_id} for row in scheduled_records])
+        _prune_datasets(conn)
     return int(dataset_id)
+
+
+def _prune_datasets(conn) -> None:
+    keep = select(datasets.c.id).order_by(datasets.c.id.desc()).limit(KEEP_DATASETS).subquery()
+    stale = select(datasets.c.id).where(datasets.c.id.not_in(select(keep.c.id)))
+    for table in (forecast_runs, scheduled_flows, history_rows):
+        conn.execute(delete(table).where(table.c.dataset_id.in_(stale)))
+    conn.execute(delete(datasets).where(datasets.c.id.in_(stale)))
 
 
 def latest_dataset_id() -> int | None:
@@ -232,6 +251,7 @@ def record_run(
             )
             .returning(forecast_runs.c.id)
         ).scalar_one()
+        conn.execute(delete(forecast_runs).where(forecast_runs.c.id <= run_id - KEEP_RUNS))
     return int(run_id)
 
 
