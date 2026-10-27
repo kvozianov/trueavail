@@ -50,3 +50,6 @@ __pycache__/
 .venv/
 
 *.db
+
+# local tool state
+.omx/
