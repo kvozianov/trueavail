@@ -1,1 +1,1 @@
-"""Backend package for the Liquidity Control Tower MVP."""
+"""TrueAvail backend (run commands from backend/ so the trueavail package is importable)."""
