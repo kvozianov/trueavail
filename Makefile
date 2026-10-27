@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV := backend/.venv
 PY := $(abspath $(VENV))/bin/python
 
-.PHONY: venv data test backtest dev dev-backend dev-frontend up down
+.PHONY: venv data demo-data test backtest dev dev-backend dev-frontend up down
 
 $(VENV)/bin/python:
 	$(PYTHON) -m venv $(VENV)
@@ -12,6 +12,9 @@ venv: $(VENV)/bin/python
 
 data: venv  ## regenerate backend/data/samples/*.csv (seed 42)
 	cd backend && $(PY) -m scripts.generate_samples
+
+demo-data: venv  ## precompute the static demo JSON into frontend/public/demo/
+	cd backend && $(PY) -m scripts.export_demo
 
 test: venv  ## backend test suite
 	cd backend && $(PY) -m pytest -q
