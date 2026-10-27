@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { AlertsList } from "@/components/AlertsList";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import { FanChart } from "@/components/FanChart";
-import { Button, Card, Loading, PageHeader, Stat, inputClass } from "@/components/ui";
+import { WhatIfResult } from "@/components/WhatIfResult";
+import { Button, Card, Loading, PageHeader, inputClass } from "@/components/ui";
 import { api } from "@/lib/api";
-import { money, num, shortDate } from "@/lib/format";
-import type { Account, Adjustment, Alert, ScheduledFlow, WhatIfResponse } from "@/lib/types";
+import { shortDate } from "@/lib/format";
+import type { Adjustment, ScheduledFlow, WhatIfResponse } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
 const HORIZON = 14;
@@ -32,18 +31,6 @@ function toAdjustment(f: ScheduledFlow, e: Edit): Adjustment {
     ...(e.shift !== 0 ? { shift_days: e.shift } : {}),
     ...(e.remove ? { remove: true } : {}),
   };
-}
-
-/** Largest gap among alerts; delta.worst_gap_* is the same number without its currency. */
-function worstAlert(alerts: Alert[]): Alert | null {
-  return alerts.reduce<Alert | null>((w, a) => (!w || a.gap_amount > w.gap_amount ? a : w), null);
-}
-
-function gapHint(a: Alert | null, byId: Map<string, Account>): string {
-  if (!a) return "no gap";
-  const acc = byId.get(a.account_id);
-  const where = a.account_id === "consolidated" ? `consolidated ${a.currency}` : acc ? acc.label : a.account_id;
-  return `${where} · ${shortDate(a.date)}`;
 }
 
 export function WhatIfView() {
@@ -94,9 +81,6 @@ export function WhatIfView() {
   // Default chart account: first adjusted account, else first account with a gap before.
   const chartAccount =
     picked ?? sentAdjustments[0]?.account_id ?? result?.alerts_before[0]?.account_id ?? accs[0]?.account_id ?? null;
-  const chartAcc = chartAccount ? accById.get(chartAccount) : undefined;
-  const worstBefore = result ? worstAlert(result.alerts_before) : null;
-  const worstAfter = result ? worstAlert(result.alerts_after) : null;
 
   return (
     <>
@@ -289,104 +273,19 @@ export function WhatIfView() {
       </div>
 
       {result && (
-        <div className={`space-y-4 ${running ? "opacity-60" : ""}`}>
-          <Card
-            title="Scenario result"
-            subtitle={
-              sentAdjustments.length
-                ? `${sentAdjustments.length} adjustment${sentAdjustments.length > 1 ? "s" : ""} applied`
-                : "No adjustments: scenario equals baseline"
-            }
-          >
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Stat
-                label="Gap days removed"
-                value={<span className="text-good">{num(result.delta.gaps_removed)}</span>}
-              />
-              <Stat
-                label="Gap days added"
-                value={
-                  <span className={result.delta.gaps_added ? "text-crit" : ""}>{num(result.delta.gaps_added)}</span>
-                }
-              />
-              <Stat
-                label="Worst gap before"
-                value={worstBefore ? money(worstBefore.gap_amount, worstBefore.currency) : num(0)}
-                hint={gapHint(worstBefore, accById)}
-              />
-              <Stat
-                label="Worst gap after"
-                value={
-                  <span
-                    className={
-                      result.delta.worst_gap_after < result.delta.worst_gap_before
-                        ? "text-good"
-                        : result.delta.worst_gap_after > result.delta.worst_gap_before
-                          ? "text-crit"
-                          : ""
-                    }
-                  >
-                    {worstAfter ? money(worstAfter.gap_amount, worstAfter.currency) : num(0)}
-                  </span>
-                }
-                hint={gapHint(worstAfter, accById)}
-              />
-            </div>
-          </Card>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card title={`Alerts before (${result.alerts_before.length})`} className="min-w-0">
-              <AlertsList alerts={result.alerts_before} accounts={accs} onSelectAccount={setPicked} limit={5} />
-            </Card>
-            <Card title={`Alerts after (${result.alerts_after.length})`} className="min-w-0">
-              <AlertsList
-                alerts={result.alerts_after}
-                accounts={accs}
-                onSelectAccount={setPicked}
-                limit={5}
-                emptyText="No cash gaps in the horizon after the adjustments."
-              />
-            </Card>
-          </div>
-
-          <Card
-            title="Before vs after"
-            subtitle="Grey: baseline forecast. Blue: scenario forecast."
-            actions={
-              <select
-                aria-label="Account"
-                value={chartAccount ?? ""}
-                onChange={(e) => setPicked(e.target.value)}
-                className={`${inputClass} w-auto max-w-full`}
-              >
-                {accs.map((a) => (
-                  <option key={a.account_id} value={a.account_id}>
-                    {a.bank_name} · {a.label}
-                    {sentAdjustments.some((x) => x.account_id === a.account_id) ? " (adjusted)" : ""}
-                  </option>
-                ))}
-              </select>
-            }
-          >
-            {chartAcc ? (
-              <FanChart
-                points={result.scenario.points.filter((p) => p.account_id === chartAcc.account_id)}
-                compare={result.baseline.points.filter((p) => p.account_id === chartAcc.account_id)}
-                currency={chartAcc.currency}
-                labels={{ main: "Scenario", compare: "Baseline" }}
-                height={320}
-              />
-            ) : (
-              <p className="text-sm text-ink-muted">Select an account.</p>
-            )}
-            {chartAcc && (
-              <p className="tabular mt-2 text-xs text-ink-muted">
-                Settled balance {money(chartAcc.settled_balance, chartAcc.currency)} · required buffer{" "}
-                {money(chartAcc.required_buffer, chartAcc.currency)}
-              </p>
-            )}
-          </Card>
-        </div>
+        <WhatIfResult
+          result={result}
+          accounts={accs}
+          subtitle={
+            sentAdjustments.length
+              ? `${sentAdjustments.length} adjustment${sentAdjustments.length > 1 ? "s" : ""} applied`
+              : "No adjustments: scenario equals baseline"
+          }
+          chartAccount={chartAccount}
+          onPickAccount={setPicked}
+          adjustedAccounts={sentAdjustments.map((x) => x.account_id)}
+          dimmed={running}
+        />
       )}
     </>
   );

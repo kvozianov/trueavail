@@ -8,7 +8,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { FanChart } from "@/components/FanChart";
 import { ModelCard } from "@/components/ModelCard";
 import { Button, Card, Loading, PageHeader } from "@/components/ui";
-import { api } from "@/lib/api";
+import { DEMO, api } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 
 const HORIZON = 14;
@@ -49,9 +49,12 @@ export function DashboardView() {
         title="Liquidity dashboard"
         description={`${HORIZON}-day balance corridors per account. A cash gap is a day where the pessimistic (P5) balance falls below the account's required buffer.`}
         actions={
-          <Button onClick={refresh} disabled={forecast.loading || alerts.loading}>
-            {forecast.loading ? "Running…" : "Re-run forecast"}
-          </Button>
+          // The static demo serves one precomputed run; re-running needs the backend.
+          DEMO ? undefined : (
+            <Button onClick={refresh} disabled={forecast.loading || alerts.loading}>
+              {forecast.loading ? "Running…" : "Re-run forecast"}
+            </Button>
+          )
         }
       />
       <ErrorBanner error={error} onRetry={retry} retrying={anyLoading} />

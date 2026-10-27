@@ -1,6 +1,6 @@
 "use client";
 
-import { API_URL, isApiError } from "@/lib/api";
+import { API_URL, DEMO, isApiError } from "@/lib/api";
 import { Button } from "./ui";
 
 /** Shown whenever a request fails. Never replaced by fallback data. */
@@ -16,13 +16,15 @@ export function ErrorBanner({
   if (!error) return null;
   const e = isApiError(error) ? error : null;
   const unreachable = e?.kind === "network";
-  const title = unreachable
-    ? "Backend unreachable"
-    : e?.kind === "validation"
-      ? "The backend rejected the request"
-      : e?.kind === "http"
-        ? `Backend error (${e.status})`
-        : "Request failed";
+  const title = DEMO
+    ? "Could not load the precomputed demo data"
+    : unreachable
+      ? "Backend unreachable"
+      : e?.kind === "validation"
+        ? "The backend rejected the request"
+        : e?.kind === "http"
+          ? `Backend error (${e.status})`
+          : "Request failed";
 
   return (
     <div role="alert" className="mb-4 rounded-lg border border-[var(--critical)] bg-[var(--critical-bg)] p-4 text-sm">
@@ -32,7 +34,7 @@ export function ErrorBanner({
           <p className="mt-1 break-all text-ink-2">
             Tried: <code className="font-mono text-xs">{e ? `${e.method} ${e.url}` : API_URL}</code>
           </p>
-          {unreachable && (
+          {unreachable && !DEMO && (
             <p className="mt-1 text-ink-2">
               Start the API (<code className="font-mono text-xs">make dev</code> or{" "}
               <code className="font-mono text-xs">docker compose up</code>) or point{" "}

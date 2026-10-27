@@ -1,0 +1,1 @@
+{"status":"ok","version":"0.2.0","model_available":true,"dataset":{"source":"synthetic","seed":42,"rows":600,"accounts":5,"start":"2026-01-19","end":"2026-05-18"},"database":"sqlite"}

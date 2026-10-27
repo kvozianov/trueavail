@@ -216,4 +216,34 @@ export interface BacktestResponse {
   summary: BacktestSummary;
   baseline: string;
   folds_detail: BacktestFold[];
+  /** Wall-clock time of the run on the backend. */
+  elapsed_seconds?: number;
+}
+
+/** Demo mode (NEXT_PUBLIC_DEMO=1): a what-if scenario precomputed by backend/scripts/export_demo.py. */
+export interface DemoScenarioSummary {
+  id: string;
+  title: string;
+  description: string;
+  /** Path relative to /demo/. */
+  file: string;
+  delta: WhatIfDelta;
+}
+
+/** The full `/api/whatif/run` response plus the scenario definition that produced it. */
+export interface DemoScenario extends WhatIfResponse {
+  id: string;
+  title: string;
+  description: string;
+  adjustments: Adjustment[];
+}
+
+export interface DemoManifest {
+  generated_at: string;
+  backend_version: string;
+  git_commit: { sha: string | null; backend_dirty: boolean | null };
+  generator: string;
+  dataset: DatasetInfo;
+  model_available: boolean;
+  files: { path: string; bytes: number }[];
 }

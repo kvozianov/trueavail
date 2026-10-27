@@ -6,6 +6,10 @@
  *   Failures surface as ApiError; there is no fallback to bundled data.
  * - fixtures: NEXT_PUBLIC_USE_FIXTURES=1 serves typed sample responses from
  *   src/lib/fixtures without any network call. The UI shows a "Fixtures" badge.
+ * - demo: NEXT_PUBLIC_DEMO=1 (static export for hosting without a backend) reads
+ *   responses that the real backend precomputed into public/demo/*.json
+ *   (backend/scripts/export_demo.py, `make demo-data`). Only the default requests exist
+ *   there; generate/upload/custom what-if are not available and the UI hides them.
  */
 import type {
   Account,
@@ -13,6 +17,9 @@ import type {
   BacktestRequest,
   BacktestResponse,
   DatasetSummary,
+  DemoManifest,
+  DemoScenario,
+  DemoScenarioSummary,
   ForecastRequest,
   ForecastResponse,
   GenerateRequest,
@@ -25,7 +32,10 @@ import type {
 } from "./types";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
-export const USE_FIXTURES = process.env.NEXT_PUBLIC_USE_FIXTURES === "1";
+export const DEMO = process.env.NEXT_PUBLIC_DEMO === "1";
+export const USE_FIXTURES = !DEMO && process.env.NEXT_PUBLIC_USE_FIXTURES === "1";
+/** Where the static demo keeps its precomputed JSON and sample CSVs. */
+export const DEMO_BASE = "/demo";
 
 export type ApiErrorKind = "network" | "http" | "validation" | "parse";
 
@@ -92,13 +102,13 @@ type Query = Record<string, string | number | undefined | null>;
 async function request<T>(
   method: "GET" | "POST",
   path: string,
-  opts: { query?: Query; json?: unknown; form?: FormData; signal?: AbortSignal } = {},
+  opts: { query?: Query; json?: unknown; form?: FormData; signal?: AbortSignal; base?: string } = {},
 ): Promise<T> {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(opts.query ?? {})) {
     if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
   }
-  const url = `${API_URL}${path}${qs.size ? `?${qs}` : ""}`;
+  const url = `${opts.base ?? API_URL}${path}${qs.size ? `?${qs}` : ""}`;
 
   const init: RequestInit = { method, signal: opts.signal, headers: { Accept: "application/json" } };
   if (opts.json !== undefined) {
@@ -156,19 +166,55 @@ async function fx() {
   return mod;
 }
 
+const demoCache = new Map<string, Promise<unknown>>();
+
+/** Static demo: GET /demo/<file> once per page load (shared by every caller); failures are not cached. */
+function demo<T>(file: string): Promise<T> {
+  let p = demoCache.get(file) as Promise<T> | undefined;
+  if (!p) {
+    p = request<T>("GET", `${DEMO_BASE}/${file}`, { base: "" });
+    p.catch(() => demoCache.delete(file));
+    demoCache.set(file, p);
+  }
+  return p;
+}
+
+function notInDemo(what: string): Promise<never> {
+  return Promise.reject(
+    new ApiError({
+      kind: "http",
+      message: `${what} is not available in the static demo`,
+      url: DEMO_BASE,
+      method: "GET",
+      details: ["Run the full pipeline locally with docker compose up."],
+    }),
+  );
+}
+
 export const api = {
   health: (signal?: AbortSignal) =>
-    USE_FIXTURES ? fx().then((m) => m.health) : request<HealthResponse>("GET", "/health", { signal }),
+    DEMO
+      ? demo<HealthResponse>("health.json")
+      : USE_FIXTURES
+        ? fx().then((m) => m.health)
+        : request<HealthResponse>("GET", "/health", { signal }),
 
   accounts: (signal?: AbortSignal) =>
-    USE_FIXTURES ? fx().then((m) => m.accounts) : request<Account[]>("GET", "/api/accounts", { signal }),
+    DEMO
+      ? demo<Account[]>("accounts.json")
+      : USE_FIXTURES
+        ? fx().then((m) => m.accounts)
+        : request<Account[]>("GET", "/api/accounts", { signal }),
 
   generateData: (body: GenerateRequest) =>
-    USE_FIXTURES
-      ? fx().then((m) => m.generateDataset(body))
-      : request<DatasetSummary>("POST", "/api/data/generate", { json: body }),
+    DEMO
+      ? notInDemo("Generating a dataset")
+      : USE_FIXTURES
+        ? fx().then((m) => m.generateDataset(body))
+        : request<DatasetSummary>("POST", "/api/data/generate", { json: body }),
 
   uploadData: (history: File, scheduled?: File | null) => {
+    if (DEMO) return notInDemo("CSV upload");
     if (USE_FIXTURES) return fx().then((m) => m.uploadDataset(history, scheduled ?? null));
     const form = new FormData();
     form.append("file", history);
@@ -177,35 +223,56 @@ export const api = {
   },
 
   history: (accountId?: string, signal?: AbortSignal) =>
-    USE_FIXTURES
-      ? fx().then((m) => m.historyFor(accountId))
-      : request<HistoryRow[]>("GET", "/api/data/history", { query: { account_id: accountId }, signal }),
+    DEMO
+      ? demo<HistoryRow[]>("history.json").then((rows) =>
+          accountId ? rows.filter((r) => r.account_id === accountId) : rows,
+        )
+      : USE_FIXTURES
+        ? fx().then((m) => m.historyFor(accountId))
+        : request<HistoryRow[]>("GET", "/api/data/history", { query: { account_id: accountId }, signal }),
 
   scheduled: (signal?: AbortSignal) =>
-    USE_FIXTURES
-      ? fx().then((m) => m.scheduledFlows)
-      : request<ScheduledFlow[]>("GET", "/api/data/scheduled", { signal }),
+    DEMO
+      ? demo<ScheduledFlow[]>("scheduled.json")
+      : USE_FIXTURES
+        ? fx().then((m) => m.scheduledFlows)
+        : request<ScheduledFlow[]>("GET", "/api/data/scheduled", { signal }),
 
+  /** Demo mode serves the precomputed default run (14-day horizon) whatever the request. */
   runForecast: (body: ForecastRequest = { horizon_days: 14 }, signal?: AbortSignal) =>
-    USE_FIXTURES
-      ? fx().then((m) => m.forecast)
-      : request<ForecastResponse>("POST", "/api/forecast/run", { json: body, signal }),
+    DEMO
+      ? demo<ForecastResponse>("forecast.json")
+      : USE_FIXTURES
+        ? fx().then((m) => m.forecast)
+        : request<ForecastResponse>("POST", "/api/forecast/run", { json: body, signal }),
 
   alerts: (params: { quantile?: string; horizon_days?: number } = {}, signal?: AbortSignal) =>
-    USE_FIXTURES
-      ? fx().then((m) => m.alerts)
-      : request<AlertsResponse>("GET", "/api/alerts", {
-          query: { quantile: params.quantile ?? "p05", horizon_days: params.horizon_days ?? 14 },
-          signal,
-        }),
+    DEMO
+      ? demo<AlertsResponse>("alerts.json")
+      : USE_FIXTURES
+        ? fx().then((m) => m.alerts)
+        : request<AlertsResponse>("GET", "/api/alerts", {
+            query: { quantile: params.quantile ?? "p05", horizon_days: params.horizon_days ?? 14 },
+            signal,
+          }),
 
+  /** Demo mode serves the precomputed default backtest (14 d, 6 folds, 7-day step). */
   runBacktest: (body: BacktestRequest = {}, signal?: AbortSignal) =>
-    USE_FIXTURES
-      ? fx().then((m) => m.backtestFor(body))
-      : request<BacktestResponse>("POST", "/api/backtest/run", { json: body, signal }),
+    DEMO
+      ? demo<BacktestResponse>("backtest.json")
+      : USE_FIXTURES
+        ? fx().then((m) => m.backtestFor(body))
+        : request<BacktestResponse>("POST", "/api/backtest/run", { json: body, signal }),
 
   runWhatIf: (body: WhatIfRequest) =>
-    USE_FIXTURES
-      ? fx().then((m) => m.runWhatIf(body))
-      : request<WhatIfResponse>("POST", "/api/whatif/run", { json: body }),
+    DEMO
+      ? notInDemo("A custom what-if run")
+      : USE_FIXTURES
+        ? fx().then((m) => m.runWhatIf(body))
+        : request<WhatIfResponse>("POST", "/api/whatif/run", { json: body }),
+
+  /** Demo mode only: precomputed what-if scenarios and the export manifest. */
+  demoScenarios: () => demo<DemoScenarioSummary[]>("scenarios/index.json"),
+  demoScenario: (s: Pick<DemoScenarioSummary, "file">) => demo<DemoScenario>(s.file),
+  demoManifest: () => demo<DemoManifest>("manifest.json"),
 };

@@ -2,14 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { API_URL, USE_FIXTURES } from "@/lib/api";
+import { API_URL, DEMO, USE_FIXTURES } from "@/lib/api";
+import { REPO_URL } from "@/lib/links";
 
 const links = [
   { href: "/", label: "Dashboard" },
   { href: "/backtest", label: "Backtest" },
   { href: "/what-if", label: "What-if" },
   { href: "/data", label: "Data" },
+  { href: "/how-it-works", label: "How it works" },
 ];
+
+/** Static demo (NEXT_PUBLIC_DEMO=1): replaces the badges with one line under the header. */
+export function DemoBanner() {
+  return (
+    <div className="border-b border-line bg-surface-2">
+      <p className="mx-auto max-w-6xl px-4 py-2 text-xs leading-relaxed text-ink-2">
+        <span className="font-medium text-ink">Demo on synthetic data</span> (5 accounts × 120 days)
+        <span aria-hidden className="px-1.5 text-ink-muted">
+          ·
+        </span>
+        results precomputed by the backend
+        <span aria-hidden className="px-1.5 text-ink-muted">
+          ·
+        </span>
+        full pipeline: <code className="font-mono">docker compose up</code>
+        <span aria-hidden className="px-1.5 text-ink-muted">
+          —
+        </span>
+        <a href={REPO_URL} className="font-medium text-series-1 underline underline-offset-2">
+          GitHub
+        </a>
+      </p>
+    </div>
+  );
+}
 
 export function SyntheticBadge() {
   return (
@@ -47,7 +74,7 @@ export function Nav() {
           <span className="text-base font-semibold tracking-tight text-ink">TrueAvail</span>
           <span className="hidden text-xs text-ink-muted sm:inline">14-day liquidity forecast</span>
         </Link>
-        <nav aria-label="Main" className="order-3 -mx-1 flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto">
+        <nav aria-label="Main" className="order-3 -mx-1 flex w-full flex-wrap gap-1 sm:order-none sm:w-auto">
           {links.map((l) => {
             const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
             return (
@@ -64,11 +91,14 @@ export function Nav() {
             );
           })}
         </nav>
-        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-          <SyntheticBadge />
-          <ModeBadge />
-        </div>
+        {!DEMO && (
+          <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+            <SyntheticBadge />
+            <ModeBadge />
+          </div>
+        )}
       </div>
+      {DEMO && <DemoBanner />}
     </header>
   );
 }

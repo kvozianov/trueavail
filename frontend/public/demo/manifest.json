@@ -1,0 +1,92 @@
+{
+ "generated_at": "2026-10-27T17:31:50+00:00",
+ "backend_version": "0.2.0",
+ "git_commit": {
+  "sha": "0f41718e0d6501b107631d4d4c5bed9ac39fe9d9",
+  "backend_dirty": false
+ },
+ "generator": "backend/scripts/export_demo.py",
+ "dataset": {
+  "source": "synthetic",
+  "seed": 42,
+  "rows": 600,
+  "accounts": 5,
+  "start": "2026-01-19",
+  "end": "2026-05-18"
+ },
+ "model_available": true,
+ "files": [
+  {
+   "path": "health.json",
+   "bytes": 184
+  },
+  {
+   "path": "accounts.json",
+   "bytes": 798
+  },
+  {
+   "path": "history.json",
+   "bytes": 79711
+  },
+  {
+   "path": "scheduled.json",
+   "bytes": 1744
+  },
+  {
+   "path": "forecast.json",
+   "bytes": 19640
+  },
+  {
+   "path": "alerts.json",
+   "bytes": 3978
+  },
+  {
+   "path": "backtest.json",
+   "bytes": 4861
+  },
+  {
+   "path": "optimizer.json",
+   "bytes": 1979
+  },
+  {
+   "path": "stress.json",
+   "bytes": 6906
+  },
+  {
+   "path": "scenarios/payout-plus-2.json",
+   "bytes": 46949
+  },
+  {
+   "path": "scenarios/split-payout.json",
+   "bytes": 47996
+  },
+  {
+   "path": "scenarios/cancel-fee.json",
+   "bytes": 44188
+  },
+  {
+   "path": "scenarios/delay-card-settlement.json",
+   "bytes": 49347
+  },
+  {
+   "path": "scenarios/supplier-prepayment.json",
+   "bytes": 49914
+  },
+  {
+   "path": "scenarios/seasonal-dip.json",
+   "bytes": 54248
+  },
+  {
+   "path": "scenarios/index.json",
+   "bytes": 2133
+  },
+  {
+   "path": "samples/history_5accounts_120d.csv",
+   "bytes": 46531
+  },
+  {
+   "path": "samples/scheduled_flows.csv",
+   "bytes": 859
+  }
+ ]
+}

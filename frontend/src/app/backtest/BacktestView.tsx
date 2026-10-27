@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Button, Card, Field, Loading, PageHeader, Stat, inputClass } from "@/components/ui";
-import { api } from "@/lib/api";
+import { DEMO, api } from "@/lib/api";
 import { axisNumber, num, pct, shortDate } from "@/lib/format";
 import type { BacktestRequest, BacktestResponse } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
@@ -104,49 +104,73 @@ export function BacktestView() {
       />
       <ErrorBanner error={res.error} onRetry={res.reload} retrying={res.loading} />
 
-      <Card className="mb-4">
-        <form
-          className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            run();
-          }}
-        >
-          <Field label="Horizon (days)">
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={form.horizon_days}
-              onChange={setNum("horizon_days")}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Folds">
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={form.folds}
-              onChange={setNum("folds")}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Step (days)">
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={form.step_days}
-              onChange={setNum("step_days")}
-              className={inputClass}
-            />
-          </Field>
-          <Button type="submit" variant="primary" disabled={res.loading}>
-            {res.loading ? "Running…" : "Run backtest"}
-          </Button>
-        </form>
-      </Card>
+      {DEMO ? (
+        <Card className="mb-4">
+          <dl className="tabular grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            {(
+              [
+                ["Horizon", `${r?.horizon_days ?? DEFAULTS.horizon_days} days`],
+                ["Folds", String(r?.folds ?? DEFAULTS.folds)],
+                ["Step", `${r?.step_days ?? DEFAULTS.step_days} days`],
+                ["Backend run time", r?.elapsed_seconds != null ? `${r.elapsed_seconds.toFixed(1)} s` : "—"],
+              ] as const
+            ).map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-xs text-ink-muted">{k}</dt>
+                <dd className="font-medium text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs text-ink-muted">
+            Precomputed by the backend with the default parameters. Change them and re-run in the self-hosted version (
+            <code className="font-mono">docker compose up</code>).
+          </p>
+        </Card>
+      ) : (
+        <Card className="mb-4">
+          <form
+            className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run();
+            }}
+          >
+            <Field label="Horizon (days)">
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={form.horizon_days}
+                onChange={setNum("horizon_days")}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Folds">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={form.folds}
+                onChange={setNum("folds")}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Step (days)">
+              <input
+                type="number"
+                min={1}
+                max={30}
+                value={form.step_days}
+                onChange={setNum("step_days")}
+                className={inputClass}
+              />
+            </Field>
+            <Button type="submit" variant="primary" disabled={res.loading}>
+              {res.loading ? "Running…" : "Run backtest"}
+            </Button>
+          </form>
+        </Card>
+      )}
 
       {!r && res.loading && <Loading label="Running backtest…" />}
 

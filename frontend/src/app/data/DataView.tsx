@@ -4,8 +4,9 @@ import { useState } from "react";
 import { DatasetStrip } from "@/components/DatasetStrip";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { Button, Card, Field, Loading, PageHeader, inputClass } from "@/components/ui";
-import { API_URL, USE_FIXTURES, api } from "@/lib/api";
-import { num, shortDate } from "@/lib/format";
+import { API_URL, DEMO, DEMO_BASE, USE_FIXTURES, api } from "@/lib/api";
+import { money, num, shortDate } from "@/lib/format";
+import { REPO_URL } from "@/lib/links";
 import type { DatasetSummary, GenerateRequest, UploadResponse } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
@@ -15,8 +16,8 @@ const SAMPLES = [
   { name: "history_5accounts_120d.csv", label: "history" },
   { name: "scheduled_flows.csv", label: "scheduled flows" },
 ] as const;
-/** Default sample CSVs are served by the backend (`GET /api/data/samples/{name}`). */
-const sampleUrl = (name: string) => `${API_URL}/api/data/samples/${name}`;
+/** Default sample CSVs are served by the backend (`GET /api/data/samples/{name}`); the static demo ships copies. */
+const sampleUrl = (name: string) => (DEMO ? `${DEMO_BASE}/samples/${name}` : `${API_URL}/api/data/samples/${name}`);
 
 function Warnings({ warnings }: { warnings: string[] }) {
   if (!warnings.length) return <p className="mt-2 text-xs text-ink-muted">No validation warnings.</p>;
@@ -81,6 +82,37 @@ function SampleLink({ name, label }: { name: string; label: string }) {
     <a className="mt-2 inline-block text-series-1 underline underline-offset-2" href={sampleUrl(name)} download={name}>
       Download {name}
     </a>
+  );
+}
+
+function FormatCard() {
+  return (
+    <Card title="File format and samples">
+      <div className="grid gap-4 text-sm md:grid-cols-2">
+        <div className="min-w-0">
+          <h3 className="font-medium text-ink">Daily history (one row per account per day)</h3>
+          <pre className="mt-2 overflow-x-auto rounded-md bg-surface-2 p-2 font-mono text-xs text-ink-2">
+            {`date,account_id,bank_name,currency,net_flow,ending_balance,required_buffer
+2026-01-19,atlas-eur-operating,Atlas Bank,EUR,-12345.67,4300000.00,1000000`}
+          </pre>
+          <SampleLink {...SAMPLES[0]} />
+        </div>
+        <div className="min-w-0">
+          <h3 className="font-medium text-ink">Scheduled future flows</h3>
+          <pre className="mt-2 overflow-x-auto rounded-md bg-surface-2 p-2 font-mono text-xs text-ink-2">
+            {`flow_id,account_id,currency,amount,direction,expected_date,rail,description
+payout-2026-05-19,atlas-eur-operating,EUR,4100000,outflow,2026-05-19,SEPA,merchant payout`}
+          </pre>
+          <SampleLink {...SAMPLES[1]} />
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-ink-muted">
+        <code className="font-mono">direction</code> is <code className="font-mono">inflow</code> or{" "}
+        <code className="font-mono">outflow</code>. Settlement rails and bank holidays can move a flow&apos;s effective
+        date. The samples are the default dataset (seed 42){DEMO ? "" : " served by the backend"}; the same files live
+        in the repository under <code className="font-mono">backend/data/samples/</code>.
+      </p>
+    </Card>
   );
 }
 
@@ -247,32 +279,97 @@ export function DataView() {
           </Card>
         </div>
 
-        <Card title="File format and samples">
-          <div className="grid gap-4 text-sm md:grid-cols-2">
-            <div className="min-w-0">
-              <h3 className="font-medium text-ink">Daily history (one row per account per day)</h3>
-              <pre className="mt-2 overflow-x-auto rounded-md bg-surface-2 p-2 font-mono text-xs text-ink-2">
-                {`date,account_id,bank_name,currency,net_flow,ending_balance,required_buffer
-2026-01-19,atlas-eur-operating,Atlas Bank,EUR,-12345.67,4300000.00,1000000`}
-              </pre>
-              <SampleLink {...SAMPLES[0]} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-medium text-ink">Scheduled future flows</h3>
-              <pre className="mt-2 overflow-x-auto rounded-md bg-surface-2 p-2 font-mono text-xs text-ink-2">
-                {`flow_id,account_id,currency,amount,direction,expected_date,rail,description
-payout-2026-05-19,atlas-eur-operating,EUR,4100000,outflow,2026-05-19,SEPA,merchant payout`}
-              </pre>
-              <SampleLink {...SAMPLES[1]} />
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-ink-muted">
-            <code className="font-mono">direction</code> is <code className="font-mono">inflow</code> or{" "}
-            <code className="font-mono">outflow</code>. Settlement rails and bank holidays can move a flow&apos;s
-            effective date. The samples are the default dataset (seed 42) served by the backend; the same files live in
-            the repository under <code className="font-mono">backend/data/samples/</code>.
-          </p>
-        </Card>
+        <FormatCard />
+      </div>
+    </>
+  );
+}
+
+/** Static demo: no generate/upload (that needs the backend); shows what the demo runs on. */
+export function DemoDataView() {
+  const health = useApi("health", (s) => api.health(s));
+  const accounts = useApi("accounts", (s) => api.accounts(s));
+  const flows = useApi("scheduled", (s) => api.scheduled(s));
+  const manifest = useApi("demo:manifest", () => api.demoManifest());
+  const error = health.error ?? accounts.error ?? flows.error ?? manifest.error;
+  const sha = manifest.data?.git_commit.sha;
+
+  return (
+    <>
+      <PageHeader
+        title="Data"
+        description="The dataset behind this demo: a reproducible synthetic set produced by the backend's generator (seed 42). Every number on the other pages was computed from it by the backend."
+      />
+      <ErrorBanner
+        error={error}
+        onRetry={() => {
+          for (const r of [health, accounts, flows, manifest]) if (r.error) r.reload();
+        }}
+      />
+
+      <div className="space-y-4">
+        <div>
+          <h2 className="mb-2 text-sm font-semibold text-ink">Active dataset</h2>
+          {health.data ? <DatasetStrip health={health.data} /> : health.loading && <Loading label="Loading dataset…" />}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card
+            title="Accounts"
+            subtitle={flows.data ? `${flows.data.length} scheduled flows in the forecast window` : undefined}
+          >
+            {accounts.data ? (
+              <ul className="divide-y divide-line text-sm">
+                {accounts.data.map((a) => (
+                  <li key={a.account_id} className="flex flex-wrap items-baseline justify-between gap-x-3 py-1.5">
+                    <span className="min-w-0">
+                      <span className="font-medium text-ink">{a.bank_name}</span>{" "}
+                      <span className="text-ink-2">{a.label}</span>
+                    </span>
+                    <span className="tabular text-xs text-ink-muted">
+                      {money(a.settled_balance, a.currency)} · buffer {money(a.required_buffer, a.currency)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              accounts.loading && <Loading label="Loading accounts…" />
+            )}
+          </Card>
+
+          <Card title="Use your own data" subtitle="Generate a different synthetic set or upload a CSV.">
+            <p className="text-sm text-ink-2">
+              Upload your own CSV in the self-hosted version (<code className="font-mono">docker compose up</code>): the
+              backend validates it row by row, stores it in PostgreSQL and every page re-runs on it.
+            </p>
+            <pre className="mt-3 overflow-x-auto rounded-md bg-surface-2 p-2 font-mono text-xs text-ink-2">
+              {`git clone ${REPO_URL}
+cd trueavail && docker compose up --build
+# then open http://localhost:3000/data`}
+            </pre>
+            {manifest.data && (
+              <p className="tabular mt-3 text-xs text-ink-muted">
+                Demo data generated {manifest.data.generated_at.replace("T", " ").replace("+00:00", " UTC")} by backend{" "}
+                {manifest.data.backend_version}
+                {sha ? (
+                  <>
+                    {" "}
+                    at commit{" "}
+                    <a
+                      href={`${REPO_URL}/commit/${sha}`}
+                      className="font-mono text-series-1 underline underline-offset-2"
+                    >
+                      {sha.slice(0, 7)}
+                    </a>
+                  </>
+                ) : null}{" "}
+                (<code className="font-mono">make demo-data</code>).
+              </p>
+            )}
+          </Card>
+        </div>
+
+        <FormatCard />
       </div>
     </>
   );

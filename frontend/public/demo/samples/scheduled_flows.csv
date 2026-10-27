@@ -1,0 +1,8 @@
+flow_id,account_id,currency,amount,direction,expected_date,rail,description
+card-settlement-2026-05-18,atlas-eur-operating,EUR,3200000.00,inflow,2026-05-18,Card Clearing,card settlement from weekend merchant volume
+payout-2026-05-19,atlas-eur-operating,EUR,4100000.00,outflow,2026-05-19,SEPA,merchant payout
+usd-platform-2026-05-19,atlas-usd-operating,USD,1600000.00,inflow,2026-05-19,SWIFT,platform settlement from US PSP partner
+processing-fee-2026-05-21,atlas-eur-operating,EUR,850000.00,outflow,2026-05-21,SEPA,monthly processing partner fee
+reserve-topup-2026-05-21,nova-eur-reserve,EUR,950000.00,inflow,2026-05-21,SEPA,reserve account top-up
+gbp-payroll-2026-05-22,meridian-gbp-operating,GBP,900000.00,outflow,2026-05-22,Local Bank Transfer,UK payroll
+usd-payroll-2026-05-28,atlas-usd-operating,USD,1800000.00,outflow,2026-05-28,SWIFT,month-end payroll

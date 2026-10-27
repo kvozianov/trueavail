@@ -7,7 +7,9 @@
     "dev:fixtures": "NEXT_PUBLIC_USE_FIXTURES=1 next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:demo": "NEXT_PUBLIC_DEMO=1 next build",
+    "dev:demo": "NEXT_PUBLIC_DEMO=1 next dev"
   },
   "dependencies": {
     "next": "16.4.3",
