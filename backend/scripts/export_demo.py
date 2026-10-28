@@ -139,6 +139,14 @@ def _git_commit() -> dict[str, object]:
         return {"sha": None, "backend_dirty": None}
 
 
+def _worst(alerts: list[dict[str, object]]) -> dict[str, object] | None:
+    """Largest gap among alerts (what-if delta.worst_gap_* without its currency and date)."""
+    if not alerts:
+        return None
+    worst = max(alerts, key=lambda alert: float(alert["gap_amount"]))
+    return {key: worst[key] for key in ("account_id", "currency", "date", "gap_amount")}
+
+
 def _check(response, path: str):
     if response.status_code != 200:
         raise RuntimeError(f"{path} -> HTTP {response.status_code}: {response.text[:500]}")
@@ -207,6 +215,10 @@ def export(out_dir: Path) -> dict[str, object]:
                     "description": scenario["description"],
                     "file": f"scenarios/{scenario['id']}.json",
                     "delta": result["delta"],
+                    # The delta carries amounts only; the scenario list also needs where and in which currency.
+                    "accounts": sorted({str(adj["account_id"]) for adj in scenario["adjustments"]}),
+                    "worst_before": _worst(result["alerts_before"]),
+                    "worst_after": _worst(result["alerts_after"]),
                 }
             )
         write("scenarios/index.json", index)

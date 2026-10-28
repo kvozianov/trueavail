@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from scripts.export_demo import SCENARIOS, export
 
 
@@ -34,5 +36,12 @@ def test_export_demo_writes_parseable_files(tmp_path) -> None:
         scenario = json.loads((tmp_path / item["file"]).read_text())
         assert {"id", "title", "description", "adjustments", "baseline", "scenario", "delta"} <= scenario.keys()
         assert scenario["delta"] == item["delta"]
+        assert item["accounts"] == sorted({a["account_id"] for a in scenario["adjustments"]})
+        for side, alerts in (("worst_before", scenario["alerts_before"]), ("worst_after", scenario["alerts_after"])):
+            if alerts:
+                assert item[side]["gap_amount"] == max(a["gap_amount"] for a in alerts)
+            else:
+                assert item[side] is None
+        assert (item["worst_before"] or {}).get("gap_amount", 0) == pytest.approx(item["delta"]["worst_gap_before"])
     # Every scenario changes the gap picture; otherwise it is not worth showing.
     assert all(s["delta"]["gaps_removed"] or s["delta"]["gaps_added"] for s in index)
