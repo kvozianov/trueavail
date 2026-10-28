@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-10-27T17:31:50+00:00",
+ "generated_at": "2026-10-28T05:35:22+00:00",
  "backend_version": "0.2.0",
  "git_commit": {
-  "sha": "0f41718e0d6501b107631d4d4c5bed9ac39fe9d9",
+  "sha": "427647ad5c50fad1585449d941fad5ef5a278542",
   "backend_dirty": false
  },
  "generator": "backend/scripts/export_demo.py",
@@ -35,6 +35,10 @@
   {
    "path": "forecast.json",
    "bytes": 19640
+  },
+  {
+   "path": "explain.json",
+   "bytes": 42330
   },
   {
    "path": "alerts.json",
