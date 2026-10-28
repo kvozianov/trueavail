@@ -4,9 +4,13 @@ TrueAvail forecasts the next 14 days of account balances for a company with seve
 
 ## Live demo
 
-**https://trueavail.vercel.app** serves results precomputed by the backend on the default synthetic dataset (regenerate them with `make demo-data`); `docker compose up` runs the full interactive pipeline with your own CSV, any what-if and new backtests. The [How it works](https://trueavail.vercel.app/how-it-works/) page (`/how-it-works`) explains the problem, the pipeline, the model and the backtest for a non-specialist reader.
+**https://trueavail.vercel.app** serves results precomputed by the backend on the default synthetic dataset (regenerate them with `make demo-data`); `docker compose up` runs the full interactive pipeline with your own CSV, any what-if and new backtests. The overview (`/`) shows the accounts on a globe, a six-step model room that replays one forecast from the backend's own per-model output, and the backtest with its weak spots; the dashboard is at [`/forecast`](https://trueavail.vercel.app/forecast/), and [How it works](https://trueavail.vercel.app/how-it-works/) walks through the nine pipeline stages for a non-specialist reader.
 
-![Dashboard](frontend/docs/screenshots/dashboard.png)
+![Overview](frontend/docs/screenshots/overview.png)
+
+![Model room: the gap day](frontend/docs/screenshots/model-room.png)
+
+![Forecast dashboard](frontend/docs/screenshots/forecast.png)
 
 > **Scope.** Data is synthetic (5 accounts × 120 days = 600 daily observations, reproducible seed) or a CSV you upload in the same format. The model is not calibrated on real bank data, there are no bank connections, and nothing moves money. The project started as a team entry at the NIS SynergyX Hackathon (May 2026, 1st place, FinTech & Business Solutions track); that version is preserved in tag [`hackathon-may-2026`](../../tree/hackathon-may-2026). This branch is the engineering rebuild.
 
@@ -22,7 +26,8 @@ TrueAvail forecasts the next 14 days of account balances for a company with seve
 | Synthetic data generator and CSV upload with row-level validation | `data.py` |
 | Datasets, scheduled flows and forecast runs stored in PostgreSQL (SQLite for tests) | `db.py` |
 | Stress scenarios and a PuLP/HiGHS rebalancing optimizer (secondary, kept from the hackathon version) | `stress.py`, `optimizer.py` |
-| Next.js dashboard: fan chart, alerts, backtest, what-if, data and how-it-works pages | `frontend/` |
+| Model explanation: each component's own corridor next to the weighted blend, LightGBM gain importances, anomaly-flagged days (`GET /api/forecast/explain`) | `forecasting.py` |
+| Next.js site: overview with globe and model room, forecast dashboard, what-if, backtest, data and how-it-works pages; light and dark themes | `frontend/` |
 | Static demo: the backend's responses exported to JSON, served by a static build of the dashboard (`NEXT_PUBLIC_DEMO=1`) | `backend/scripts/export_demo.py`, `frontend/public/demo/`, `vercel.json` |
 
 ## Run it
@@ -33,7 +38,7 @@ Requires Docker.
 docker compose up --build
 ```
 
-- Dashboard: http://localhost:3000
+- Dashboard: http://localhost:3000 (overview), http://localhost:3000/forecast (dashboard)
 - API and interactive docs: http://localhost:8000/docs
 
 The first start creates the default synthetic dataset (seed 42) in PostgreSQL.
@@ -82,6 +87,8 @@ Shift the EUR 4.1M merchant payout by two days and remove a fee: the scenario re
 
 ![What-if](frontend/docs/screenshots/what-if.png)
 
+![How it works](frontend/docs/screenshots/how-it-works.png)
+
 ## API
 
 | Method | Path | Purpose |
@@ -122,8 +129,8 @@ Samples: [`backend/data/samples/`](backend/data/samples/).
 
 ```
 backend/    FastAPI app, ML pipeline, tests (pytest), Dockerfile
-frontend/   Next.js + TypeScript + Tailwind + recharts, Dockerfile; public/demo/ = precomputed demo JSON
-docs/       SPEC.md
+frontend/   Next.js + TypeScript + Tailwind, SVG charts, d3-geo globe, Dockerfile; public/demo/ = precomputed demo JSON
+docs/       SPEC.md; design/ = design system, page specs and the visual reference
 docker-compose.yml   PostgreSQL 16 + backend + frontend
 vercel.json          static demo build for Vercel (frontend/out)
 .github/workflows/   CI: backend tests, frontend lint/type-check/build + static demo build, docker build
@@ -131,4 +138,4 @@ vercel.json          static demo build for Vercel (frontend/out)
 
 ## Stack
 
-Python 3.12, FastAPI, pandas, LightGBM, scikit-learn, PuLP/HiGHS, SQLAlchemy, PostgreSQL · Next.js, TypeScript, Tailwind CSS, recharts · Docker Compose, GitHub Actions.
+Python 3.12, FastAPI, pandas, LightGBM, scikit-learn, PuLP/HiGHS, SQLAlchemy, PostgreSQL · Next.js, TypeScript, Tailwind CSS, motion, d3-geo · Docker Compose, GitHub Actions.
