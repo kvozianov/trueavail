@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrueAvail design reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   TOKENS (mirror of docs/design/tokens.css, light primary)
+   ================================================================ */
+:root{
+  --bg:#FFFFFF; --bg-2:#F6F7F8; --bg-3:#EEF0F2;
+  --ink:#101214; --ink-2:#4B5057; --ink-3:#6B7079; --ink-4:#9AA0A8;
+  --hairline:#E6E8EB; --hairline-2:#D5D9DE; --border-input:#8E949C;
+  --accent:#2F4BD9; --accent-ink:#2439B0; --accent-tint:#EEF1FD; --accent-band:rgba(47,75,217,.14);
+  --gap:#C0282A; --gap-fill:#DC3B3E; --gap-tint:#FDEEEE; --gap-band:rgba(220,59,62,.09);
+  --warn:#8A5A00; --warn-fill:#E8A400; --warn-tint:#FFF6E0;
+  --good:#1B7A41; --good-fill:#22A45B; --good-tint:#EAF6EE;
+  --c-actual:#101214; --c-accent:#2F4BD9; --c-baseline:#D4691E; --c-gbdt:#0BA08F; --c-ewma:#9B59D6; --c-before:#8B9098; --c-before-band:rgba(139,144,152,.18);
+  --font-display:"Instrument Sans",system-ui,sans-serif; --font-body:"Inter",system-ui,sans-serif; --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r-1:6px; --r-2:10px; --r-3:14px; --r-4:20px; --r-pill:999px;
+  --shadow-card:0 1px 2px rgba(16,18,20,.04),0 8px 24px -12px rgba(16,18,20,.12);
+  --shadow-hover:0 1px 2px rgba(16,18,20,.05),0 16px 32px -14px rgba(16,18,20,.18);
+  --shadow-pop:0 2px 4px rgba(16,18,20,.06),0 20px 40px -12px rgba(16,18,20,.22);
+  --ease:cubic-bezier(.2,0,0,1); --ease-in:cubic-bezier(.4,0,1,1); --ease-out:cubic-bezier(0,0,.2,1);
+}
+.dark{
+  --bg:#0E1013; --bg-2:#16181C; --bg-3:#1D2026; --ink:#F2F3F5; --ink-2:#B6BAC1; --ink-3:#8B9098; --ink-4:#5C636B;
+  --hairline:#262A31; --hairline-2:#30353D; --border-input:#656C75;
+  --accent:#7388F0; --accent-ink:#9DACF6; --accent-tint:#1A2040; --accent-band:rgba(115,136,240,.20);
+  --gap:#F0706F; --gap-fill:#E25553; --gap-tint:#2C1719; --gap-band:rgba(226,85,83,.14);
+  --warn:#F2B84B; --warn-fill:#D99A1E; --warn-tint:#2A2113; --good:#4FC27C; --good-fill:#2E9E5B; --good-tint:#13251A;
+  --c-actual:#F2F3F5; --c-accent:#7388F0; --c-baseline:#D2782F; --c-gbdt:#1BA592; --c-ewma:#9E74E0; --c-before:#8B9098;
+  --shadow-card:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+}
+/* ================================================================
+   REFERENCE CHROME (not part of the product)
+   ================================================================ */
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{margin:0;background:#DDE0E4;font-family:var(--font-body);color:var(--ink);font-size:15px;line-height:1.55}
+.ref-head{max-width:1440px;margin:40px auto 0;padding:0 8px;font-family:var(--font-mono);font-size:12px;color:#4B5057;letter-spacing:.06em;text-transform:uppercase}
+.ref-head b{color:#101214}
+.frame{width:1440px;margin:12px auto 56px;background:var(--bg);color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.08),0 24px 60px -24px rgba(0,0,0,.25);overflow:hidden;position:relative}
+.frame.auto{width:1440px}
+.wrap{margin:0 auto;padding:0 120px;width:1440px}
+.phones{display:flex;gap:40px;justify-content:center;margin:12px auto 56px;width:1440px}
+.phone{width:375px;background:var(--bg);box-shadow:0 2px 6px rgba(0,0,0,.08),0 24px 60px -24px rgba(0,0,0,.25);overflow:hidden;position:relative;flex:none}
+/* ================================================================
+   PRODUCT PRIMITIVES
+   ================================================================ */
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.eyebrow.accent{color:var(--accent)}
+.eyebrow .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:1px}
+h1,h2,h3{font-family:var(--font-display);margin:0;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+.display{font-size:64px;line-height:1.02;letter-spacing:-.028em}
+.h1{font-size:36px;line-height:1.1}
+.h2{font-size:30px;line-height:1.12;letter-spacing:-.022em}
+.h3{font-size:20px;line-height:1.3;letter-spacing:-.012em}
+.h4{font-family:var(--font-body);font-size:15px;font-weight:600;letter-spacing:-.005em}
+.lead{font-size:18px;line-height:1.5;color:var(--ink-2)}
+.body{font-size:15px;color:var(--ink-2)}
+.small{font-size:13px;line-height:1.45;color:var(--ink-3)}
+.micro{font-size:12px;line-height:1.4;color:var(--ink-3)}
+.mono{font-family:var(--font-mono)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1,"ss01" 1}
+.ink{color:var(--ink)} .ink2{color:var(--ink-2)} .gapc{color:var(--gap)} .goodc{color:var(--good)} .warnc{color:var(--warn)} .accc{color:var(--accent)}
+code,.code{font-family:var(--font-mono);font-size:.92em;background:var(--bg-2);padding:1px 6px;border-radius:4px;color:var(--ink)}
+a{color:inherit}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 22px;border-radius:var(--r-pill);font:500 15px/1 var(--font-body);letter-spacing:-.005em;border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s var(--ease),transform .15s var(--ease),box-shadow .15s var(--ease)}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.btn-primary{background:var(--ink);color:var(--bg)}
+.btn-primary.hover{background:#2A2E34;box-shadow:var(--shadow-hover)}
+.btn-primary.active{background:#000;transform:translateY(1px)}
+.btn-secondary{background:var(--bg);color:var(--ink);border-color:var(--hairline-2)}
+.btn-secondary.hover{background:var(--bg-2);border-color:var(--ink-4)}
+.btn-ghost{background:transparent;color:var(--ink-2)}
+.btn-ghost.hover{background:var(--bg-2);color:var(--ink)}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-danger{background:var(--gap-tint);color:var(--gap);border-color:transparent}
+.btn.sm{height:34px;padding:0 14px;font-size:13px}
+.btn.lg{height:52px;padding:0 28px;font-size:16px}
+.btn.focus{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--accent)}
+.btn.disabled{opacity:.42;pointer-events:none}
+.btn.loading .spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* chips / badges */
+.chip{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px 0 9px;border-radius:var(--r-pill);font:500 12.5px/1 var(--font-body);border:1px solid var(--hairline-2);color:var(--ink-2);background:var(--bg)}
+.chip .d{width:7px;height:7px;border-radius:50%;background:var(--ink-4)}
+.chip.gap{background:var(--gap-tint);color:var(--gap);border-color:transparent}.chip.gap .d{background:var(--gap-fill)}
+.chip.warn{background:var(--warn-tint);color:var(--warn);border-color:transparent}.chip.warn .d{background:var(--warn-fill)}
+.chip.good{background:var(--good-tint);color:var(--good);border-color:transparent}.chip.good .d{background:var(--good-fill)}
+.chip.accent{background:var(--accent-tint);color:var(--accent-ink);border-color:transparent}.chip.accent .d{background:var(--accent)}
+.chip.mono{font-family:var(--font-mono);font-size:12px;letter-spacing:.02em}
+.tag{white-space:nowrap;display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:var(--r-1);font:500 11.5px/1 var(--font-mono);letter-spacing:.04em;background:var(--bg-3);color:var(--ink-2)}
+.tag.in{background:var(--good-tint);color:var(--good)} .tag.out{background:var(--gap-tint);color:var(--gap)}
+/* cards: no boxy gray borders — hairline at 6% ink + soft lift */
+.card{background:var(--bg);border:1px solid rgba(16,18,20,.06);border-radius:var(--r-3);box-shadow:var(--shadow-card)}
+.dark .card{border-color:rgba(255,255,255,.07)}
+.card.tonal{background:var(--bg-2);border-color:transparent;box-shadow:none}
+.card.flat{box-shadow:none;border-color:var(--hairline)}
+.card.hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
+.card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),var(--shadow-card)}
+.card-h{padding:18px 20px 0}
+.card-b{padding:16px 20px 20px}
+/* inputs */
+.field{display:flex;flex-direction:column;gap:6px;width:240px}
+.label{font-size:13px;font-weight:500;color:var(--ink)}
+.input{white-space:nowrap;overflow:hidden;height:40px;border:1px solid var(--border-input);border-radius:var(--r-2);padding:0 12px;font:400 15px var(--font-body);color:var(--ink);background:var(--bg);display:flex;align-items:center;gap:8px}
+.input .ph{color:var(--ink-4)}
+.input .suffix{margin-left:auto;font-family:var(--font-mono);font-size:12px;color:var(--ink-3)}
+.input.focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,75,217,.18)}
+.input.error{border-color:var(--gap-fill);box-shadow:0 0 0 3px rgba(220,59,62,.14)}
+.input.disabled{background:var(--bg-2);color:var(--ink-4);border-color:var(--hairline-2)}
+.input.num{font-family:var(--font-mono);font-size:14px}
+.hint{font-size:12.5px;color:var(--ink-3)} .hint.err{color:var(--gap)}
+.select{justify-content:space-between}
+.select svg{width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:1.75}
+.seg{display:inline-flex;background:var(--bg-3);border-radius:var(--r-pill);padding:3px;gap:2px}
+.seg span{white-space:nowrap;height:30px;padding:0 14px;border-radius:var(--r-pill);display:inline-flex;align-items:center;font:500 13px var(--font-body);color:var(--ink-2)}
+.seg span.on{background:var(--bg);color:var(--ink);box-shadow:0 1px 2px rgba(16,18,20,.08),0 1px 0 rgba(16,18,20,.03)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--hairline)}
+.tabs span{padding:10px 0 12px;font:500 14px var(--font-body);color:var(--ink-3);position:relative}
+.tabs span.on{color:var(--ink)}
+.tabs span.on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--ink);border-radius:2px}
+.tabs span.hover{color:var(--ink-2)}
+.switch{width:38px;height:22px;border-radius:999px;background:var(--hairline-2);position:relative;display:inline-block}
+.switch:after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch.on{background:var(--ink)}.switch.on:after{left:18px}
+.tip{display:inline-block;background:var(--ink);color:var(--bg);font-size:12.5px;padding:8px 10px;border-radius:8px;box-shadow:var(--shadow-pop);line-height:1.4}
+.tip .k{color:#9AA0A8;font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+/* stat tile */
+.stat{display:flex;flex-direction:column;gap:6px}
+.stat .v{font-family:var(--font-display);font-size:30px;line-height:1;font-weight:600;letter-spacing:-.025em;color:var(--ink)}
+.stat .v.gapc{color:var(--gap)}
+.stat .l{font-size:13px;color:var(--ink-3)}
+/* header */
+.hdr{height:64px;display:flex;align-items:center;gap:28px;border-bottom:1px solid var(--hairline)}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:600;font-size:18px;letter-spacing:-.02em;color:var(--ink)}
+.logo svg{width:22px;height:22px}
+.nav{display:flex;gap:4px;margin-left:12px}
+.nav a{white-space:nowrap;text-decoration:none;font-size:14px;font-weight:500;color:var(--ink-2);padding:7px 12px;border-radius:var(--r-pill)}
+.nav a.on{color:var(--ink);background:var(--bg-2)}
+.hdr .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.banner{height:36px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--hairline);background:var(--bg-2);font-size:12.5px;color:var(--ink-2)}
+.banner .sep{color:var(--ink-4)}
+.banner .wrap{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.banner b{font-weight:600;color:var(--ink)}
+.banner a{color:var(--accent-ink);font-weight:500}
+/* hero */
+.hero{display:grid;grid-template-columns:1fr 580px;gap:60px;align-items:center;padding-top:64px;padding-bottom:56px}
+.hero .ctas{display:flex;align-items:center;gap:12px;margin-top:32px}
+.hero .ctas .gh{font-size:14px;font-weight:500;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;margin-left:8px;text-decoration:none}
+.hero .ctas .gh svg{width:16px;height:16px;fill:currentColor}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:44px;padding-top:24px;border-top:1px solid var(--hairline)}
+.stats .v{font-family:var(--font-display);font-size:32px;font-weight:600;letter-spacing:-.025em;line-height:1}
+.stats .l{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:8px}
+.stats .n{font-size:13px;color:var(--ink-3);margin-top:6px}
+/* globe */
+.globe{width:580px;height:580px;display:block}
+.g-sphere{fill:url(#sph)}
+.g-halo{fill:none;stroke:var(--hairline-2);stroke-width:1}
+.g-grat{fill:none;stroke:#DFE3E8;stroke-width:.7}
+.g-land{fill:#E4E8ED;stroke:#CCD2DA;stroke-width:.6;stroke-linejoin:round}
+.g-arc{fill:none;stroke:var(--accent);stroke-width:1.3;stroke-dasharray:2.5 4;opacity:.55;stroke-linecap:round}
+.g-particle{fill:var(--accent)}
+.g-node{fill:var(--accent);stroke:#fff;stroke-width:2}
+.g-node.gap{fill:var(--gap-fill)}
+.g-pulse{fill:none;stroke:var(--gap-fill);stroke-width:1.5;animation:pulse 2.4s var(--ease-out) infinite}
+.g-pulse2{animation-delay:1.2s}
+@keyframes pulse{0%{r:7;opacity:.75}100%{r:26;opacity:0}}
+.g-leader{stroke:var(--ink-4);stroke-width:.8}
+.g-city{font:600 12.5px var(--font-body);fill:var(--ink)}
+.g-city.gapc{fill:var(--gap)}
+.g-acc{font:400 11px var(--font-mono);fill:var(--ink-3)}
+.g-gapv{font:500 11px var(--font-mono);fill:var(--gap)}
+.g-cap{font:400 11px var(--font-mono);fill:var(--ink-4);letter-spacing:.08em;text-transform:uppercase}
+/* charts */
+svg text.tick{font:400 11px var(--font-mono);fill:var(--ink-3)}
+svg line.grid{stroke:var(--hairline);stroke-width:1}
+svg .gapband{fill:var(--gap-band)}
+svg .band{fill:var(--accent-band)}
+svg .p50{fill:none;stroke:var(--c-accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+svg .p5{fill:none;stroke:var(--c-accent);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+svg .actual{fill:none;stroke:var(--c-actual);stroke-width:1.75;stroke-linejoin:round}
+svg .buffer{stroke:var(--gap-fill);stroke-width:1.25;stroke-dasharray:5 4}
+svg .zero{stroke:var(--hairline-2);stroke-width:1}
+svg .asof{stroke:var(--ink-4);stroke-width:1;stroke-dasharray:2 3}
+svg .flow.in{fill:var(--good-fill)} svg .flow.out{fill:var(--gap-fill)}
+svg .lbl{font:500 11px var(--font-mono);fill:var(--ink-3)}
+svg .lbl.acc{fill:var(--accent)} svg .lbl.gap{fill:var(--gap)}
+svg .pt.model{fill:var(--c-accent);stroke:#fff;stroke-width:1.5} svg .pt.base{fill:var(--c-baseline);stroke:#fff;stroke-width:1.5} svg .pt.under{fill:var(--warn-fill);stroke:#fff;stroke-width:1.5}
+svg .underband{fill:var(--warn-tint)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:7px;vertical-align:3px}
+.legend i.band{height:10px;vertical-align:-1px;border-radius:3px}
+/* dashboard */
+.dash{display:grid;grid-template-columns:300px 1fr;gap:24px;padding-top:32px;padding-bottom:48px}
+.rail{display:flex;flex-direction:column;gap:6px}
+.acct{display:grid;grid-template-columns:1fr 72px;grid-template-rows:auto auto auto;gap:2px 12px;padding:14px 16px;border-radius:var(--r-3);border:1px solid transparent;cursor:pointer}
+.acct .bank{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.acct .name{font-size:15px;font-weight:600;letter-spacing:-.01em;margin-top:2px}
+.acct .bal{font-size:15px;font-weight:500;margin-top:6px}
+.acct .bal small{font-size:12.5px;color:var(--ink-3);font-weight:400;margin-left:6px}
+.acct .spark{grid-column:2;grid-row:1/3;align-self:center;width:72px;height:24px}
+.acct .spark path.l{fill:none;stroke:var(--ink-2);stroke-width:1.25} .acct .spark path.a{fill:var(--bg-3)}
+.acct .st{grid-column:1/3;margin-top:8px;display:flex;align-items:center;justify-content:space-between}
+.acct .days{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.acct .days small{font:500 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-left:6px}
+.acct.on{background:var(--bg-2);border-color:var(--hairline)}
+.acct.on.gap{background:var(--gap-tint);border-color:rgba(220,59,62,.25)}
+.acct.gap .days{color:var(--gap)}
+.acct.hover{background:var(--bg-2)}
+.fan-card .card-h{display:flex;flex-direction:column;gap:10px}
+.fan-card svg{width:100%;height:auto;display:block}
+.tt{position:absolute;background:var(--ink);color:#fff;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;box-shadow:var(--shadow-pop);min-width:210px}
+.tt .d{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;color:#9AA0A8;text-transform:uppercase;margin-bottom:6px}
+.tt .row{display:flex;justify-content:space-between;gap:16px}
+.tt .row b{font-weight:500;font-variant-numeric:tabular-nums}
+.tt .row .k{color:#B6BAC1}
+.tt .gapline{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.14);color:#F0706F;font-weight:500}
+.tt .drv{color:#B6BAC1;font-size:12px;margin-top:2px}
+/* alerts */
+.alerts{display:flex;flex-direction:column}
+.alert{display:grid;grid-template-columns:18px 1fr auto;gap:0 12px;padding:12px 0;border-top:1px solid var(--hairline);position:relative}
+.alert:first-child{border-top:0}
+.alert .sev{width:10px;height:10px;border-radius:50%;margin-top:5px;background:var(--gap-fill);position:relative}
+.alert .sev.amber{background:var(--warn-fill)}
+.alert .sev:after{content:"";position:absolute;left:4px;top:14px;width:2px;height:46px;background:var(--hairline)}
+.alert:last-child .sev:after{display:none}
+.alert .t{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.alert .t .acc{font-weight:500;color:var(--ink-3);margin-left:8px;font-size:13px}
+.alert .g{font-size:13.5px;color:var(--ink-2);margin-top:2px}
+.alert .g b{color:var(--gap);font-weight:600;font-variant-numeric:tabular-nums}
+.alert .drivers{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;grid-column:2}
+.alert .when{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3);text-align:right;white-space:nowrap}
+.alert .when b{display:block;font:600 13px var(--font-body);color:var(--ink);letter-spacing:-.005em}
+/* model card */
+.wrow{display:grid;grid-template-columns:150px 1fr 44px;align-items:center;gap:12px;margin-top:10px;font-size:13px}
+.wrow .n{font-family:var(--font-mono);font-size:12px;color:var(--ink-2)}
+.wrow .bar{height:8px;border-radius:4px;background:var(--bg-3);overflow:hidden}
+.wrow .bar i{display:block;height:100%;border-radius:4px}
+.wrow .v{font-variant-numeric:tabular-nums;text-align:right;font-weight:500}
+/* scenario */
+.scen{display:grid;grid-template-columns:1fr 400px;gap:24px}
+.scen-item{padding:14px 16px;border-radius:var(--r-2);border:1px solid var(--hairline);display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:center}
+.scen-item.on{border-color:var(--ink);background:var(--bg)}
+.scen-item .t{font-weight:600;font-size:14px;letter-spacing:-.005em;white-space:nowrap}
+.scen-item .d{font-size:13px;color:var(--ink-3);grid-column:1}
+.scen-item .delta{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.delta .big{font-family:var(--font-display);font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.delta .big.goodc{color:var(--good)} .delta .big.gapc{color:var(--gap)}
+.delta .s{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.03em;white-space:nowrap}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center;margin-top:12px}
+.ba .cell{display:flex;flex-direction:column;gap:2px}
+.ba .cell .k{font:500 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.ba .cell .v{font-family:var(--font-display);font-size:24px;font-weight:600;letter-spacing:-.02em}
+.ba .arrow{font-size:18px;color:var(--ink-4)}
+/* model room */
+.mr{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:32px}
+.mr .fr{display:flex;flex-direction:column}
+.mr .stage{height:276px;overflow:hidden;background:var(--bg);border:1px solid rgba(16,18,20,.06);border-radius:var(--r-3);box-shadow:var(--shadow-card);padding:14px 12px 8px;position:relative}
+.mr .stage svg{width:100%;height:auto;display:block}
+.mr .step{display:flex;align-items:center;gap:10px;margin-top:16px}
+.mr .step .n{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:var(--accent);font-weight:500}
+.mr .step .n:after{content:"";display:inline-block;width:20px;height:1px;background:var(--hairline-2);margin-left:10px;vertical-align:3px}
+.mr .step .t{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.mr .txt{font-size:13.5px;color:var(--ink-2);margin-top:6px;line-height:1.5}
+.mr .txt b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.mr .stage .cap{position:absolute;right:14px;top:12px;font:500 11px var(--font-mono);color:var(--ink-3);letter-spacing:.06em}
+.mr .obs rect{fill:var(--ink-4)}
+.mr .comp{fill:none;stroke-width:1.75;stroke-linejoin:round}
+.mr .lgbm{stroke:var(--c-accent)} .mr .gbdt{stroke:var(--c-gbdt)} .mr .ewma{stroke:var(--c-ewma)}
+.mr .lgbm-b{fill:var(--c-accent);opacity:.12} .mr .gbdt-b{fill:var(--c-gbdt);opacity:.12} .mr .ewma-b{fill:var(--c-ewma);opacity:.12}
+.feat{display:flex;flex-wrap:wrap;gap:3px;padding:4px 2px 0}
+.feat span{font:500 10px var(--font-mono);padding:2px 6px;line-height:1.5;border-radius:6px;background:var(--bg-2);color:var(--ink-2);letter-spacing:.01em}
+.feat span.hi{background:var(--accent-tint);color:var(--accent-ink)}
+.feat span.sch{background:var(--good-tint);color:var(--good)}
+.feat span.cal{background:#F3ECFB;color:#6A3FA0}
+.feat .g{width:100%;font:500 10px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-top:0}
+.wbars{display:flex;flex-direction:column;gap:7px;position:absolute;right:28px;bottom:44px;width:170px}
+.wbars .w{display:grid;grid-template-columns:48px 1fr 30px;align-items:center;gap:8px;font:500 11px var(--font-mono);color:var(--ink-2)}
+.wbars .w i{height:7px;border-radius:4px;display:block}
+.imp-row{display:grid;grid-template-columns:180px 1fr 44px;align-items:center;gap:12px;font-size:12.5px;padding:3px 0}
+.imp-label{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imp-track{height:8px;background:var(--bg-3);border-radius:4px;overflow:hidden}
+.imp-bar{display:block;height:100%;border-radius:4px}
+.imp-val{font-family:var(--font-mono);font-size:11.5px;text-align:right;color:var(--ink-2)}
+.note{border-left:2px solid var(--hairline-2);padding:4px 0 4px 12px;font-size:12.5px;color:var(--ink-3);margin-top:10px;line-height:1.5}
+/* pipeline */
+.pipe-wrap{display:grid;grid-template-columns:440px 1fr;gap:80px;align-items:start;padding-top:48px;padding-bottom:48px}
+.stage-card{padding:4px 0}
+.stage-card .k{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:500}
+.stage-card .t{font-family:var(--font-display);font-size:30px;line-height:1.12;letter-spacing:-.022em;font-weight:600;margin-top:12px}
+.stage-card .b{font-size:15px;color:var(--ink-2);margin-top:14px;max-width:40ch}
+.stage-card .big{font-family:var(--font-display);font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1;margin-top:28px}
+.stage-card .big small{font:400 13px var(--font-body);color:var(--ink-3);display:block;margin-top:8px;letter-spacing:0}
+.stage-card .prog{display:flex;gap:4px;margin-top:28px}
+.stage-card .prog i{height:3px;flex:1;background:var(--hairline);border-radius:2px}
+.stage-card .prog i.done{background:var(--ink-4)} .stage-card .prog i.on{background:var(--accent)}
+.pipe{width:100%;max-width:600px;height:auto;display:block}
+.pipe .box{fill:var(--bg);stroke:var(--hairline-2);stroke-width:1;rx:10}
+.pipe .box.done{stroke:var(--ink-4)}
+.pipe .box.on{fill:var(--accent-tint);stroke:var(--accent);stroke-width:1.5}
+.pipe .t{font:600 12.5px var(--font-body);fill:var(--ink-3);letter-spacing:-.005em}
+.pipe .t.done{fill:var(--ink)} .pipe .t.on{fill:var(--accent-ink)}
+.pipe .s{font:400 10px var(--font-mono);fill:var(--ink-4)}
+.pipe .s.on{fill:var(--accent-ink)} .pipe .s.done{fill:var(--ink-3)}
+.pipe .num{font:500 10.5px var(--font-mono);fill:var(--ink-4);letter-spacing:.08em}
+.pipe .num.on{fill:var(--accent)} .pipe .num.done{fill:var(--ink-2)}
+.pipe .edge{fill:none;stroke:var(--hairline-2);stroke-width:1.25}
+.pipe .edge.done{stroke:var(--ink-4)} .pipe .edge.on{stroke:var(--accent)}
+.pipe .ptc{fill:var(--accent)}
+.pipe .ghost{fill:none;stroke:var(--hairline);stroke-dasharray:3 3}
+/* backtest */
+.proof{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.weak{border-left:3px solid var(--warn-fill);background:var(--warn-tint);border-radius:0 var(--r-3) var(--r-3) 0;padding:16px 20px}
+.weak .t{font-weight:600;font-size:14px;color:var(--warn)}
+.weak ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}
+.weak li{margin:4px 0}
+.weak b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+/* components sheet */
+.sheet{padding-top:32px;padding-bottom:48px}
+.sheet h3{margin-top:40px;padding-bottom:10px;border-bottom:1px solid var(--hairline);font-size:13px;font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:18px}
+.row .lab{font:400 11px var(--font-mono);color:var(--ink-4);width:100%;margin-bottom:-8px}
+.swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:12px;margin-top:18px}
+.sw{height:72px;border-radius:10px;border:1px solid rgba(16,18,20,.06);display:flex;align-items:flex-end;padding:8px;font:500 10.5px var(--font-mono);color:var(--ink-3)}
+/* mobile */
+.mpipe{margin-top:24px;display:flex;flex-direction:column;position:relative}
+.mpipe:before{content:"";position:absolute;left:19px;top:12px;bottom:12px;width:1px;background:var(--hairline-2)}
+.ms{display:grid;grid-template-columns:40px 1fr;align-items:center;padding:7px 0;position:relative}
+.ms .n{width:40px;height:40px;border-radius:50%;background:var(--bg);border:1px solid var(--hairline-2);display:flex;align-items:center;justify-content:center;font:500 11px var(--font-mono);color:var(--ink-4);position:relative;z-index:1}
+.ms div{padding:10px 14px;border-radius:12px;border:1px solid var(--hairline-2);margin-left:10px;background:var(--bg)}
+.ms b{display:block;font-size:14px;font-weight:600;letter-spacing:-.005em;color:var(--ink-3)}
+.ms i{display:block;font:400 11px var(--font-mono);color:var(--ink-4);margin-top:2px;font-style:normal}
+.ms.done .n{border-color:var(--ink-4);color:var(--ink-2)} .ms.done b{color:var(--ink)} .ms.done i{color:var(--ink-3)}
+.ms.on .n{background:var(--accent);border-color:var(--accent);color:#fff} .ms.on div{background:var(--accent-tint);border-color:var(--accent)} .ms.on b{color:var(--accent-ink)} .ms.on i{color:var(--accent-ink)}
+
+.m .hdr{height:56px;padding:0 16px;gap:12px}
+.m .banner{height:auto;padding:8px 16px;font-size:12px;line-height:1.4}
+.m .hero{display:block;padding:32px 16px 24px}
+.m .display{font-size:40px;line-height:1.04}
+.m .lead{font-size:16px}
+.m .ctas{flex-wrap:wrap}
+.m .stats{grid-template-columns:1fr 1fr;gap:20px 16px;margin-top:28px}
+.m .stats .v{font-size:26px}
+.m .globe{width:343px;height:343px;margin:0 auto}
+.m .stage-card .t{font-size:24px}
+.m .stage-card .big{font-size:36px}
+</style>
+</head>
+<body>
+
+<!-- shared globe symbol -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="sph" cx="38%" cy="32%" r="78%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".65" stop-color="#F6F7F8"/><stop offset="1" stop-color="#ECEFF2"/></radialGradient>
+    <linearGradient id="bandgrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2F4BD9" stop-opacity=".22"/><stop offset=".5" stop-color="#2F4BD9" stop-opacity=".10"/><stop offset="1" stop-color="#2F4BD9" stop-opacity=".22"/></linearGradient>
+    <linearGradient id="bandgrad-x" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#2F4BD9" stop-opacity=".06"/><stop offset="1" stop-color="#2F4BD9" stop-opacity=".20"/></linearGradient>
+    <clipPath id="gclip"><circle cx="300" cy="300" r="284"/></clipPath>
+    <symbol id="globe-sym" viewBox="0 0 600 600">
+      <circle class="g-sphere" cx="300" cy="300" r="284"/>
+      <g clip-path="url(#gclip)">
+        <g class="g-grat">{{GLOBE_GRAT}}</g>
+        <g class="g-land">{{GLOBE_LAND}}</g>
+      </g>
+      <circle class="g-halo" cx="300" cy="300" r="284"/>
+      {{GLOBE_ARCS}}
+      {{GLOBE_PARTICLES}}
+      {{GLOBE_NODES}}
+      <text class="g-cap" x="300" y="596" text-anchor="middle">Illustrative locations · 5 accounts · 7 scheduled flows</text>
+    </symbol>
+    <symbol id="mark" viewBox="0 0 24 24">
+      <path d="M3 17 C9 15 15 10 21 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M3 17 C9 16.5 15 16 21 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity=".55"/>
+      <path d="M3 17 C9 18 14 20 21 21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity=".3"/>
+      <path d="M2 12.5 H22" stroke="#DC3B3E" stroke-width="1.6" stroke-dasharray="2.5 2.2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="pipe-sym" viewBox="0 0 560 640">
+      <!-- edges drawn under nodes; classes set per instance via CSS vars is overkill: two static states below -->
+    </symbol>
+  </defs>
+</svg>
+
+<div class="ref-head"><b>TrueAvail · design reference v1</b> &nbsp;·&nbsp; 01 header + banner + hero (1440)</div>
+<div class="frame">
+  <div class="wrap hdr">
+    <a class="logo" href="#"><svg><use href="#mark"/></svg>TrueAvail</a>
+    <nav class="nav"><a class="on" href="#">Overview</a><a href="#">Forecast</a><a href="#">What-if</a><a href="#">Backtest</a><a href="#">Data</a><a href="#">How it works</a></nav>
+    <div class="right">
+      <span class="chip warn"><span class="d"></span>Synthetic data · demo</span>
+      <a class="btn btn-secondary sm" href="#"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 0 0-.9-2.6c3.1-.3 6.4-1.5 6.4-7A5.4 5.4 0 0 0 20 4.8 5 5 0 0 0 19.9 1S18.7.6 16 2.5a13.4 13.4 0 0 0-7 0C6.3.6 5.1 1 5.1 1A5 5 0 0 0 5 4.8a5.4 5.4 0 0 0-1.5 3.7c0 5.5 3.3 6.7 6.4 7a3.4 3.4 0 0 0-.9 2.6V22"/></svg>GitHub</a>
+      <a class="btn btn-primary sm" href="#">See the forecast</a>
+    </div>
+  </div>
+  <div class="banner"><div class="wrap"><b>Demo on synthetic data</b><span class="sep">·</span>5 accounts × 120 days, seed 42<span class="sep">·</span>every number was precomputed by the real backend on 28 Oct 2026<span class="sep">·</span>full pipeline: <code>docker compose up</code><span class="sep">—</span><a href="#">Read how it works</a></div></div>
+  <div class="wrap hero">
+    <div>
+      <div class="eyebrow accent"><span class="dot"></span>14-day liquidity forecast · quantile ML ensemble</div>
+      <h1 class="display" style="margin-top:20px">See the cash gap<br>before it happens.</h1>
+      <p class="lead" style="margin-top:22px;max-width:46ch">TrueAvail forecasts a P5–P95 balance corridor for every bank account, 14 days ahead, and flags the days when the pessimistic case falls below the required buffer — days before a treasury team would otherwise notice.</p>
+      <div class="ctas">
+        <a class="btn btn-primary lg" href="#">See the forecast <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-secondary lg" href="#">How it works</a>
+        <a class="gh" href="#"><svg viewBox="0 0 24 24"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>Source on GitHub</a>
+      </div>
+      <div class="stats">
+        <div><div class="v gapc num">€2.13M</div><div class="l">First cash gap</div><div class="n">Atlas EUR Operating · Tue 19 May, in 1 day</div></div>
+        <div><div class="v num">29.2%</div><div class="l">Lower loss vs baseline</div><div class="n">Pinball P50, 6-fold rolling backtest</div></div>
+        <div><div class="v num">0.88</div><div class="l">90 % interval coverage</div><div class="n">Target 0.90 · honest: under at h 1–3</div></div>
+      </div>
+    </div>
+    <svg class="globe" viewBox="0 0 600 600" role="img" aria-label="Globe with five account locations and scheduled flows; Frankfurt pulses red for the cash gap"><use href="#globe-sym"/></svg>
+  </div>
+</div>
+
+<div class="ref-head"><b>02 model room</b> · scroll-triggered sequence as static frames (stage = 520×220 viewBox)</div>
+<div class="frame">
+  <div class="wrap" style="padding-top:56px;padding-bottom:56px">
+    <div class="eyebrow accent"><span class="dot"></span>Model room · Atlas EUR Operating</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:40px">
+      <h2 class="h2" style="margin-top:14px;max-width:22ch">Six steps from 600 observations to one cash gap.</h2>
+      <div style="display:flex;gap:10px;align-items:center"><span class="seg"><span class="on">Atlas EUR</span><span>Nova EUR</span><span>Orion EUR</span><span>Atlas USD</span><span>Meridian GBP</span></span><a class="btn btn-secondary sm" href="#"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Replay</a></div>
+    </div>
+    <div class="mr">
+      <div class="fr"><div class="stage"><span class="cap">600 / 600</span><svg viewBox="0 0 520 220"><g class="obs">{{MR_OBS}}</g></svg></div>
+        <div class="step"><span class="n">STEP 01</span><span class="t">600 daily observations</span></div><p class="txt">120 days × 5 accounts. Each row is a balance and a net flow. <b>12</b> rows are flagged as anomalies, <b>548</b> remain trainable after the 7-day lags.</p></div>
+      <div class="fr"><div class="stage"><span class="cap" style="top:8px">21 features</span><div class="feat" style="padding-top:18px">
+        <span class="g">Calendar</span><span class="cal">day_of_week</span><span class="cal">is_weekend</span><span class="cal">is_holiday</span><span class="cal">is_month_end</span><span class="cal">is_payroll_day</span>
+        <span class="g">Recent history (Atlas EUR, 18 May)</span><span class="hi">net_flow_lag_1 = 19.7K</span><span class="hi">net_flow_lag_2 = −3.5K</span><span class="hi">net_flow_lag_7 = 20.6K</span><span class="hi">balance_lag_1 = 2.98M</span><span class="hi">rolling_mean_7 = 16.9K</span><span class="hi">rolling_volatility_7 = 31.8K</span><span class="hi">ewma_net_flow = 13.4K</span><span class="hi">mad_zscore = 0.45</span>
+        <span class="g">Scheduled</span><span class="sch">known_event_count</span><span class="sch">known_event_net_flow</span><span class="sch">event_merchant_payout</span><span class="sch">event_payroll</span>
+      </div></div>
+        <div class="step"><span class="n">STEP 02</span><span class="t">Engineered features</span></div><p class="txt">Calendar, lags of 1 / 2 / 7 days, a 7-day mean and volatility, an EWMA and an anomaly score. Scheduled payments are placed on their settlement date per rail.</p></div>
+      <div class="fr"><div class="stage"><span class="cap">P5 · day 1</span><svg viewBox="0 0 520 220">{{MR_YT}}
+        <path class="ewma-b" d="{{MR_EWMA_BAND}}"/><path class="gbdt-b" d="{{MR_GBDT_BAND}}"/><path class="lgbm-b" d="{{MR_LGBM_BAND}}"/>
+        <path class="comp ewma" d="{{MR_EWMA_P50}}"/><path class="comp gbdt" d="{{MR_GBDT_P50}}"/><path class="comp lgbm" d="{{MR_LGBM_P50}}"/>
+        <text class="lbl" style="fill:var(--c-accent)" x="300" y="150">LightGBM · P5 day 1 −1.14M</text><text class="lbl" style="fill:var(--c-gbdt)" x="300" y="165">GBDT −1.11M</text><text class="lbl" style="fill:var(--c-ewma)" x="300" y="180">EWMA −1.16M · widest by day 14</text>
+        {{MR_XT}}</svg></div>
+        <div class="step"><span class="n">STEP 03</span><span class="t">Three models, three corridors</span></div><p class="txt">LightGBM (120 trees), gradient boosting (90 trees) and an EWMA volatility baseline each draw their own P5–P95. On day 1 they agree within <b>€50K</b>: the gap is not a model artefact. EWMA, with no features, widens fastest.</p></div>
+      <div class="fr"><div class="stage"><span class="cap">Σ w = 1.00</span><svg viewBox="0 0 520 220">{{MR_YT}}
+        <path class="band" d="{{MR_BLEND_BAND}}"/><path class="p50" d="{{MR_BLEND_P50}}"/><g font-family="var(--font-mono)" font-size="11" fill="var(--ink-2)"><text x="300" y="152">LightGBM</text><rect x="370" y="145" width="100" height="7" rx="3.5" fill="var(--bg-3)"/><rect x="370" y="145" width="55" height="7" rx="3.5" fill="var(--c-accent)"/><text x="480" y="152">0.55</text><text x="300" y="168">GBDT</text><rect x="370" y="161" width="100" height="7" rx="3.5" fill="var(--bg-3)"/><rect x="370" y="161" width="30" height="7" rx="3.5" fill="var(--c-gbdt)"/><text x="480" y="168">0.30</text><text x="300" y="184">EWMA</text><rect x="370" y="177" width="100" height="7" rx="3.5" fill="var(--bg-3)"/><rect x="370" y="177" width="15" height="7" rx="3.5" fill="var(--c-ewma)"/><text x="480" y="184">0.15</text></g>{{MR_XT}}</svg></div>
+        <div class="step"><span class="n">STEP 04</span><span class="t">Weighted quantile blend</span></div><p class="txt">The three corridors collapse into one: <b>0.55</b> × LightGBM + <b>0.30</b> × GBDT + <b>0.15</b> × EWMA, quantile by quantile. Start balance and scheduled flows are added day by day.</p></div>
+      <div class="fr"><div class="stage"><span class="cap">buffer €1.00M</span><svg viewBox="0 0 520 220">{{MR_YT}}{{MR_GAPS}}
+        <path class="band" d="{{MR_BLEND_BAND}}"/><path class="p5" d="{{MR_BLEND_P5}}"/><path class="p50" d="{{MR_BLEND_P50}}"/>
+        <line class="buffer" x1="44" x2="500" y1="{{MR_BUFFER_Y}}" y2="{{MR_BUFFER_Y}}"/><text class="lbl gap" x="160" y="{{MR_BUFFER_Y}}" dy="14">required buffer €1.00M</text>
+        <circle cx="{{MR_DAY1_X}}" cy="{{MR_DAY1_Y}}" r="5" fill="var(--gap-fill)" stroke="#fff" stroke-width="2"/>
+        <line x1="{{MR_DAY1_X}}" y1="{{MR_DAY1_Y}}" x2="118" y2="200" stroke="var(--gap-fill)" stroke-width=".8"/><text class="lbl gap" x="122" y="204">Tue 19 May · P5 −1.13M · gap 2.13M</text>{{MR_XT}}</svg></div>
+        <div class="step"><span class="n">STEP 05 · 06</span><span class="t">Crosses the buffer → gap day lights up</span></div><p class="txt">P5 falls under the €1.00M buffer on <b>Tue 19 May</b>: gap <b>€2.13M</b>. Driver: the <b>€4.1M</b> merchant payout (SEPA) leaves that day; the €3.2M card settlement lands only on 21 May. Eight smaller gaps follow from 25 May.</p></div>
+      <div class="fr"><div class="stage" style="padding:16px 18px 12px"><span class="cap">LightGBM · P50 · gain</span><div style="font-size:13px;font-weight:600;margin-bottom:8px">What the model looks at</div>{{IMP_ROWS}}
+        <div class="note">10 features carry no gain: hour-of-day (constant on daily data) and the scheduled-event flags — scheduled payments are added to the corridor directly, not learned by the trees.</div></div>
+        <div class="step"><span class="n">ASIDE</span><span class="t">Feature importance</span></div><p class="txt">Day of week explains <b>37.5 %</b> of split gain; the recent-history features together <b>61 %</b>. Colour = feature group (violet calendar, blue history).</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="ref-head"><b>03 forecast dashboard</b> · account rail · fan chart · alerts · model card · scenario switcher (1440)</div>
+<div class="frame">
+  <div class="wrap hdr">
+    <a class="logo" href="#"><svg><use href="#mark"/></svg>TrueAvail</a>
+    <nav class="nav"><a href="#">Overview</a><a class="on" href="#">Forecast</a><a href="#">What-if</a><a href="#">Backtest</a><a href="#">Data</a><a href="#">How it works</a></nav>
+    <div class="right"><span class="chip warn"><span class="d"></span>Synthetic data · demo</span><a class="btn btn-secondary sm" href="#">GitHub</a></div>
+  </div>
+  <div class="banner"><div class="wrap"><b>Demo on synthetic data</b><span class="sep">·</span>5 accounts × 120 days<span class="sep">·</span>precomputed by the backend<span class="sep">·</span><code>docker compose up</code> for the live pipeline</div></div>
+  <div class="wrap" style="padding-top:32px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+      <div><div class="eyebrow">Forecast · as of Mon 18 May 2026 · horizon 14 d · threshold P5</div><h1 class="h1" style="margin-top:10px">One gap in 14 days. It starts tomorrow.</h1></div>
+      <div style="display:flex;gap:10px;align-items:center"><span class="chip mono">run #1 · 28 Oct 05:35 UTC</span><a class="btn btn-secondary sm disabled" href="#">Re-run forecast</a></div>
+    </div>
+  </div>
+  <div class="wrap dash">
+    <aside class="rail">
+      <div class="eyebrow" style="padding:0 16px 8px">Accounts · 5 · 3 currencies</div>
+      <div class="acct on gap"><div><div class="bank">Atlas Bank · EUR</div><div class="name">EUR Operating</div><div class="bal num">€3.00M<small>buffer €1.00M</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_atlas_eur_operating}}"/><path class="l" d="{{SPARK_atlas_eur_operating}}"/></svg><div class="st"><span class="days num">1<small>day to gap</small></span><span class="chip gap"><span class="d"></span>Gap €2.13M</span></div></div>
+      <div class="acct"><div><div class="bank">Nova Bank · EUR</div><div class="name">EUR Reserve</div><div class="bal num">€4.60M<small>buffer €1.20M</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_nova_eur_reserve}}"/><path class="l" d="{{SPARK_nova_eur_reserve}}"/></svg><div class="st"><span class="days num">14<small>days clear</small></span><span class="chip good"><span class="d"></span>min P5 €4.28M</span></div></div>
+      <div class="acct"><div><div class="bank">Orion Bank · EUR</div><div class="name">EUR Safeguarding</div><div class="bal num">€3.40M<small>buffer €900K</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_orion_eur_safeguard}}"/><path class="l" d="{{SPARK_orion_eur_safeguard}}"/></svg><div class="st"><span class="days num">14<small>days clear</small></span><span class="chip good"><span class="d"></span>min P5 €2.86M</span></div></div>
+      <div class="acct hover"><div><div class="bank">Atlas Bank · USD</div><div class="name">USD Operating</div><div class="bal num">$8.90M<small>buffer $2.00M</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_atlas_usd_operating}}"/><path class="l" d="{{SPARK_atlas_usd_operating}}"/></svg><div class="st"><span class="days num">14<small>days clear</small></span><span class="chip good"><span class="d"></span>min P5 $6.71M</span></div></div>
+      <div class="acct"><div><div class="bank">Meridian Bank · GBP</div><div class="name">GBP Operating</div><div class="bal num">£3.30M<small>buffer £900K</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_meridian_gbp_operating}}"/><path class="l" d="{{SPARK_meridian_gbp_operating}}"/></svg><div class="st"><span class="days num">14<small>days clear</small></span><span class="chip good"><span class="d"></span>min P5 £1.99M</span></div></div>
+      <div class="micro" style="padding:12px 16px 0">Consolidated per currency: no gap in EUR, USD or GBP. Sum of accounts, no FX conversion.</div>
+    </aside>
+    <main style="display:flex;flex-direction:column;gap:24px">
+      <div class="card fan-card" style="position:relative">
+        <div class="card-h">
+          <div><div class="h4">Atlas Bank · EUR Operating</div><div class="small" style="margin-top:2px">Last 21 days actual + 14-day forecast · P5 / P50 / P95 · as of 18 May</div></div>
+          <div class="legend"><span><i style="background:var(--c-actual)"></i>Actual</span><span><i class="band" style="background:var(--accent-band)"></i>P5–P95</span><span><i style="background:var(--c-accent)"></i>P50</span><span><i style="background:var(--gap-fill);height:2px;border-top:2px dashed var(--gap-fill);background:none"></i>Buffer</span><span><i class="band" style="background:var(--gap-band)"></i>Gap days</span><span><i style="background:var(--good-fill);width:8px;height:8px;border-radius:2px"></i>Inflow <i style="background:var(--gap-fill);width:8px;height:8px;border-radius:2px;margin-left:4px"></i>Outflow</span></div>
+        </div>
+        <div class="card-b" style="padding-top:8px">
+          <svg viewBox="0 0 800 310">
+            {{FAN_YTICKS}}{{FAN_GAPS}}
+            <line class="zero" x1="56" x2="780" y1="{{FAN_ZERO_Y}}" y2="{{FAN_ZERO_Y}}"/>
+            <path class="band" style="fill:url(#bandgrad-x)" d="{{FAN_BAND}}"/>
+            <path class="p5" d="{{FAN_P5}}"/>
+            <path class="actual" d="{{FAN_ACTUAL}}"/>
+            <path class="p50" d="{{FAN_P50}}"/>
+            <line class="buffer" x1="56" x2="780" y1="{{FAN_BUFFER_Y}}" y2="{{FAN_BUFFER_Y}}"/>
+            <text class="lbl gap" x="62" y="{{FAN_BUFFER_Y}}" dy="-6">required buffer €1.00M</text>
+            <line class="asof" x1="{{FAN_ASOF_X}}" x2="{{FAN_ASOF_X}}" y1="14" y2="276"/><text class="lbl" x="{{FAN_ASOF_X}}" y="10" text-anchor="middle">as of</text>
+            {{FAN_MARKERS}}
+            <text class="lbl acc" x="786" y="{{FAN_END_P95_Y}}" dy="3">P95</text><text class="lbl acc" x="786" y="{{FAN_END_P50_Y}}" dy="3">P50</text><text class="lbl acc" x="786" y="{{FAN_END_P5_Y}}" dy="3">P5</text>
+            <circle cx="{{FAN_TT_X}}" cy="{{FAN_TT_Y}}" r="4.5" fill="var(--c-accent)" stroke="#fff" stroke-width="2"/>
+            <line x1="{{FAN_TT_X}}" x2="{{FAN_TT_X}}" y1="14" y2="276" stroke="var(--ink-4)" stroke-width="1"/>
+            {{FAN_XTICKS}}
+          </svg>
+          <div class="tt" style="left:64%;top:92px"><div class="d">Tue 19 May · day 1</div><div class="row"><span class="k">P95</span><b>−€1.03M</b></div><div class="row"><span class="k">P50</span><b>−€1.06M</b></div><div class="row"><span class="k">P5</span><b>−€1.13M</b></div><div class="gapline">Gap €2.13M below buffer €1.00M</div><div class="drv">▼ €4.10M merchant payout · SEPA</div></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 380px;gap:24px">
+        <div class="card"><div class="card-h" style="display:flex;justify-content:space-between;align-items:center"><div><div class="h4">Alerts · 10 in 14 days</div><div class="small" style="margin-top:2px">P5 below the buffer · all on Atlas EUR Operating</div></div><span class="seg"><span class="on">Per account</span><span>Per currency</span></span></div>
+          <div class="card-b alerts">
+            <div class="alert"><span class="sev"></span><div><div class="t">Gap €2.13M<span class="acc">Atlas Bank · EUR Operating</span></div><div class="g">P5 balance <b>−€1.13M</b> vs buffer €1.00M</div><div class="drivers"><span class="tag out">▼ €4.10M merchant payout · SEPA · 19 May</span></div></div><div class="when"><b>Tue 19 May</b>in 1 day</div></div>
+            <div class="alert"><span class="sev"></span><div><div class="t">Gap €2.17M<span class="acc">Atlas Bank · EUR Operating</span></div><div class="g">P5 balance <b>−€1.17M</b> vs buffer €1.00M</div><div class="drivers"><span class="tag out">▼ €4.10M merchant payout · SEPA · 19 May</span></div></div><div class="when"><b>Wed 20 May</b>in 2 days</div></div>
+            <div class="alert"><span class="sev amber"></span><div><div class="t">Gap €29.4K<span class="acc">Atlas Bank · EUR Operating</span></div><div class="g">P5 balance <b>€970.6K</b> vs buffer €1.00M · amber: under 10 % of buffer</div><div class="drivers"><span class="tag out">▼ €4.10M merchant payout</span><span class="tag out">▼ €850K processing fee · 21 May</span></div></div><div class="when"><b>Mon 25 May</b>in 7 days</div></div>
+            <div class="alert"><span class="sev"></span><div><div class="t">Gap €100.5K<span class="acc">Atlas Bank · EUR Operating</span></div><div class="g">P5 balance <b>€899.5K</b> vs buffer €1.00M</div><div class="drivers"><span class="tag out">▼ €4.10M merchant payout</span><span class="tag out">▼ €850K processing fee</span></div></div><div class="when"><b>Wed 27 May</b>in 9 days</div></div>
+            <a class="small accc" style="display:block;margin-top:12px;font-weight:500" href="#">Show all 10 alerts · 6 more, 25 May – 1 Jun →</a>
+          </div></div>
+        <div class="card"><div class="card-h"><div class="h4">Model</div><div class="small" style="margin-top:2px">ensemble-quantile · P5 / P50 / P95 · <span class="goodc">trained model in use</span></div></div>
+          <div class="card-b">
+            <div class="wrow"><span class="n">LightGBM</span><span class="bar"><i style="width:55%;background:var(--c-accent)"></i></span><span class="v num">0.55</span></div>
+            <div class="wrow"><span class="n">sklearn GBDT</span><span class="bar"><i style="width:30%;background:var(--c-gbdt)"></i></span><span class="v num">0.30</span></div>
+            <div class="wrow"><span class="n">EWMA baseline</span><span class="bar"><i style="width:15%;background:var(--c-ewma)"></i></span><span class="v num">0.15</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid var(--hairline)">
+              <div class="stat"><span class="v num" style="font-size:22px">548</span><span class="l">trainable rows</span></div>
+              <div class="stat"><span class="v num" style="font-size:22px">12</span><span class="l">anomaly rows</span></div>
+              <div class="stat"><span class="v num" style="font-size:22px">7</span><span class="l">known-event rows</span></div>
+            </div>
+            <a class="small accc" style="display:block;margin-top:16px;font-weight:500" href="#">Open the model room →</a>
+          </div></div>
+      </div>
+      <div class="card"><div class="card-h" style="display:flex;justify-content:space-between;align-items:center"><div><div class="h4">What-if · 6 precomputed scenarios</div><div class="small" style="margin-top:2px">Pick one to see the corridor move before → after. Nothing is executed.</div></div><a class="btn btn-secondary sm" href="#">Open what-if</a></div>
+        <div class="card-b scen">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="scen-item on"><div class="t">Pay the merchant payout 2 days later</div><div class="d">€4.1M payout moves 19 → 21 May, the day the €3.2M card settlement lands.</div><div class="delta"><span class="big goodc num">−2</span><span class="s">GAP DAYS · worst €2.17M → €310K</span></div></div>
+            <div class="scen-item"><div class="t">Cancel the processing fee</div><div class="d">€850K monthly fee on 21 May removed from the schedule.</div><div class="delta"><span class="big goodc num">−8</span><span class="s">GAP DAYS · worst unchanged</span></div></div>
+            <div class="scen-item"><div class="t">Card settlement arrives 5 days late</div><div class="d">The €3.2M inflow shifts 5 days later.</div><div class="delta"><span class="big gapc num">+4</span><span class="s">GAP DAYS · worst €2.17M → €3.26M</span></div></div>
+          </div>
+          <div>
+            <div class="legend" style="margin-bottom:6px"><span><i class="band" style="background:var(--c-before-band)"></i>Before</span><span><i style="background:var(--c-before);border-top:2px dashed var(--c-before);height:0"></i>P50 before</span><span><i class="band" style="background:var(--accent-band)"></i>After</span><span><i style="background:var(--c-accent)"></i>P50 after</span></div>
+            <svg viewBox="0 0 400 150" style="width:100%;height:auto;display:block">
+              <path d="{{SC_BEFORE_BAND}}" fill="var(--c-before-band)"/><path d="{{SC_BEFORE_P50}}" fill="none" stroke="var(--c-before)" stroke-width="1.5" stroke-dasharray="4 3"/>
+              <path d="{{SC_AFTER_BAND}}" class="band"/><path d="{{SC_AFTER_P50}}" class="p50"/>
+              <line class="buffer" x1="8" x2="392" y1="{{SC_BUFFER_Y}}" y2="{{SC_BUFFER_Y}}"/>
+            </svg>
+            <div class="ba"><div class="cell"><span class="k">Worst gap · before</span><span class="v gapc num">€2.17M</span></div><div class="cell"><span class="k">Worst gap · after</span><span class="v num">€310K</span><span class="small">8 smaller gap days remain from 25 May</span></div></div>
+          </div>
+        </div></div>
+    </main>
+  </div>
+</div>
+
+<div class="ref-head"><b>04 how it works</b> · sticky pipeline, two scroll states (stage 03 lit · stage 06 lit)</div>
+<div class="frame">
+  <div class="wrap pipe-wrap">
+    <div class="stage-card">
+      <div class="k">Stage 03 / 09 · feature engineering</div>
+      <div class="t">21 features per account-day, placed on the day money actually settles.</div>
+      <div class="b">Calendar and holidays, net-flow lags of 1, 2 and 7 days, a 7-day mean and volatility, an EWMA and a MAD anomaly score. Known payments are moved to their effective date for the payment rail: the 18 May card settlement lands on 21 May.</div>
+      <div class="big num">548<small>trainable rows out of 600 · 12 anomalies flagged · 7 known-event rows</small></div>
+      <div class="prog"><i class="done"></i><i class="done"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <svg class="pipe" viewBox="0 0 560 640">
+      <!-- edges -->
+      <path class="edge done" d="M280 56 V76"/><path class="edge done" d="M280 120 V140"/><path class="edge on" d="M280 184 V204"/><path class="edge on" d="M280 204 H110 V214 M280 204 V214 M280 204 H450 V214"/>
+      <path class="edge" d="M110 258 V272 H450 V258 M280 258 V292"/><path class="edge" d="M280 336 V356"/><path class="edge" d="M280 400 V414 H110 V424 M280 414 V424 M280 414 H450 V424"/>
+      <path class="edge" d="M110 468 V482 H450 V468 M280 482 V502"/><path class="edge" d="M280 546 V566"/>
+      <circle class="ptc" r="3"><animateMotion dur="1.6s" repeatCount="indefinite" path="M280 184 V204 H110 V214"/></circle>
+      <circle class="ptc" r="3"><animateMotion dur="1.6s" begin=".5s" repeatCount="indefinite" path="M280 184 V214"/></circle>
+      <circle class="ptc" r="3"><animateMotion dur="1.6s" begin="1s" repeatCount="indefinite" path="M280 184 V204 H450 V214"/></circle>
+      <!-- nodes -->
+      <g><rect class="box done" x="130" y="12" width="300" height="44" rx="10"/><text class="num done" x="144" y="30">01</text><text class="t done" x="170" y="30">Synthetic generator / CSV upload</text><text class="s done" x="170" y="46">600 rows · 5 accounts · seed 42</text></g>
+      <g><rect class="box done" x="130" y="76" width="300" height="44" rx="10"/><text class="num done" x="144" y="94">02</text><text class="t done" x="170" y="94">PostgreSQL</text><text class="s done" x="170" y="110">datasets · 7 scheduled flows · runs</text></g>
+      <g><rect class="box on" x="130" y="140" width="300" height="44" rx="10"/><text class="num on" x="144" y="158">03</text><text class="t on" x="170" y="158">Feature engineering</text><text class="s on" x="170" y="174">21 features · 548 trainable rows</text></g>
+      <g><rect class="box" x="40" y="214" width="140" height="44" rx="10"/><text class="num" x="52" y="232">04</text><text class="t" x="78" y="232">LightGBM</text><text class="s" x="78" y="248">120 trees</text></g>
+      <g><rect class="box" x="210" y="214" width="140" height="44" rx="10"/><text class="t" x="222" y="232">GBDT</text><text class="s" x="222" y="248">90 trees</text></g>
+      <g><rect class="box" x="380" y="214" width="140" height="44" rx="10"/><text class="t" x="392" y="232">EWMA</text><text class="s" x="392" y="248">volatility baseline</text></g>
+      <g><rect class="box" x="130" y="292" width="300" height="44" rx="10"/><text class="num" x="144" y="310">05</text><text class="t" x="170" y="310">Weighted quantile blend</text><text class="s" x="170" y="326">0.55 · 0.30 · 0.15</text></g>
+      <g><rect class="box" x="130" y="356" width="300" height="44" rx="10"/><text class="num" x="144" y="374">06</text><text class="t" x="170" y="374">Balance corridor P5 / P50 / P95</text><text class="s" x="170" y="390">14 days × 5 accounts = 70 corridor points</text></g>
+      <g><rect class="box" x="40" y="424" width="140" height="44" rx="10"/><text class="num" x="52" y="442">07</text><text class="t" x="78" y="442">Alerts</text><text class="s" x="78" y="458">10 gap days</text></g>
+      <g><rect class="box" x="210" y="424" width="140" height="44" rx="10"/><text class="t" x="222" y="442">What-if</text><text class="s" x="222" y="458">6 scenarios</text></g>
+      <g><rect class="box" x="380" y="424" width="140" height="44" rx="10"/><text class="t" x="392" y="442">Backtest</text><text class="s" x="392" y="458">−29.2 % loss</text></g>
+      <g><rect class="box" x="130" y="502" width="300" height="44" rx="10"/><text class="num" x="144" y="520">08</text><text class="t" x="170" y="520">FastAPI</text><text class="s" x="170" y="536">12 JSON endpoints · /docs</text></g>
+      <g><rect class="box" x="130" y="566" width="300" height="44" rx="10"/><text class="num" x="144" y="584">09</text><text class="t" x="170" y="584">Next.js dashboard</text><text class="s" x="170" y="600">static export · live with docker</text></g>
+    </svg>
+  </div>
+  <div class="wrap" style="border-top:1px dashed var(--hairline-2)"></div>
+  <div class="wrap pipe-wrap">
+    <div class="stage-card">
+      <div class="k">Stage 06 / 09 · balance corridor</div>
+      <div class="t">Start balance + scheduled flows + cumulated daily quantiles, day by day.</div>
+      <div class="b">Each model's daily P5 / P50 / P95 net flow is blended, cumulated from today's settled balance and shifted by the known payments. The result is a corridor, not a number: the downside is visible before it happens.</div>
+      <div class="big num gapc">−€1.13M<small>Atlas EUR Operating · P5 on 19 May · €2.13M below the buffer</small></div>
+      <div class="prog"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="on"></i><i></i><i></i><i></i></div>
+    </div>
+    <svg class="pipe" viewBox="0 0 560 640">
+      <path class="edge done" d="M280 56 V76"/><path class="edge done" d="M280 120 V140"/><path class="edge done" d="M280 184 V204"/><path class="edge done" d="M280 204 H110 V214 M280 204 V214 M280 204 H450 V214"/>
+      <path class="edge done" d="M110 258 V272 H450 V258 M280 258 V292"/><path class="edge on" d="M280 336 V356"/><path class="edge" d="M280 400 V414 H110 V424 M280 414 V424 M280 414 H450 V424"/>
+      <path class="edge" d="M110 468 V482 H450 V468 M280 482 V502"/><path class="edge" d="M280 546 V566"/>
+      <circle class="ptc" r="3"><animateMotion dur="1.2s" repeatCount="indefinite" path="M280 336 V356"/></circle>
+      <g><rect class="box done" x="130" y="12" width="300" height="44" rx="10"/><text class="num done" x="144" y="30">01</text><text class="t done" x="170" y="30">Synthetic generator / CSV upload</text><text class="s done" x="170" y="46">600 rows · 5 accounts · seed 42</text></g>
+      <g><rect class="box done" x="130" y="76" width="300" height="44" rx="10"/><text class="num done" x="144" y="94">02</text><text class="t done" x="170" y="94">PostgreSQL</text><text class="s done" x="170" y="110">datasets · 7 scheduled flows · runs</text></g>
+      <g><rect class="box done" x="130" y="140" width="300" height="44" rx="10"/><text class="num done" x="144" y="158">03</text><text class="t done" x="170" y="158">Feature engineering</text><text class="s done" x="170" y="174">21 features · 548 trainable rows</text></g>
+      <g><rect class="box done" x="40" y="214" width="140" height="44" rx="10"/><text class="num done" x="52" y="232">04</text><text class="t done" x="78" y="232">LightGBM</text><text class="s done" x="78" y="248">120 trees</text></g>
+      <g><rect class="box done" x="210" y="214" width="140" height="44" rx="10"/><text class="t done" x="222" y="232">GBDT</text><text class="s done" x="222" y="248">90 trees</text></g>
+      <g><rect class="box done" x="380" y="214" width="140" height="44" rx="10"/><text class="t done" x="392" y="232">EWMA</text><text class="s done" x="392" y="248">volatility baseline</text></g>
+      <g><rect class="box done" x="130" y="292" width="300" height="44" rx="10"/><text class="num done" x="144" y="310">05</text><text class="t done" x="170" y="310">Weighted quantile blend</text><text class="s done" x="170" y="326">0.55 · 0.30 · 0.15</text></g>
+      <g><rect class="box on" x="130" y="356" width="300" height="44" rx="10"/><text class="num on" x="144" y="374">06</text><text class="t on" x="170" y="374">Balance corridor P5 / P50 / P95</text><text class="s on" x="170" y="390">14 days × 5 accounts = 70 corridor points</text></g>
+      <g><rect class="box" x="40" y="424" width="140" height="44" rx="10"/><text class="num" x="52" y="442">07</text><text class="t" x="78" y="442">Alerts</text><text class="s" x="78" y="458">10 gap days</text></g>
+      <g><rect class="box" x="210" y="424" width="140" height="44" rx="10"/><text class="t" x="222" y="442">What-if</text><text class="s" x="222" y="458">6 scenarios</text></g>
+      <g><rect class="box" x="380" y="424" width="140" height="44" rx="10"/><text class="t" x="392" y="442">Backtest</text><text class="s" x="392" y="458">−29.2 % loss</text></g>
+      <g><rect class="box" x="130" y="502" width="300" height="44" rx="10"/><text class="num" x="144" y="520">08</text><text class="t" x="170" y="520">FastAPI</text><text class="s" x="170" y="536">12 JSON endpoints · /docs</text></g>
+      <g><rect class="box" x="130" y="566" width="300" height="44" rx="10"/><text class="num" x="144" y="584">09</text><text class="t" x="170" y="584">Next.js dashboard</text><text class="s" x="170" y="600">static export · live with docker</text></g>
+    </svg>
+  </div>
+</div>
+
+<div class="ref-head"><b>05 backtest as proof</b> · model vs baseline by horizon · coverage vs target · weak spots designed, not hidden</div>
+<div class="frame">
+  <div class="wrap" style="padding-top:48px;padding-bottom:56px">
+    <div class="eyebrow accent"><span class="dot"></span>Backtest · rolling origin · 6 folds · 7-day step · 420 scored account-days</div>
+    <h2 class="h2" style="margin-top:14px;max-width:26ch">29.2 % lower loss than a seasonal-naive baseline — and worse at one horizon.</h2>
+    <div class="proof" style="margin-top:32px">
+      <div class="card tonal"><div class="card-b" style="padding:20px"><div class="stat"><span class="v num">82,024</span><span class="l">mean pinball loss P50 · model</span></div><div class="small" style="margin-top:10px">vs <b class="ink num">115,880</b> seasonal-naive (net flow 7 days earlier, cumulated)</div></div></div>
+      <div class="card tonal"><div class="card-b" style="padding:20px"><div class="stat"><span class="v num">13 / 14</span><span class="l">horizons where the model beats the baseline</span></div><div class="small" style="margin-top:10px">loses at <b class="ink">h = 3</b>: 67.7K vs 52.7K</div></div></div>
+      <div class="card tonal"><div class="card-b" style="padding:20px"><div class="stat"><span class="v num">0.879</span><span class="l">mean 90 % interval coverage · target 0.90</span></div><div class="small" style="margin-top:10px">under target at <b class="ink">h = 1–3</b> (0.80 · 0.70 · 0.67); on target from h = 4</div></div></div>
+    </div>
+    <div class="two">
+      <div class="card"><div class="card-h"><div class="h4">Pinball loss P50 by horizon</div><div class="small" style="margin-top:2px">Lower is better · account-currency units · h = 3 highlighted</div></div><div class="card-b" style="padding-top:8px">
+        <svg viewBox="0 0 560 210" style="width:100%;height:auto;display:block">{{BT_YT}}
+          <rect x="{{BT_H3_X}}" y="12" width="1" height="170" fill="var(--warn-fill)" transform="translate(-0.5 0)"/><rect x="{{BT_H3_X}}" y="12" width="24" height="170" fill="var(--warn-tint)" transform="translate(-12 0)"/>
+          <path d="{{BT_BASE}}" fill="none" stroke="var(--c-baseline)" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/><path d="{{BT_MODEL}}" class="p50"/>{{BT_BPTS}}{{BT_PTS}}
+          <text class="lbl" style="fill:var(--c-baseline)" x="496" y="{{BT_END_BASE_Y}}" dy="3">baseline</text><text class="lbl acc" x="496" y="{{BT_END_MODEL_Y}}" dy="3">model</text>
+          <text class="lbl" style="fill:var(--warn)" x="{{BT_H3_X}}" y="{{BT_H3_Y}}" dx="-14" dy="-30">h=3: model 67.7K vs baseline 52.7K</text>{{BT_XT}}</svg></div></div>
+      <div class="card"><div class="card-h"><div class="h4">90 % interval coverage by horizon</div><div class="small" style="margin-top:2px">Share of actual balances inside P5–P95 · target 0.90 · amber = under target</div></div><div class="card-b" style="padding-top:8px">
+        <svg viewBox="0 0 560 210" style="width:100%;height:auto;display:block">{{CV_UNDER}}{{CV_YT}}
+          <line x1="48" x2="488" y1="{{CV_TARGET_Y}}" y2="{{CV_TARGET_Y}}" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="5 4"/><text class="lbl" x="330" y="{{CV_TARGET_Y}}" dy="14" text-anchor="middle">target 0.90</text>
+          <path d="{{CV_LINE}}" class="p50"/>{{CV_PTS}}<text class="lbl" style="fill:var(--warn)" x="62" y="26">too narrow at h 1–3</text>{{CV_XT}}</svg></div></div>
+    </div>
+    <div class="weak" style="margin-top:24px"><div class="t">Where it is weak — stated in the same type size as the wins</div><ul>
+      <li>At <b>h = 3</b> the model is worse than the baseline (<b>67,662</b> vs <b>52,732</b>).</li>
+      <li>Intervals are too narrow for <b>h = 1–3</b>: coverage <b>0.67–0.80</b> against 0.90, so near-term gaps can be missed. From h = 4 coverage is on target.</li>
+      <li>The backtest scores history only; scheduled payments are not replayed.</li>
+      <li>Synthetic data from a known process: these numbers describe the method, not real-world accuracy.</li></ul></div>
+  </div>
+</div>
+
+<div class="ref-head"><b>06 components</b> · all states · light</div>
+<div class="frame">
+  <div class="wrap sheet">
+    <h3>Colour · light</h3>
+    <div class="swatches">
+      <div class="sw" style="background:#101214;color:#B6BAC1">ink 101214</div><div class="sw" style="background:#4B5057;color:#E6E8EB">ink-2 4B5057</div><div class="sw" style="background:#6B7079;color:#fff">ink-3 6B7079</div><div class="sw" style="background:#F6F7F8">bg-2 F6F7F8</div>
+      <div class="sw" style="background:#2F4BD9;color:#fff">accent 2F4BD9</div><div class="sw" style="background:#DC3B3E;color:#fff">gap DC3B3E</div><div class="sw" style="background:#E8A400;color:#101214">warn E8A400</div><div class="sw" style="background:#22A45B;color:#fff">good 22A45B</div>
+      <div class="sw" style="background:#EEF1FD;color:#2439B0">accent-tint</div><div class="sw" style="background:#FDEEEE;color:#C0282A">gap-tint</div><div class="sw" style="background:#FFF6E0;color:#8A5A00">warn-tint</div><div class="sw" style="background:#EAF6EE;color:#1B7A41">good-tint</div>
+      <div class="sw" style="background:#D4691E;color:#fff">baseline D4691E</div><div class="sw" style="background:#0BA08F;color:#fff">gbdt 0BA08F</div><div class="sw" style="background:#9B59D6;color:#fff">ewma 9B59D6</div><div class="sw" style="background:#8B9098;color:#fff">before 8B9098</div>
+    </div>
+    <h3>Buttons</h3>
+    <div class="row"><span class="lab">primary · rest / hover / active / focus / loading / disabled</span><a class="btn btn-primary">See the forecast</a><a class="btn btn-primary hover">See the forecast</a><a class="btn btn-primary active">See the forecast</a><a class="btn btn-primary focus">See the forecast</a><a class="btn btn-primary loading"><span class="spin"></span>Running…</a><a class="btn btn-primary disabled">See the forecast</a></div>
+    <div class="row"><span class="lab">secondary / ghost / accent (data actions only) / danger · sizes sm 34 · md 44 · lg 52</span><a class="btn btn-secondary">How it works</a><a class="btn btn-secondary hover">How it works</a><a class="btn btn-ghost">Reset</a><a class="btn btn-ghost hover">Reset</a><a class="btn btn-accent">Run scenario</a><a class="btn btn-danger">Remove flow</a><a class="btn btn-primary sm">Small</a><a class="btn btn-primary lg">Large</a></div>
+    <h3>Inputs · select · segmented · tabs · switch</h3>
+    <div class="row" style="align-items:flex-start">
+      <div class="field"><span class="label">Shift (days)</span><div class="input num">2<span class="suffix">d</span></div><span class="hint">Positive = later</span></div>
+      <div class="field"><span class="label">Amount</span><div class="input num focus">4 100 000<span class="suffix">EUR</span></div><span class="hint">Original 4 100 000</span></div>
+      <div class="field"><span class="label">Seed</span><div class="input num error">−1</div><span class="hint err">Must be an integer ≥ 0</span></div>
+      <div class="field"><span class="label">Horizon</span><div class="input disabled">14 d</div><span class="hint">Fixed in the demo</span></div>
+      <div class="field"><span class="label">Account</span><div class="input select">Atlas Bank · EUR Operating<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div></div>
+    </div>
+    <div class="row"><span class="seg"><span class="on">Per account</span><span>Per currency</span></span><span class="seg"><span>P5</span><span class="on">P50</span><span>P95</span></span><div class="tabs" style="width:360px"><span class="on">Summary</span><span class="hover">Per horizon</span><span>Folds</span><span>Raw JSON</span></div><span class="switch"></span><span class="switch on"></span></div>
+    <h3>Status pills · tags · tooltip · stat tile · banners</h3>
+    <div class="row"><span class="chip gap"><span class="d"></span>Gap €2.13M</span><span class="chip warn"><span class="d"></span>Amber · €29K under</span><span class="chip good"><span class="d"></span>Clear 14 d</span><span class="chip accent"><span class="d"></span>Scenario applied</span><span class="chip"><span class="d"></span>Precomputed</span><span class="chip mono">run #1 · 05:35 UTC</span><span class="tag in">▲ €3.20M card settlement</span><span class="tag out">▼ €4.10M merchant payout</span><span class="tag">SEPA</span><span class="tip"><span class="k">Wed 27 May</span><br>P5 €899.5K · gap €100.5K</span></div>
+    <div class="row" style="gap:40px"><div class="stat"><span class="v num gapc">€2.13M</span><span class="l">first cash gap · in 1 day</span></div><div class="stat"><span class="v num">29.2%</span><span class="l">lower pinball loss</span></div><div class="stat"><span class="v num">0.879</span><span class="l">90 % coverage · target 0.90</span></div><div class="stat"><span class="v num">—</span><span class="l">no data yet</span></div></div>
+    <div class="row" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div style="border-left:3px solid var(--gap-fill);background:var(--gap-tint);border-radius:0 10px 10px 0;padding:12px 16px;font-size:13.5px"><b style="color:var(--gap)">Backend unreachable.</b> <span class="ink2">Could not reach <code>localhost:8000</code>. Nothing is shown in its place: no fake data fallback.</span> <a class="accc" style="font-weight:500;margin-left:8px" href="#">Retry</a></div>
+      <div style="border-left:3px solid var(--warn-fill);background:var(--warn-tint);border-radius:0 10px 10px 0;padding:12px 16px;font-size:13.5px"><b style="color:var(--warn)">3 rows rejected.</b> <span class="ink2">Row 14, column <code>ending_balance</code>: not a number. Row 15 … </span><a class="accc" style="font-weight:500;margin-left:8px" href="#">Show all</a></div>
+      <div class="card flat" style="padding:32px;text-align:center"><div class="h4">No cash gaps in the next 14 days</div><div class="small" style="margin-top:4px">P5 stays above every buffer. Try a scenario to stress the schedule.</div><a class="btn btn-secondary sm" style="margin-top:14px" href="#">Open what-if</a></div>
+    </div>
+    <h3>Cards · account item · alert item</h3>
+    <div class="row" style="align-items:flex-start">
+      <div class="card" style="width:280px"><div class="card-b"><div class="eyebrow">Elevated</div><div class="small" style="margin-top:6px">6 % hairline + soft lift. Default for data cards.</div></div></div>
+      <div class="card tonal" style="width:280px"><div class="card-b"><div class="eyebrow">Tonal</div><div class="small" style="margin-top:6px">bg-2 fill, no border. Stat clusters, side notes.</div></div></div>
+      <div class="card hover" style="width:280px"><div class="card-b"><div class="eyebrow">Hover</div><div class="small" style="margin-top:6px">Lift 1 px, stronger shadow, 150 ms.</div></div></div>
+      <div class="card selected" style="width:280px"><div class="card-b"><div class="eyebrow">Selected</div><div class="small" style="margin-top:6px">1 px accent ring. Used in scenario lists.</div></div></div>
+    </div>
+    <div class="row" style="align-items:flex-start">
+      <div class="rail" style="width:300px"><div class="acct"><div><div class="bank">Atlas Bank · EUR</div><div class="name">EUR Operating</div><div class="bal num">€3.00M<small>buffer €1.00M</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_atlas_eur_operating}}"/><path class="l" d="{{SPARK_atlas_eur_operating}}"/></svg><div class="st"><span class="days num gapc">1<small>day to gap</small></span><span class="chip gap"><span class="d"></span>Gap €2.13M</span></div></div><div class="acct on"><div><div class="bank">Nova Bank · EUR</div><div class="name">EUR Reserve</div><div class="bal num">€4.60M<small>buffer €1.20M</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_nova_eur_reserve}}"/><path class="l" d="{{SPARK_nova_eur_reserve}}"/></svg><div class="st"><span class="days num">14<small>days clear</small></span><span class="chip good"><span class="d"></span>min P5 €4.28M</span></div></div></div>
+      <div class="card" style="width:560px"><div class="card-b alerts"><div class="alert"><span class="sev"></span><div><div class="t">Gap €2.13M<span class="acc">Atlas Bank · EUR Operating</span></div><div class="g">P5 balance <b>−€1.13M</b> vs buffer €1.00M</div><div class="drivers"><span class="tag out">▼ €4.10M merchant payout · SEPA · 19 May</span></div></div><div class="when"><b>Tue 19 May</b>in 1 day</div></div><div class="alert"><span class="sev amber"></span><div><div class="t">Gap €29.4K<span class="acc">Atlas Bank · EUR Operating</span></div><div class="g">P5 balance <b>€970.6K</b> vs buffer €1.00M</div><div class="drivers"><span class="tag out">▼ €4.10M merchant payout</span><span class="tag out">▼ €850K processing fee</span></div></div><div class="when"><b>Mon 25 May</b>in 7 days</div></div></div></div>
+    </div>
+    <h3>Dark (secondary theme) · same components</h3>
+    <div class="dark" style="background:var(--bg);color:var(--ink);padding:24px;border-radius:14px;margin-top:18px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+      <div class="rail" style="width:300px"><div class="acct on gap"><div><div class="bank">Atlas Bank · EUR</div><div class="name">EUR Operating</div><div class="bal num">€3.00M<small>buffer €1.00M</small></div></div><svg class="spark" viewBox="0 0 72 24"><path class="a" d="{{SPARKA_atlas_eur_operating}}"/><path class="l" d="{{SPARK_atlas_eur_operating}}"/></svg><div class="st"><span class="days num">1<small>day to gap</small></span><span class="chip gap"><span class="d"></span>Gap €2.13M</span></div></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;gap:12px"><a class="btn btn-primary">See the forecast</a><a class="btn btn-secondary">How it works</a><a class="btn btn-ghost">Reset</a></div><div style="display:flex;gap:10px"><span class="chip gap"><span class="d"></span>Gap €2.13M</span><span class="chip warn"><span class="d"></span>Synthetic data</span><span class="chip good"><span class="d"></span>Clear 14 d</span><span class="chip accent"><span class="d"></span>Scenario</span></div><div class="field"><span class="label">Amount</span><div class="input num focus">4 100 000<span class="suffix">EUR</span></div></div></div>
+      <div class="card" style="width:420px"><div class="card-b"><div class="h4">Atlas Bank · EUR Operating</div><svg viewBox="0 0 400 150" style="width:100%;height:auto;display:block;margin-top:8px"><path d="{{SC_BEFORE_BAND}}" class="band"/><path d="{{SC_BEFORE_P50}}" class="p50"/><line class="buffer" x1="8" x2="392" y1="{{SC_BUFFER_Y}}" y2="{{SC_BUFFER_Y}}"/></svg></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="ref-head"><b>07 mobile 375</b> · hero · how-it-works pipeline (vertical)</div>
+<div class="phones">
+  <div class="phone m">
+    <div class="hdr"><a class="logo" href="#"><svg><use href="#mark"/></svg>TrueAvail</a><div class="right"><span class="chip warn"><span class="d"></span>Demo</span><span class="btn btn-ghost sm" style="padding:0 8px"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span></div></div>
+    <div class="banner"><span>Synthetic data · precomputed by the backend · <a href="#">how it works</a></span></div>
+    <div class="hero">
+      <div class="eyebrow accent"><span class="dot"></span>14-day liquidity forecast</div>
+      <h1 class="display" style="margin-top:14px">See the cash gap before it happens.</h1>
+      <p class="lead" style="margin-top:14px">A P5–P95 balance corridor for every bank account, 14 days ahead, flagging the days the pessimistic case falls below the buffer.</p>
+      <div class="ctas" style="margin-top:22px"><a class="btn btn-primary" href="#">See the forecast</a><a class="btn btn-secondary" href="#">How it works</a></div>
+      <svg class="globe" viewBox="0 0 600 600" style="margin-top:28px"><use href="#globe-sym"/></svg>
+      <div class="stats"><div><div class="v gapc num">€2.13M</div><div class="l">First cash gap</div><div class="n">Atlas EUR · in 1 day</div></div><div><div class="v num">29.2%</div><div class="l">Lower loss</div><div class="n">vs seasonal-naive</div></div><div><div class="v num">0.88</div><div class="l">90 % coverage</div><div class="n">target 0.90</div></div><div><div class="v num">600</div><div class="l">Observations</div><div class="n">5 accounts × 120 d</div></div></div>
+    </div>
+  </div>
+  <div class="phone m">
+    <div class="hdr"><a class="logo" href="#"><svg><use href="#mark"/></svg>TrueAvail</a><div class="right"><span class="chip warn"><span class="d"></span>Demo</span></div></div>
+    <div style="padding:28px 16px 32px">
+      <div class="eyebrow accent"><span class="dot"></span>How it works · 9 stages</div>
+      <div class="stage-card" style="margin-top:12px"><div class="k">Stage 03 / 09</div><div class="t">21 features per account-day.</div><div class="b" style="font-size:14px">Calendar, lags of 1 / 2 / 7 days, rolling mean and volatility, EWMA, anomaly score. Payments placed on their settlement date.</div><div class="big num">548<small>trainable rows out of 600</small></div><div class="prog"><i class="done"></i><i class="done"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="mpipe">
+        <div class="ms done"><span class="n">01</span><div><b>Synthetic generator / CSV</b><i>600 rows · 5 accounts · seed 42</i></div></div>
+        <div class="ms done"><span class="n">02</span><div><b>PostgreSQL</b><i>datasets · 7 scheduled flows · runs</i></div></div>
+        <div class="ms on"><span class="n">03</span><div><b>Feature engineering</b><i>21 features · 548 trainable rows</i></div></div>
+        <div class="ms"><span class="n">04</span><div><b>Three quantile models</b><i>LightGBM 120 trees · GBDT 90 trees · EWMA</i></div></div>
+        <div class="ms"><span class="n">05</span><div><b>Weighted quantile blend</b><i>0.55 · 0.30 · 0.15</i></div></div>
+        <div class="ms"><span class="n">06</span><div><b>Balance corridor P5 / P50 / P95</b><i>14 days × 5 accounts</i></div></div>
+        <div class="ms"><span class="n">07</span><div><b>Alerts · What-if · Backtest</b><i>10 gap days · 6 scenarios · −29.2 % loss</i></div></div>
+        <div class="ms"><span class="n">08</span><div><b>FastAPI</b><i>12 JSON endpoints · /docs</i></div></div>
+        <div class="ms"><span class="n">09</span><div><b>Next.js dashboard</b><i>static export · live with docker</i></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
