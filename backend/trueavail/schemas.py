@@ -128,6 +128,72 @@ class ForecastResponse(BaseModel):
     run_id: int | None = None
 
 
+class QuantileSeries(BaseModel):
+    p05: list[float]
+    p50: list[float]
+    p95: list[float]
+
+
+class ComponentPaths(BaseModel):
+    flow: QuantileSeries
+    balance: QuantileSeries
+
+
+class ExplainSeries(BaseModel):
+    account_id: str
+    currency: str
+    start_balance: float
+    required_buffer: float
+    dates: list[str]
+    scheduled_net_flow: list[float]
+    components: dict[str, ComponentPaths]
+    latest_features: dict[str, float | None]
+
+
+class FeatureImportanceRow(BaseModel):
+    feature: str
+    label: str
+    group: str
+    gain: float
+    share: float
+
+
+class FeatureImportance(BaseModel):
+    model: str
+    quantile: float
+    importance_type: str
+    features: list[FeatureImportanceRow]
+
+
+class ExplainModelInfo(BaseModel):
+    type: str
+    available: bool
+    fallback_reason: str | None = None
+    weights: dict[str, float]
+    n_estimators: dict[str, int]
+
+
+class ExplainTraining(BaseModel):
+    history_rows: int
+    accounts: int
+    rows_trainable: int
+    anomaly_rows: int
+    known_event_rows: int
+    feature_columns: list[str]
+    feature_labels: dict[str, str]
+
+
+class ExplainResponse(BaseModel):
+    as_of: str
+    horizon_days: int
+    quantiles: list[float]
+    model: ExplainModelInfo
+    training: ExplainTraining
+    feature_importance: FeatureImportance
+    components: list[str]
+    series: list[ExplainSeries]
+
+
 class ForecastRunOut(BaseModel):
     id: int
     dataset_id: int

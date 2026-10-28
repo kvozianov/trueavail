@@ -26,6 +26,7 @@ from .config import DEFAULT_FORECAST_HORIZON_DAYS, EWMA_ALPHA, MAD_ZSCORE_THRESH
 from .data import Dataset, load_reference_data
 from .features import (
     BASE_FEATURE_COLUMNS,
+    FEATURE_LABELS,
     add_calendar_features,
     add_cyclical_time_features,
     add_known_event_features,
@@ -331,29 +332,32 @@ def _future_feature_rows(
     return frame
 
 
-def predict_daily_flow_quantiles(
+def _future_and_fallback(
     trained: TrainedForecaster,
     horizon_days: int,
-    scheduled: pd.DataFrame | None = None,
-) -> pd.DataFrame:
-    """Return one row per (account_id, step) with flow_p05 / flow_p50 / flow_p95."""
+    scheduled: pd.DataFrame | None,
+) -> tuple[pd.DataFrame, dict[float, np.ndarray]]:
+    """Future feature rows and the EWMA + rolling-volatility baseline quantiles for them."""
     state = trained.latest_state
     future = _future_feature_rows(state, trained.as_of, horizon_days, scheduled if scheduled is not None else pd.DataFrame())
     bundle = trained.bundle
-
     ewma = future["ewma_net_flow"].astype(float).to_numpy()
     center = ewma * (0.78 ** future["step"].to_numpy())
     scale = future["account_id"].map(lambda acc: bundle.residual_scale_by_account.get(acc, 75_000.0)).to_numpy()
     fallback = {0.05: center - Z_90 * scale, 0.50: center, 0.95: center + Z_90 * scale}
+    return future, fallback
 
+
+def _blend(bundle: QuantileModelBundle, future: pd.DataFrame, fallback: dict[float, np.ndarray]) -> dict[float, np.ndarray]:
     if bundle.available and bundle.models:
         X = future[BASE_FEATURE_COLUMNS].astype(float)
         w = bundle.model_weights.get("ewma_volatility_baseline", EWMA_BASELINE_WEIGHT)
-        blended = {q: (1.0 - w) * bundle.models[q].predict(X) + w * fallback[q] for q in QUANTILES}
-    else:
-        blended = fallback
+        return {q: (1.0 - w) * bundle.models[q].predict(X) + w * fallback[q] for q in QUANTILES}
+    return fallback
 
-    stacked = np.sort(np.vstack([blended[q] for q in QUANTILES]), axis=0)  # guard against quantile crossing
+
+def _flow_frame(future: pd.DataFrame, quantiles: dict[float, np.ndarray]) -> pd.DataFrame:
+    stacked = np.sort(np.vstack([quantiles[q] for q in QUANTILES]), axis=0)  # guard against quantile crossing
     return pd.DataFrame(
         {
             "account_id": future["account_id"].to_numpy(),
@@ -364,6 +368,59 @@ def predict_daily_flow_quantiles(
             "flow_p95": stacked[2],
         }
     )
+
+
+def predict_daily_flow_quantiles(
+    trained: TrainedForecaster,
+    horizon_days: int,
+    scheduled: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Return one row per (account_id, step) with flow_p05 / flow_p50 / flow_p95."""
+    future, fallback = _future_and_fallback(trained, horizon_days, scheduled)
+    return _flow_frame(future, _blend(trained.bundle, future, fallback))
+
+
+def predict_component_flow_quantiles(
+    trained: TrainedForecaster,
+    horizon_days: int,
+    scheduled: pd.DataFrame | None = None,
+) -> tuple[dict[str, pd.DataFrame], dict[str, dict[float, np.ndarray]]]:
+    """Daily flow quantiles of every ensemble component on its own, plus the weighted "blend".
+
+    Returns (frames, raw): ``frames[name]`` has the same shape as predict_daily_flow_quantiles
+    (each component's quantiles sorted, like the blend); ``frames["blend"]`` is exactly what the
+    forecast uses. ``raw[name]`` holds the unsorted per-quantile predictions, so the blend can be
+    checked as the weighted sum of the components."""
+    future, fallback = _future_and_fallback(trained, horizon_days, scheduled)
+    bundle = trained.bundle
+    raw: dict[str, dict[float, np.ndarray]] = {}
+    if bundle.available and bundle.models:
+        X = future[BASE_FEATURE_COLUMNS].astype(float)
+        for index, component in enumerate(bundle.models[0.50].components):
+            raw[component.name] = {
+                q: np.asarray(bundle.models[q].components[index].model.predict(X), dtype=float) for q in QUANTILES
+            }
+    raw["ewma_volatility_baseline"] = fallback
+    raw["blend"] = _blend(bundle, future, fallback)
+    return {name: _flow_frame(future, values) for name, values in raw.items()}, raw
+
+
+def feature_importances(trained: TrainedForecaster) -> list[dict[str, object]]:
+    """Gain importances of the LightGBM P50 model, largest first, with readable names.
+    Empty when LightGBM was not trained (fallback or library missing)."""
+    bundle = trained.bundle
+    if not (bundle.available and bundle.models):
+        return []
+    lightgbm = next((c for c in bundle.models[0.50].components if c.name == "lightgbm_quantile"), None)
+    if lightgbm is None:
+        return []
+    gains = np.asarray(lightgbm.model.booster_.feature_importance(importance_type="gain"), dtype=float)
+    total = float(gains.sum()) or 1.0
+    rows = []
+    for name, gain in zip(BASE_FEATURE_COLUMNS, gains):
+        label, group = FEATURE_LABELS.get(name, (name, "other"))
+        rows.append({"feature": name, "label": label, "group": group, "gain": float(gain), "share": float(gain) / total})
+    return sorted(rows, key=lambda row: (-row["gain"], BASE_FEATURE_COLUMNS.index(row["feature"])))
 
 
 def balance_quantile_paths(
@@ -408,19 +465,11 @@ def resolve_as_of(dataset: Dataset, as_of: str | None) -> str:
     return key
 
 
-def run_forecast(
-    dataset: Dataset,
-    horizon_days: int = DEFAULT_FORECAST_HORIZON_DAYS,
-    as_of: str | None = None,
-    scheduled: pd.DataFrame | None = None,
-    prefer_ml: bool = True,
-) -> dict[str, object]:
-    """Forecast every account of ``dataset`` for ``horizon_days`` after ``as_of``.
-
-    ``scheduled`` overrides the dataset's scheduled flows (used by what-if)."""
-    as_of_key = resolve_as_of(dataset, as_of)
-    trained = cached_forecaster(dataset, as_of_key, prefer_ml=prefer_ml)
-    flows = dataset.scheduled if scheduled is None else scheduled
+def _forecast_inputs(
+    dataset: Dataset, as_of_key: str, horizon_days: int, flows: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, float], dict[tuple[str, str], float], dict[tuple[str, str], list[dict[str, object]]]]:
+    """Scheduled flows inside the horizon, last history row per account, start balances,
+    signed scheduled amount per (account, day) and the known events behind it."""
     end_key = (pd.Timestamp(as_of_key) + pd.Timedelta(days=horizon_days)).strftime("%Y-%m-%d")
     in_window = flows.loc[(flows["effective_date"] > as_of_key) & (flows["effective_date"] <= end_key)] if not flows.empty else flows
 
@@ -442,6 +491,25 @@ def run_forecast(
                 "description": str(flow["description"]),
             }
         )
+    return in_window, last, start_balances, scheduled_by_day, events_by_day
+
+
+def run_forecast(
+    dataset: Dataset,
+    horizon_days: int = DEFAULT_FORECAST_HORIZON_DAYS,
+    as_of: str | None = None,
+    scheduled: pd.DataFrame | None = None,
+    prefer_ml: bool = True,
+) -> dict[str, object]:
+    """Forecast every account of ``dataset`` for ``horizon_days`` after ``as_of``.
+
+    ``scheduled`` overrides the dataset's scheduled flows (used by what-if)."""
+    as_of_key = resolve_as_of(dataset, as_of)
+    trained = cached_forecaster(dataset, as_of_key, prefer_ml=prefer_ml)
+    flows = dataset.scheduled if scheduled is None else scheduled
+    in_window, last, start_balances, scheduled_by_day, events_by_day = _forecast_inputs(
+        dataset, as_of_key, horizon_days, flows
+    )
 
     daily = predict_daily_flow_quantiles(trained, horizon_days, in_window)
     paths = balance_quantile_paths(daily, start_balances, scheduled_by_day)
@@ -486,4 +554,89 @@ def run_forecast(
         },
         "points": points,
         "first_breach": next((point for point in points if point["breach"]), None),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Model explanation: per-component corridors and feature importances
+# ---------------------------------------------------------------------------
+
+
+def explain_forecast(
+    dataset: Dataset,
+    horizon_days: int = DEFAULT_FORECAST_HORIZON_DAYS,
+    as_of: str | None = None,
+) -> dict[str, object]:
+    """What the forecast is made of: each ensemble component's own balance corridor per account,
+    the weighted blend (identical to run_forecast), the LightGBM P50 gain importances and the
+    latest feature vector per account. Uses the same cached training as run_forecast."""
+    as_of_key = resolve_as_of(dataset, as_of)
+    trained = cached_forecaster(dataset, as_of_key)
+    in_window, last, start_balances, scheduled_by_day, _ = _forecast_inputs(
+        dataset, as_of_key, horizon_days, dataset.scheduled
+    )
+    frames, _raw = predict_component_flow_quantiles(trained, horizon_days, in_window)
+    paths = {name: balance_quantile_paths(frame, start_balances, scheduled_by_day) for name, frame in frames.items()}
+
+    bundle = trained.bundle
+    state = trained.latest_state.set_index("account_id")
+    series = []
+    for account_id in dataset.account_ids:
+        components: dict[str, dict[str, dict[str, list[float]]]] = {}
+        dates: list[str] = []
+        scheduled_net: list[float] = []
+        for name, frame in paths.items():
+            rows = frame.loc[frame["account_id"] == account_id].sort_values("step")
+            dates = rows["date"].tolist()
+            scheduled_net = [float(v) for v in rows["scheduled_net_flow"]]
+            components[name] = {
+                "flow": {key: [float(v) for v in rows[f"flow_{key}"]] for key in ("p05", "p50", "p95")},
+                "balance": {key: [float(v) for v in rows[f"balance_{key}"]] for key in ("p05", "p50", "p95")},
+            }
+        account = last.loc[account_id]
+        series.append(
+            {
+                "account_id": account_id,
+                "currency": str(account["currency"]),
+                "start_balance": float(start_balances[account_id]),
+                "required_buffer": float(account["required_buffer"]),
+                "dates": dates,
+                "scheduled_net_flow": scheduled_net,
+                "components": components,
+                "latest_features": {
+                    name: float(state.loc[account_id, name]) if account_id in state.index else None
+                    for name in BASE_FEATURE_COLUMNS
+                    if name in state.columns
+                },
+            }
+        )
+
+    return {
+        "as_of": as_of_key,
+        "horizon_days": int(horizon_days),
+        "quantiles": list(QUANTILES),
+        "model": {
+            "type": bundle.model_type,
+            "available": bundle.available,
+            "fallback_reason": bundle.fallback_reason,
+            "weights": bundle.model_weights,
+            "n_estimators": bundle.n_estimators,
+        },
+        "training": {
+            "history_rows": int(len(dataset.history.loc[dataset.history["date"] <= as_of_key])),
+            "accounts": len(dataset.account_ids),
+            "rows_trainable": trained.rows_trainable,
+            "anomaly_rows": trained.anomaly_rows,
+            "known_event_rows": int(len(in_window)),
+            "feature_columns": list(BASE_FEATURE_COLUMNS),
+            "feature_labels": {name: FEATURE_LABELS.get(name, (name, "other"))[0] for name in BASE_FEATURE_COLUMNS},
+        },
+        "feature_importance": {
+            "model": "lightgbm_quantile",
+            "quantile": 0.5,
+            "importance_type": "gain",
+            "features": feature_importances(trained),
+        },
+        "components": [*bundle.component_models, "blend"],
+        "series": series,
     }

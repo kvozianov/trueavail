@@ -30,6 +30,31 @@ BASE_FEATURE_COLUMNS = [
     "mad_zscore",
 ]
 
+# Readable name and group of every model feature, for the dashboard's "what the model looks at".
+FEATURE_LABELS: dict[str, tuple[str, str]] = {
+    "day_of_week": ("Day of week", "calendar"),
+    "is_weekend": ("Weekend", "calendar"),
+    "is_holiday": ("Bank holiday", "calendar"),
+    "is_month_end": ("Month end", "calendar"),
+    "is_payroll_day": ("Payroll day (15th, 25th, 28th)", "calendar"),
+    "known_event_count": ("Known payments that day", "scheduled"),
+    "known_event_expected_net_flow": ("Known payments, net amount", "scheduled"),
+    "event_payroll_day": ("Payroll event", "scheduled"),
+    "event_merchant_payout_cycle": ("Merchant payout cycle", "scheduled"),
+    "event_bank_holiday": ("Holiday event", "scheduled"),
+    "event_shopping_peak": ("Shopping peak", "scheduled"),
+    "hour_sin": ("Time of day (sine)", "calendar"),
+    "hour_cos": ("Time of day (cosine)", "calendar"),
+    "net_flow_lag_1": ("Net flow 1 day ago", "history"),
+    "net_flow_lag_2": ("Net flow 2 days ago", "history"),
+    "net_flow_lag_7": ("Net flow 7 days ago", "history"),
+    "balance_lag_1": ("Balance 1 day ago", "history"),
+    "rolling_net_flow_mean_7": ("7-day mean net flow", "history"),
+    "rolling_net_flow_volatility_7": ("7-day net flow volatility", "history"),
+    "ewma_net_flow": ("EWMA of net flow", "history"),
+    "mad_zscore": ("Anomaly score (MAD z)", "history"),
+}
+
 
 def add_cyclical_time_features(
     frame: pd.DataFrame,

@@ -59,6 +59,7 @@ payout-2026-05-19,atlas-eur-operating,EUR,4100000,outflow,2026-05-19,SEPA,mercha
 | GET | `/api/data/history` | `?account_id=` optional | `[{date, account_id, net_flow, ending_balance, required_buffer}]` |
 | GET | `/api/data/scheduled` | — | `[{flow_id, account_id, currency, amount, direction, expected_date, effective_date, rail, description}]` |
 | POST | `/api/forecast/run` | `{horizon_days?:14, as_of?:date}` | `ForecastResponse` (below) |
+| GET | `/api/forecast/explain` | `?horizon_days=14` | `ExplainResponse` (below): what the forecast is made of |
 | GET | `/api/forecast/runs` | `?limit=20` | recent forecast / backtest / what-if runs stored in the database |
 | GET | `/api/alerts` | `?quantile=p05&horizon_days=14` | `{per_account:[Alert], consolidated:[Alert], threshold_quantile}` |
 | POST | `/api/backtest/run` | `{horizon_days?:14, folds?:6, step_days?:7}` | `BacktestResponse` (below) |
@@ -75,6 +76,18 @@ ForecastResponse = {
            scheduled_net_flow, required_buffer, breach:bool, known_events:[{flow_id, amount, direction, description}]}],
   first_breach: point | null
 }
+ExplainResponse = {
+  as_of, horizon_days, quantiles, model:{type, available, fallback_reason, weights, n_estimators},
+  training:{history_rows, accounts, rows_trainable, anomaly_rows, known_event_rows, feature_columns, feature_labels},
+  feature_importance:{model:"lightgbm_quantile", quantile:0.5, importance_type:"gain",
+                      features:[{feature, label, group, gain, share}]},   // largest gain first
+  components:["lightgbm_quantile","sklearn_gbdt_quantile","ewma_volatility_baseline","blend"],
+  series:[{account_id, currency, start_balance, required_buffer, dates, scheduled_net_flow,
+           components:{<name>:{flow:{p05,p50,p95}, balance:{p05,p50,p95}}},   // one value per day
+           latest_features:{<feature>: value}}]
+}
+  // each component's corridor = start balance + scheduled flows + its own cumulated daily quantiles;
+  // "blend" is the weighted sum of the components and equals the ForecastResponse corridor
 Alert = {account_id|"consolidated", currency, date, quantile_balance, required_buffer, gap_amount, severity:"red"|"amber", drivers:[str]}
   // consolidated alerts are computed per currency (sum of that currency's accounts, no FX conversion)
   // whatif delta.worst_gap_* is the largest gap_amount among the alerts, in that alert's currency

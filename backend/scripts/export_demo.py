@@ -180,6 +180,7 @@ def export(out_dir: Path) -> dict[str, object]:
         write("history.json", get("/api/data/history"))
         write("scheduled.json", get("/api/data/scheduled"))
         write("forecast.json", post("/api/forecast/run", {"horizon_days": 14}))
+        write("explain.json", get("/api/forecast/explain", horizon_days=14))
         write("alerts.json", get("/api/alerts", quantile="p05", horizon_days=14))
         write("backtest.json", post("/api/backtest/run", {"horizon_days": 14, "folds": 6, "step_days": 7}))
         write("optimizer.json", post("/api/optimizer/rebalance", {}))

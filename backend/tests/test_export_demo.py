@@ -20,6 +20,11 @@ def test_export_demo_writes_parseable_files(tmp_path) -> None:
 
     forecast = json.loads((tmp_path / "forecast.json").read_text())
     assert len(forecast["points"]) == 5 * 14
+    explain = json.loads((tmp_path / "explain.json").read_text())
+    assert explain["as_of"] == forecast["as_of"] and len(explain["series"]) == 5
+    blend = {s["account_id"]: s["components"]["blend"]["balance"]["p05"] for s in explain["series"]}
+    for point in forecast["points"][:5]:
+        assert point["balance_p05"] in blend[point["account_id"]]
     backtest = json.loads((tmp_path / "backtest.json").read_text())
     assert backtest["folds"] == 6 and len(backtest["per_horizon"]) == 14
 

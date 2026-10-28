@@ -12,7 +12,7 @@ from .alerts import build_alerts
 from .backtest import run_backtest
 from .config import CORS_ORIGINS, SAMPLES_DIR, VERSION
 from .data import STORE, DataValidationError, dataset_from_upload, generate_synthetic_dataset
-from .forecasting import model_available, run_forecast
+from .forecasting import explain_forecast, model_available, run_forecast
 from .optimizer import solve_liquidity_rebalance
 from .schemas import (
     AccountOut,
@@ -20,6 +20,7 @@ from .schemas import (
     BacktestRequest,
     BacktestResponse,
     DatasetSummary,
+    ExplainResponse,
     ForecastRequest,
     ForecastResponse,
     ForecastRunOut,
@@ -186,6 +187,12 @@ def forecast_run(request: ForecastRequest | None = None) -> dict[str, object]:
         summary=_run_summary(result),
     )
     return result
+
+
+@app.get("/api/forecast/explain", response_model=ExplainResponse)
+def forecast_explain(horizon_days: int = Query(default=14, ge=1, le=30)) -> dict[str, object]:
+    """Per-component corridors (LightGBM, GBDT, EWMA, blend) and LightGBM P50 feature importances."""
+    return explain_forecast(STORE.get(), horizon_days=horizon_days)
 
 
 @app.get("/api/forecast/runs", response_model=list[ForecastRunOut])
