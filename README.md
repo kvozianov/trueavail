@@ -93,6 +93,7 @@ Shift the EUR 4.1M merchant payout by two days and remove a fee: the scenario re
 | GET | `/api/data/history`, `/api/data/scheduled` | active dataset rows |
 | GET | `/api/data/samples/{name}` | sample CSVs in the expected format |
 | POST | `/api/forecast/run` | 14-day quantile forecast |
+| GET | `/api/forecast/explain` | per-component corridors (LightGBM, GBDT, EWMA, blend) and LightGBM P50 feature importances |
 | GET | `/api/forecast/runs` | stored forecast runs |
 | GET | `/api/alerts` | cash-gap alerts per account and per currency |
 | POST | `/api/backtest/run` | rolling-origin backtest |
