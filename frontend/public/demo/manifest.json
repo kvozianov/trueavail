@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-10-28T05:35:22+00:00",
+ "generated_at": "2026-10-28T06:19:57+00:00",
  "backend_version": "0.2.0",
  "git_commit": {
-  "sha": "427647ad5c50fad1585449d941fad5ef5a278542",
+  "sha": "b2f26986d184aca32b3a935e4580128e7bbc76f5",
   "backend_dirty": false
  },
  "generator": "backend/scripts/export_demo.py",
@@ -82,7 +82,7 @@
   },
   {
    "path": "scenarios/index.json",
-   "bytes": 2133
+   "bytes": 3824
   },
   {
    "path": "samples/history_5accounts_120d.csv",
