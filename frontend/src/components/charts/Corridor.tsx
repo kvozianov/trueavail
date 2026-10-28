@@ -211,8 +211,10 @@ export function Corridor(props: CorridorProps) {
 
   const hd = hover != null ? days[hover] : null;
   const hx = hover != null ? x(hover) : 0;
-  const tipLeft = hd ? (hx + 14 + TOOLTIP_W > M.left + plotW || hx > width - 240 ? hx - 14 - TOOLTIP_W : hx + 14) : 0;
-  const tipX = Math.max(M.left, Math.min(tipLeft, M.left + plotW - TOOLTIP_W));
+  // The tooltip stays inside the plot area, so it never covers the P95 / P50 / P5 end labels in the right margin.
+  const tipW = Math.min(TOOLTIP_W, plotW - 4);
+  const tipLeft = hd ? (hx + 14 + tipW > M.left + plotW || hx > width - 240 ? hx - 14 - tipW : hx + 14) : 0;
+  const tipX = Math.max(M.left, Math.min(tipLeft, M.left + plotW - tipW));
   const summary = corridorSummary(props.points, accountLabel, currency);
   const t = (dur: number, delay = 0, ease: [number, number, number, number] = [0.2, 0, 0, 1]) => (play ? { duration: dur, delay, ease } : { duration: 0 });
   const opened = inView || !play;
@@ -387,7 +389,7 @@ export function Corridor(props: CorridorProps) {
         <div
           aria-hidden
           className="tip pointer-events-none absolute z-10 px-3 py-2.5 text-[12.5px]"
-          style={{ left: tipX, top: M.top + 6, width: TOOLTIP_W }}
+          style={{ left: tipX, top: M.top + 6, width: tipW }}
         >
           <TooltipBody d={hd} currency={currency} labels={hasCmp ? labels : undefined} />
         </div>
