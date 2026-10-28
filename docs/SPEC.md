@@ -84,6 +84,7 @@ ExplainResponse = {
   components:["lightgbm_quantile","sklearn_gbdt_quantile","ewma_volatility_baseline","blend"],
   series:[{account_id, currency, start_balance, required_buffer, dates, scheduled_net_flow,
            components:{<name>:{flow:{p05,p50,p95}, balance:{p05,p50,p95}}},   // one value per day
+           anomaly_dates:[date],   // history days flagged by the MAD anomaly score (excluded from training)
            latest_features:{<feature>: value}}]
 }
   // each component's corridor = start balance + scheduled flows + its own cumulated daily quantiles;

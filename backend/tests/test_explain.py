@@ -59,6 +59,10 @@ def test_explain_blend_matches_the_forecast_corridor() -> None:
             assert blend[key][step] == pytest.approx(point[f"balance_{key}"])
         assert series["scheduled_net_flow"][step] == pytest.approx(point["scheduled_net_flow"])
 
+    flagged = [d for s in explain["series"] for d in s["anomaly_dates"]]
+    assert len(flagged) == explain["training"]["anomaly_rows"] == forecast["feature_quality"]["anomaly_rows"]
+    assert all(d <= explain["as_of"] for d in flagged)
+
     atlas = by_account["atlas-eur-operating"]
     assert len(atlas["dates"]) == 14
     assert set(atlas["latest_features"]) == set(BASE_FEATURE_COLUMNS)

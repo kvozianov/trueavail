@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -215,6 +215,7 @@ class TrainedForecaster:
     latest_state: pd.DataFrame  # one feature row per account at as_of
     rows_trainable: int
     anomaly_rows: int
+    anomaly_dates: dict[str, list[str]] = field(default_factory=dict)  # account -> dates flagged by MAD z
 
 
 def history_with_timestamps(history: pd.DataFrame) -> pd.DataFrame:
@@ -244,12 +245,17 @@ def train_forecaster(history: pd.DataFrame, as_of: str, prefer_ml: bool = True, 
         if prefer_ml
         else _fallback_model_bundle(trainable, "prefer_ml=false")
     )
+    flagged = feature_frame.loc[feature_frame["is_anomaly_mad"], ["account_id", "timestamp"]]
+    anomaly_dates: dict[str, list[str]] = {}
+    for account_id, stamp in zip(flagged["account_id"], pd.to_datetime(flagged["timestamp"], utc=True)):
+        anomaly_dates.setdefault(str(account_id), []).append(stamp.strftime("%Y-%m-%d"))
     return TrainedForecaster(
         as_of=as_of,
         bundle=bundle,
         latest_state=latest_feature_state(feature_frame),
         rows_trainable=int(len(trainable)),
         anomaly_rows=int(summary["anomaly_rows"]),
+        anomaly_dates={account: sorted(dates) for account, dates in anomaly_dates.items()},
     )
 
 
@@ -603,6 +609,7 @@ def explain_forecast(
                 "dates": dates,
                 "scheduled_net_flow": scheduled_net,
                 "components": components,
+                "anomaly_dates": trained.anomaly_dates.get(account_id, []),
                 "latest_features": {
                     name: float(state.loc[account_id, name]) if account_id in state.index else None
                     for name in BASE_FEATURE_COLUMNS

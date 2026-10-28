@@ -147,6 +147,7 @@ class ExplainSeries(BaseModel):
     dates: list[str]
     scheduled_net_flow: list[float]
     components: dict[str, ComponentPaths]
+    anomaly_dates: list[str]
     latest_features: dict[str, float | None]
 
 
