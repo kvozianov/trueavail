@@ -7,6 +7,7 @@ import type {
   Account,
   BacktestRequest,
   DatasetSummary,
+  ExplainResponse,
   GenerateRequest,
   HealthResponse,
   ScheduledFlow,
@@ -145,3 +146,10 @@ export async function uploadDataset(file: File, scheduled: File | null): Promise
     warnings,
   };
 }
+
+/**
+ * The explain payload has no fixture simulator: fixtures mode serves the real backend export
+ * (public/demo/explain.json, same account ids), loaded only when the model room asks for it.
+ */
+export const explain = () =>
+  import("../../../public/demo/explain.json").then((m) => m.default as unknown as ExplainResponse);

@@ -20,6 +20,7 @@ import type {
   DemoManifest,
   DemoScenario,
   DemoScenarioSummary,
+  ExplainResponse,
   ForecastRequest,
   ForecastResponse,
   GenerateRequest,
@@ -245,6 +246,14 @@ export const api = {
       : USE_FIXTURES
         ? fx().then((m) => m.forecast)
         : request<ForecastResponse>("POST", "/api/forecast/run", { json: body, signal }),
+
+  /** Per-component corridors and LightGBM feature importances. */
+  explain: (horizonDays = 14, signal?: AbortSignal) =>
+    DEMO
+      ? demo<ExplainResponse>("explain.json")
+      : USE_FIXTURES
+        ? fx().then((m) => m.explain())
+        : request<ExplainResponse>("GET", "/api/forecast/explain", { query: { horizon_days: horizonDays }, signal }),
 
   alerts: (params: { quantile?: string; horizon_days?: number } = {}, signal?: AbortSignal) =>
     DEMO

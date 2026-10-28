@@ -1,0 +1,184 @@
+/* ============================================================================
+   TrueAvail design tokens — v1
+   Light theme is primary (defined on :root). Dark is secondary and applies via
+   prefers-color-scheme unless the page is stamped data-theme="light"; a stamp
+   data-theme="dark" forces dark. Drop this file into frontend/src/app/ and
+   @import it before Tailwind's @theme block (see DESIGN_SYSTEM.md § Tokens).
+
+   Every colour below has been checked against WCAG 2.1 AA for the surface it is
+   meant to sit on; the ratios are listed in DESIGN_SYSTEM.md § Colour.
+   ============================================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Neutrals (cool graphite) -------------------------------------- */
+  --bg: #FFFFFF;            /* page */
+  --bg-2: #F6F7F8;          /* tonal sections, banner, tonal cards, segmented track */
+  --bg-3: #EEF0F2;          /* bar tracks, tag fills, pressed surfaces */
+  --ink: #101214;           /* headlines, primary text, primary button fill   18.8:1 on bg */
+  --ink-2: #4B5057;         /* body text                                       8.1:1 */
+  --ink-3: #6B7079;         /* secondary / captions / eyebrows                 5.0:1 (4.6:1 on bg-2) */
+  --ink-4: #9AA0A8;         /* placeholders, disabled text, leader lines — NOT for text that must be read */
+  --hairline: #E6E8EB;      /* dividers, grid lines */
+  --hairline-2: #D5D9DE;    /* secondary button border, chart axes */
+  --border-input: #8E949C;  /* input borders: 3.06:1 vs bg (WCAG 1.4.11) */
+
+  /* ---- Accent: "corridor blue" --------------------------------------- */
+  --accent: #2F4BD9;        /* P50 line, links on white, focus ring, active markers   6.7:1 on bg */
+  --accent-ink: #2439B0;    /* link hover, text on accent-tint                        9.2:1 on bg, 8.1:1 on tint */
+  --accent-tint: #EEF1FD;   /* selected rows, lit pipeline stage, info chips */
+  --accent-band: rgba(47, 75, 217, 0.14);  /* P5–P95 corridor fill */
+
+  /* ---- Status (reserved; never used for chart series) ---------------- */
+  --gap: #C0282A;           /* gap text                       5.9:1 on bg, 5.2:1 on gap-tint */
+  --gap-fill: #DC3B3E;      /* gap dot, buffer line, gap node  4.4:1 on bg (UI, ≥3:1) */
+  --gap-tint: #FDEEEE;
+  --gap-band: rgba(220, 59, 62, 0.09);     /* gap-day bands on charts */
+  --warn: #8A5A00;          /* warning text                   5.9:1 on bg, 5.5:1 on warn-tint */
+  --warn-fill: #E8A400;     /* warning dot / under-coverage marker (non-text) */
+  --warn-tint: #FFF6E0;
+  --good: #1B7A41;          /* healthy text                   5.4:1 on bg, 4.8:1 on good-tint */
+  --good-fill: #22A45B;     /* healthy dot, inflow marker      3.2:1 on bg (UI) */
+  --good-tint: #EAF6EE;
+
+  /* ---- Chart series (validated categorical set, fixed order) --------- */
+  --c-actual: #101214;      /* actual history line */
+  --c-accent: #2F4BD9;      /* slot 1: P50 / blend / LightGBM */
+  --c-baseline: #D4691E;    /* slot 2: seasonal-naive baseline            3.6:1 on bg (lines ≥3:1; labels in ink) */
+  --c-gbdt: #0BA08F;        /* slot 3: sklearn GBDT component             3.3:1 */
+  --c-ewma: #9B59D6;        /* slot 4: EWMA component                     4.4:1 */
+  --c-before: #8B9098;      /* "before" scenario corridor / P50 */
+  --c-before-band: rgba(139, 144, 152, 0.18);
+  --c-calendar: #9B59D6;    /* feature-group colour: calendar (shares the EWMA hue — never shown together) */
+  --c-history: #2F4BD9;     /* feature-group colour: history */
+  --c-scheduled: #0BA08F;   /* feature-group colour: scheduled */
+
+  /* ---- Typography ---------------------------------------------------- */
+  --font-display: var(--font-instrument-sans), "Instrument Sans", system-ui, sans-serif;
+  --font-body: var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  --text-display-xl: 64px; --lh-display-xl: 1.02; --ls-display-xl: -0.028em;  /* hero, desktop */
+  --text-display-l: 48px;  --lh-display-l: 1.04;  --ls-display-l: -0.026em;
+  --text-h1: 36px;         --lh-h1: 1.1;          --ls-h1: -0.02em;
+  --text-h2: 30px;         --lh-h2: 1.12;         --ls-h2: -0.022em;
+  --text-h3: 20px;         --lh-h3: 1.3;          --ls-h3: -0.012em;
+  --text-h4: 15px;         --lh-h4: 1.4;          --ls-h4: -0.005em;          /* body family, 600 */
+  --text-lead: 18px;       --lh-lead: 1.5;
+  --text-body: 15px;       --lh-body: 1.55;
+  --text-small: 13px;      --lh-small: 1.45;
+  --text-micro: 12px;      --lh-micro: 1.4;
+  --text-eyebrow: 11px;    --ls-eyebrow: 0.12em;                               /* mono, uppercase, 500 */
+  --text-stat-xl: 44px;    --text-stat-l: 32px;   --text-stat-m: 24px;        /* display family, 600, tnum */
+
+  /* ---- Spacing (4 px base) ------------------------------------------- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px;
+  --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px; --s-20: 80px; --s-24: 96px; --s-32: 128px;
+
+  /* ---- Layout -------------------------------------------------------- */
+  --container: 1200px;      /* content width at ≥1440 */
+  --gutter-desktop: 120px;  /* 1440 − 1200 = 2 × 120 */
+  --gutter-tablet: 32px;
+  --gutter-mobile: 16px;
+  --grid-gap-desktop: 24px; --grid-gap-tablet: 20px; --grid-gap-mobile: 16px;
+  --rail-width: 300px;      /* dashboard account rail */
+  --header-height: 64px;    /* 56px on mobile */
+  --banner-height: 36px;
+
+  /* ---- Radii --------------------------------------------------------- */
+  --r-1: 6px;    /* tags, small chips, tooltips' inner */
+  --r-2: 10px;   /* inputs, scenario rows, tooltip */
+  --r-3: 14px;   /* cards, account items */
+  --r-4: 20px;   /* large panels (model room stage, hero media) */
+  --r-pill: 999px;
+
+  /* ---- Elevation (no boxy grey borders) ------------------------------ */
+  --card-border: rgba(16, 18, 20, 0.06);
+  --shadow-card: 0 1px 2px rgba(16, 18, 20, 0.04), 0 8px 24px -12px rgba(16, 18, 20, 0.12);
+  --shadow-hover: 0 1px 2px rgba(16, 18, 20, 0.05), 0 16px 32px -14px rgba(16, 18, 20, 0.18);
+  --shadow-pop: 0 2px 4px rgba(16, 18, 20, 0.06), 0 20px 40px -12px rgba(16, 18, 20, 0.22);
+  --focus-ring: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent);
+  --focus-ring-input: 0 0 0 3px rgba(47, 75, 217, 0.18);
+
+  /* ---- Motion -------------------------------------------------------- */
+  --dur-micro: 120ms;   /* hover colour, toggle */
+  --dur-ui: 200ms;      /* buttons, chips, tabs */
+  --dur-panel: 320ms;   /* cards entering, tooltip, scenario row select */
+  --dur-chart: 600ms;   /* path morph before→after, corridor open */
+  --dur-scene: 900ms;   /* model-room frame transitions */
+  --dur-ticker: 700ms;  /* number tickers */
+  --ease: cubic-bezier(0.2, 0, 0, 1);          /* standard */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);      /* entering */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);       /* leaving */
+  --ease-draw: cubic-bezier(0.65, 0, 0.35, 1); /* path drawing, symmetric */
+}
+
+/* Dark: OS preference, unless the page is stamped light */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0E1013; --bg-2: #16181C; --bg-3: #1D2026;
+    --ink: #F2F3F5; --ink-2: #B6BAC1; --ink-3: #8B9098; --ink-4: #5C636B;
+    --hairline: #262A31; --hairline-2: #30353D; --border-input: #656C75;
+    --accent: #7388F0; --accent-ink: #9DACF6; --accent-tint: #1A2040; --accent-band: rgba(115, 136, 240, 0.20);
+    --gap: #F0706F; --gap-fill: #E25553; --gap-tint: #2C1719; --gap-band: rgba(226, 85, 83, 0.14);
+    --warn: #F2B84B; --warn-fill: #D99A1E; --warn-tint: #2A2113;
+    --good: #4FC27C; --good-fill: #2E9E5B; --good-tint: #13251A;
+    --c-actual: #F2F3F5; --c-accent: #7388F0; --c-baseline: #D2782F; --c-gbdt: #1BA592; --c-ewma: #9E74E0;
+    --c-before: #8B9098; --c-before-band: rgba(139, 144, 152, 0.22);
+    --c-calendar: #9E74E0; --c-history: #7388F0; --c-scheduled: #1BA592;
+    --card-border: rgba(255, 255, 255, 0.07);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    --shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 32px -14px rgba(0, 0, 0, 0.7);
+    --shadow-pop: 0 2px 4px rgba(0, 0, 0, 0.5), 0 20px 40px -12px rgba(0, 0, 0, 0.8);
+  }
+}
+/* Dark: explicit stamp (theme toggle) */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0E1013; --bg-2: #16181C; --bg-3: #1D2026;
+  --ink: #F2F3F5; --ink-2: #B6BAC1; --ink-3: #8B9098; --ink-4: #5C636B;
+  --hairline: #262A31; --hairline-2: #30353D; --border-input: #656C75;
+  --accent: #7388F0; --accent-ink: #9DACF6; --accent-tint: #1A2040; --accent-band: rgba(115, 136, 240, 0.20);
+  --gap: #F0706F; --gap-fill: #E25553; --gap-tint: #2C1719; --gap-band: rgba(226, 85, 83, 0.14);
+  --warn: #F2B84B; --warn-fill: #D99A1E; --warn-tint: #2A2113;
+  --good: #4FC27C; --good-fill: #2E9E5B; --good-tint: #13251A;
+  --c-actual: #F2F3F5; --c-accent: #7388F0; --c-baseline: #D2782F; --c-gbdt: #1BA592; --c-ewma: #9E74E0;
+  --c-before: #8B9098; --c-before-band: rgba(139, 144, 152, 0.22);
+  --c-calendar: #9E74E0; --c-history: #7388F0; --c-scheduled: #1BA592;
+  --card-border: rgba(255, 255, 255, 0.07);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 32px -14px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 2px 4px rgba(0, 0, 0, 0.5), 0 20px 40px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* Reduced motion: every duration collapses; scroll-linked scenes show their final frame */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-micro: 0ms; --dur-ui: 0ms; --dur-panel: 0ms; --dur-chart: 0ms; --dur-scene: 0ms; --dur-ticker: 0ms;
+  }
+}
+
+/* Responsive type: the display sizes step down, everything else stays */
+@media (max-width: 1023px) {
+  :root { --text-display-xl: 48px; --text-display-l: 40px; --text-h1: 32px; --text-h2: 26px; --text-stat-xl: 36px; }
+}
+@media (max-width: 639px) {
+  :root { --text-display-xl: 40px; --lh-display-xl: 1.04; --text-display-l: 32px; --text-h1: 28px; --text-h2: 24px; --text-lead: 16px; --text-stat-xl: 32px; --text-stat-l: 26px; --header-height: 56px; }
+}
+
+/* Tailwind v4 bridge (frontend/src/app/globals.css):
+   @theme inline {
+     --color-bg: var(--bg); --color-bg-2: var(--bg-2); --color-bg-3: var(--bg-3);
+     --color-ink: var(--ink); --color-ink-2: var(--ink-2); --color-ink-3: var(--ink-3); --color-ink-4: var(--ink-4);
+     --color-hairline: var(--hairline); --color-hairline-2: var(--hairline-2); --color-border-input: var(--border-input);
+     --color-accent: var(--accent); --color-accent-ink: var(--accent-ink); --color-accent-tint: var(--accent-tint);
+     --color-gap: var(--gap); --color-gap-fill: var(--gap-fill); --color-gap-tint: var(--gap-tint);
+     --color-warn: var(--warn); --color-warn-fill: var(--warn-fill); --color-warn-tint: var(--warn-tint);
+     --color-good: var(--good); --color-good-fill: var(--good-fill); --color-good-tint: var(--good-tint);
+     --font-display: var(--font-display); --font-sans: var(--font-body); --font-mono: var(--font-mono);
+     --radius-1: var(--r-1); --radius-2: var(--r-2); --radius-3: var(--r-3); --radius-4: var(--r-4);
+     --shadow-card: var(--shadow-card); --shadow-hover: var(--shadow-hover); --shadow-pop: var(--shadow-pop);
+   }
+*/

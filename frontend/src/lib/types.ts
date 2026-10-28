@@ -118,6 +118,8 @@ export interface ForecastResponse {
   feature_quality: FeatureQuality;
   points: ForecastPoint[];
   first_breach: ForecastPoint | null;
+  /** Id of the stored forecast run (live and demo). */
+  run_id?: number | null;
 }
 
 export interface ForecastRequest {
@@ -228,6 +230,17 @@ export interface DemoScenarioSummary {
   /** Path relative to /demo/. */
   file: string;
   delta: WhatIfDelta;
+  /** Accounts touched by the scenario's adjustments. */
+  accounts?: string[];
+  worst_before?: WorstGap | null;
+  worst_after?: WorstGap | null;
+}
+
+export interface WorstGap {
+  account_id: string;
+  currency: string;
+  date: ISODate;
+  gap_amount: number;
 }
 
 /** The full `/api/whatif/run` response plus the scenario definition that produced it. */
@@ -246,4 +259,71 @@ export interface DemoManifest {
   dataset: DatasetInfo;
   model_available: boolean;
   files: { path: string; bytes: number }[];
+}
+
+/** `GET /api/forecast/explain` (demo: explain.json): what one forecast is made of. */
+export type ComponentName = "lightgbm_quantile" | "sklearn_gbdt_quantile" | "ewma_volatility_baseline" | "blend";
+
+export interface QuantileSeries {
+  p05: number[];
+  p50: number[];
+  p95: number[];
+}
+
+export interface ComponentPaths {
+  /** Daily net flow quantiles of this component alone. */
+  flow: QuantileSeries;
+  /** Start balance + scheduled flows + this component's cumulated daily quantiles. */
+  balance: QuantileSeries;
+}
+
+export interface ExplainSeries {
+  account_id: string;
+  currency: string;
+  start_balance: number;
+  required_buffer: number;
+  dates: ISODate[];
+  scheduled_net_flow: number[];
+  components: Partial<Record<ComponentName, ComponentPaths>>;
+  /** History days flagged by the MAD anomaly score (excluded from training). */
+  anomaly_dates?: ISODate[];
+  latest_features: Record<string, number | null>;
+}
+
+export interface FeatureImportanceRow {
+  feature: string;
+  label: string;
+  group: "calendar" | "history" | "scheduled" | string;
+  gain: number;
+  share: number;
+}
+
+export interface ExplainResponse {
+  as_of: ISODate;
+  horizon_days: number;
+  quantiles: number[];
+  model: {
+    type: string;
+    available: boolean;
+    fallback_reason?: string | null;
+    weights: Record<string, number>;
+    n_estimators: Record<string, number>;
+  };
+  training: {
+    history_rows: number;
+    accounts: number;
+    rows_trainable: number;
+    anomaly_rows: number;
+    known_event_rows: number;
+    feature_columns: string[];
+    feature_labels: Record<string, string>;
+  };
+  feature_importance: {
+    model: string;
+    quantile: number;
+    importance_type: string;
+    features: FeatureImportanceRow[];
+  };
+  components: ComponentName[];
+  series: ExplainSeries[];
 }

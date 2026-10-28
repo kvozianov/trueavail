@@ -1,25 +1,45 @@
-import type { Metadata } from "next";
-import { Nav } from "@/components/Nav";
+import type { Metadata, Viewport } from "next";
+import { DemoBanner, Footer } from "@/components/nav/DemoBanner";
+import { Header } from "@/components/nav/Header";
+import { THEME_INIT } from "@/components/nav/ThemeToggle";
+import { MotionProvider } from "@/components/MotionProvider";
+import { body, display, mono } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "TrueAvail", template: "%s · TrueAvail" },
   description:
-    "14-day liquidity forecasting prototype on synthetic data: P5/P50/P95 balance corridors, cash-gap alerts, what-if and backtest.",
+    "14-day liquidity forecasting prototype on synthetic data: a quantile ML ensemble draws P5/P50/P95 balance corridors, flags cash gaps, tests what-ifs and is scored in a rolling backtest.",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E1013" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="flex min-h-full flex-col font-sans">
-        <Nav />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-        <footer className="border-t border-line">
-          <div className="mx-auto max-w-6xl px-4 py-4 text-xs text-ink-muted">
-            Engineering prototype. Data is synthetic (or a CSV you upload); the model is not calibrated on real bank
-            data. No bank connections, no payments, nothing moves money.
-          </div>
-        </footer>
+    <html lang="en" suppressHydrationWarning className={`${display.variable} ${body.variable} ${mono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
+      <body className="flex min-h-screen flex-col">
+        <a
+          href="#main"
+          className="sr-only-table focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[60] focus:h-auto focus:w-auto focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-bg"
+        >
+          Skip to content
+        </a>
+        <MotionProvider>
+          <Header />
+          <DemoBanner />
+          <main id="main" className="route-fade flex-1">
+            {children}
+          </main>
+          <Footer />
+        </MotionProvider>
       </body>
     </html>
   );
