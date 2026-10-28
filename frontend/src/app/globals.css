@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "./tokens.css";
 
-/* Theme: light by default; dark from prefers-color-scheme unless stamped light; data-theme="dark" forces it. */
+/* Theme: light by default; data-theme="dark" (theme toggle) switches to dark. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
@@ -341,12 +341,6 @@ body {
   background: #262a31;
   box-shadow: var(--shadow-pop), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .tip {
-    background: #262a31;
-    box-shadow: var(--shadow-pop), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  }
-}
 .text-tip-2 {
   color: #b6bac1;
 }
@@ -368,13 +362,4 @@ body {
   --globe-graticule: #23272e;
   --globe-land: #262a31;
   --globe-border: #353a43;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --globe-ocean-1: #1b1e24;
-    --globe-ocean-2: #0e1013;
-    --globe-graticule: #23272e;
-    --globe-land: #262a31;
-    --globe-border: #353a43;
-  }
 }

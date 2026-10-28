@@ -10,18 +10,15 @@ export const THEME_INIT = `try{var t=localStorage.getItem("${KEY}");if(t==="ligh
 
 function effective(): "light" | "dark" {
   const stamp = document.documentElement.dataset.theme;
-  if (stamp === "light" || stamp === "dark") return stamp;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  // Light is the product theme; dark only when the visitor picks it.
+  return stamp === "dark" ? "dark" : "light";
 }
 
 const listeners = new Set<() => void>();
 function subscribe(cb: () => void) {
   listeners.add(cb);
-  const mq = window.matchMedia("(prefers-color-scheme: dark)");
-  mq.addEventListener("change", cb);
   return () => {
     listeners.delete(cb);
-    mq.removeEventListener("change", cb);
   };
 }
 

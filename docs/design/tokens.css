@@ -1,8 +1,8 @@
 /* ============================================================================
    TrueAvail design tokens — v1
-   Light theme is primary (defined on :root). Dark is secondary and applies via
-   prefers-color-scheme unless the page is stamped data-theme="light"; a stamp
-   data-theme="dark" forces dark. Drop this file into frontend/src/app/ and
+   Light theme is primary (defined on :root) and is the default for everyone.
+   Dark is secondary and applies only when the page is stamped
+   data-theme="dark" (the theme toggle). Drop this file into frontend/src/app/ and
    @import it before Tailwind's @theme block (see DESIGN_SYSTEM.md § Tokens).
 
    Every colour below has been checked against WCAG 2.1 AA for the surface it is
@@ -114,26 +114,6 @@
   --ease-draw: cubic-bezier(0.65, 0, 0.35, 1); /* path drawing, symmetric */
 }
 
-/* Dark: OS preference, unless the page is stamped light */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #0E1013; --bg-2: #16181C; --bg-3: #1D2026;
-    --ink: #F2F3F5; --ink-2: #B6BAC1; --ink-3: #8B9098; --ink-4: #5C636B;
-    --hairline: #262A31; --hairline-2: #30353D; --border-input: #656C75;
-    --accent: #7388F0; --accent-ink: #9DACF6; --accent-tint: #1A2040; --accent-band: rgba(115, 136, 240, 0.20);
-    --gap: #F0706F; --gap-fill: #E25553; --gap-tint: #2C1719; --gap-band: rgba(226, 85, 83, 0.14);
-    --warn: #F2B84B; --warn-fill: #D99A1E; --warn-tint: #2A2113;
-    --good: #4FC27C; --good-fill: #2E9E5B; --good-tint: #13251A;
-    --c-actual: #F2F3F5; --c-accent: #7388F0; --c-baseline: #D2782F; --c-gbdt: #1BA592; --c-ewma: #9E74E0;
-    --c-before: #8B9098; --c-before-band: rgba(139, 144, 152, 0.22);
-    --c-calendar: #9E74E0; --c-history: #7388F0; --c-scheduled: #1BA592;
-    --card-border: rgba(255, 255, 255, 0.07);
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-    --shadow-hover: 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 32px -14px rgba(0, 0, 0, 0.7);
-    --shadow-pop: 0 2px 4px rgba(0, 0, 0, 0.5), 0 20px 40px -12px rgba(0, 0, 0, 0.8);
-  }
-}
 /* Dark: explicit stamp (theme toggle) */
 :root[data-theme="dark"] {
   color-scheme: dark;
